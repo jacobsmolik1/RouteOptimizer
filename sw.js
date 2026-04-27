@@ -1,10 +1,10 @@
 const CACHE = 'route-optimizer-v1';
 const ASSETS = [
-  '/RouteOptimizer/',
-  '/RouteOptimizer/index.html',
-  '/RouteOptimizer/manifest.json',
-  '/RouteOptimizer/icons/icon-192.png',
-  '/RouteOptimizer/icons/icon-512.png',
+  'https://jacobsmolik1.github.io/RouteOptimizer/',
+  'https://jacobsmolik1.github.io/RouteOptimizer/index.html',
+  'https://jacobsmolik1.github.io/RouteOptimizer/manifest.json',
+  'https://jacobsmolik1.github.io/RouteOptimizer/icons/icon-192.png',
+  'https://jacobsmolik1.github.io/RouteOptimizer/icons/icon-512.png',
 ];
 
 self.addEventListener('install', e => {

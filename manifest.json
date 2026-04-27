@@ -2,7 +2,7 @@
   "name": "CCBCU Route Optimizer",
   "short_name": "Route Optimizer",
   "description": "Montgomery DC — DOT Compliant 3-Run Load Assignment System",
-  "start_url": "/RouteOptimizer/",
+  "start_url": "https://jacobsmolik1.github.io/RouteOptimizer/",
   "display": "standalone",
   "background_color": "#001F5B",
   "theme_color": "#001F5B",
