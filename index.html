@@ -5,120 +5,290 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CCBCU | Route Optimizer — Montgomery DC</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#001F5B">
+<meta name="theme-color" content="#E31837">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Route Optimizer">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
-:root {
-  --red:        #E31837;
-  --navy:       #001F5B;
-  --navy-dark:  #001040;
-  --navy-light: #0D2E80;
-  --white:      #FFFFFF;
-  --gray-50:    #F7F8FC;
-  --gray-100:   #EEF0F6;
-  --gray-200:   #DDE1ED;
-  --gray-400:   #9199B4;
-  --gray-600:   #4A5275;
-  --gray-800:   #1E2440;
-  --green:      #1B6B2F;
-  --green-bg:   #E6F4EA;
-  --amber:      #7A4800;
-  --amber-bg:   #FFF4E0;
-  --danger:     #B71C1C;
-  --danger-bg:  #FDECEA;
-  --purple:     #4A148C;
-  --purple-bg:  #F3E5F5;
-  --blue:       #0D47A1;
-  --blue-bg:    #E3F2FD;
-  --shadow-sm:  0 1px 3px rgba(0,0,0,0.10);
-  --shadow-md:  0 4px 12px rgba(0,0,0,0.12);
-  --radius:     8px;
-  --radius-lg:  12px;
-}
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; background: var(--gray-50); color: var(--gray-800); min-height: 100vh; }
 
-/* ─── HEADER ─────────────────────────────────────────────────────────────── */
-header { background: var(--navy); color: var(--white); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 60px; box-shadow: var(--shadow-md); position: sticky; top: 0; z-index: 100; }
-.header-brand { display: flex; align-items: center; gap: 12px; }
-.brand-logo { display: flex; align-items: center; gap: 0; }
-.brand-logo-coke { background: var(--red); color: white; font-weight: 900; font-size: 11px; padding: 5px 8px; border-radius: 4px 0 0 4px; letter-spacing: 0.3px; line-height: 1.2; text-align: center; }
-.brand-logo-coke span { display: block; font-size: 9px; font-weight: 600; opacity: 0.85; letter-spacing: 0.5px; }
-.brand-logo-united { background: white; color: var(--navy); font-weight: 900; font-size: 10px; padding: 5px 8px; border-radius: 0 4px 4px 0; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.2; text-align: center; }
-.brand-logo-united span { display: block; font-size: 8px; color: var(--gray-600); letter-spacing: 0.3px; }
-.header-title { font-size: 15px; font-weight: 700; letter-spacing: 0.3px; }
-.header-sub { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 1px; }
-.header-date { font-size: 12px; color: var(--gray-400); text-align: right; }
-.header-date strong { display: block; color: var(--white); font-size: 14px; font-weight: 700; }
+:root {
+  --red:       #E31837;
+  --red-dark:  #C41230;
+  --black:     #1A1A1A;
+  --gray-50:   #F7F7F7;
+  --gray-100:  #EEEEEE;
+  --gray-200:  #DDDDDD;
+  --gray-400:  #999999;
+  --gray-600:  #555555;
+  --white:     #FFFFFF;
+  --green:     #2E7D32;
+  --green-bg:  #E8F5E9;
+  --amber:     #E65100;
+  --amber-bg:  #FFF3E0;
+  --danger:    #C62828;
+  --danger-bg: #FFEBEE;
+  --purple:    #4A148C;
+  --purple-bg: #F3E5F5;
+  --blue:      #1565C0;
+  --blue-bg:   #E3F2FD;
+  --radius:    6px;
+  --radius-lg: 10px;
+  --shadow:    0 1px 4px rgba(0,0,0,0.10);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.13);
+}
 
-/* ─── TABS ───────────────────────────────────────────────────────────────── */
-.tab-bar { background: var(--navy-dark); display: flex; padding: 0 24px; gap: 4px; }
-.tab-btn { background: none; border: none; color: var(--gray-400); font-size: 13px; font-weight: 500; padding: 12px 18px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.15s; letter-spacing: 0.3px; }
-.tab-btn:hover { color: var(--white); }
-.tab-btn.active { color: var(--white); border-bottom-color: var(--red); }
-.tab-content { display: none; padding: 20px 24px; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+  background: var(--gray-50);
+  color: var(--black);
+  min-height: 100vh;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────────── */
+header {
+  background: var(--red);
+  color: var(--white);
+  height: 56px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.hdr-left { display: flex; align-items: center; gap: 14px; }
+.hdr-logo {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+.hdr-logo-coke {
+  background: rgba(0,0,0,0.25);
+  color: white;
+  font-weight: 900;
+  font-size: 10px;
+  padding: 5px 8px;
+  border-radius: 4px 0 0 4px;
+  line-height: 1.3;
+  letter-spacing: 0.3px;
+}
+.hdr-logo-coke span { display: block; font-size: 8px; font-weight: 600; opacity: 0.8; letter-spacing: 0.5px; }
+.hdr-logo-united {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  font-weight: 900;
+  font-size: 9px;
+  padding: 5px 8px;
+  border-radius: 0 4px 4px 0;
+  line-height: 1.3;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.hdr-logo-united span { display: block; font-size: 7px; opacity: 0.7; letter-spacing: 0.3px; }
+.hdr-title { font-size: 16px; font-weight: 700; letter-spacing: 0.2px; }
+.hdr-sub { font-size: 10px; opacity: 0.7; margin-top: 1px; }
+.hdr-right { display: flex; align-items: center; gap: 16px; }
+.hdr-date { text-align: right; font-size: 11px; opacity: 0.75; }
+.hdr-date strong { display: block; font-size: 13px; opacity: 1; font-weight: 700; }
+.hdr-settings-btn {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.hdr-settings-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* ── TABS ────────────────────────────────────────────────────────────── */
+.tab-bar {
+  background: var(--white);
+  border-bottom: 2px solid var(--gray-100);
+  display: flex;
+  padding: 0 24px;
+  gap: 0;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  color: var(--gray-400);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 14px 20px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  letter-spacing: 0.2px;
+}
+.tab-btn:hover { color: var(--black); }
+.tab-btn.active { color: var(--red); border-bottom-color: var(--red); }
+.tab-content { display: none; padding: 24px; }
 .tab-content.active { display: block; }
 
-/* ─── LAYOUT ─────────────────────────────────────────────────────────────── */
-.two-col { display: grid; grid-template-columns: 360px 1fr; gap: 16px; align-items: start; }
-.card { background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); overflow: hidden; }
-.card-header { background: var(--navy); color: var(--white); padding: 10px 16px; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; }
-.card-header.red    { background: var(--red); }
-.card-header.dark   { background: var(--navy-dark); }
-.card-header.purple { background: var(--purple); }
+/* ── CARDS ───────────────────────────────────────────────────────────── */
+.card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.card-header {
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--gray-600);
+  border-bottom: 1px solid var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .card-body { padding: 16px; }
-.section-gap { display: flex; flex-direction: column; gap: 16px; }
 
-/* ─── FORMS ──────────────────────────────────────────────────────────────── */
-.form-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; border-radius: 6px; gap: 8px; }
-.form-row:nth-child(even) { background: var(--gray-50); }
-.form-row label { font-size: 13px; color: var(--gray-600); flex: 1; }
-.form-row .phase-num { background: var(--navy); color: white; font-size: 10px; font-weight: 700; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.form-row input[type="number"] { width: 72px; padding: 5px 8px; border: 2px solid var(--gray-200); border-radius: 6px; font-size: 14px; font-weight: 600; text-align: center; color: var(--blue); background: var(--blue-bg); transition: border-color 0.15s; }
-.form-row input[type="number"]:focus { outline: none; border-color: var(--navy); }
-.form-row .hrs-badge { font-size: 11px; color: var(--gray-400); width: 52px; text-align: right; }
-input[type="text"], input[type="number"].plain, select, textarea { padding: 7px 10px; border: 1px solid var(--gray-200); border-radius: 6px; font-size: 13px; width: 100%; color: var(--gray-800); transition: border-color 0.15s; }
-input[type="text"]:focus, input[type="number"].plain:focus, select:focus { outline: none; border-color: var(--navy); }
-.field-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-.field-group label { font-size: 12px; font-weight: 600; color: var(--gray-600); }
+/* ── PHASE INPUTS ────────────────────────────────────────────────────── */
+.phase-row {
+  display: flex;
+  align-items: center;
+  padding: 9px 16px;
+  gap: 12px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.phase-row:last-child { border-bottom: none; }
+.phase-num {
+  background: var(--red);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.phase-label { flex: 1; font-size: 13px; color: var(--black); }
+.phase-input {
+  width: 64px;
+  padding: 6px 8px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--red);
+  background: var(--gray-50);
+  transition: border-color 0.15s;
+}
+.phase-input:focus { outline: none; border-color: var(--red); background: white; }
+.phase-hrs { font-size: 11px; color: var(--gray-400); width: 56px; text-align: right; }
 
-/* ─── BUTTONS ────────────────────────────────────────────────────────────── */
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s, transform 0.1s; letter-spacing: 0.2px; }
-.btn:active { transform: scale(0.97); }
-.btn-primary { background: var(--red); color: white; }
-.btn-navy    { background: var(--navy); color: white; }
-.btn-green   { background: #1B6B2F; color: white; }
-.btn-outline { background: white; color: var(--navy); border: 1.5px solid var(--navy); }
-.btn-ghost   { background: var(--gray-100); color: var(--gray-600); }
-.btn-danger  { background: var(--danger-bg); color: var(--danger); border: 1px solid #f5c6c6; }
-.btn:hover   { opacity: 0.88; }
-.btn-sm { padding: 4px 10px; font-size: 12px; }
-.btn-full { width: 100%; justify-content: center; padding: 11px; font-size: 14px; }
-.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.totals-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--black);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+.totals-bar .t-label { color: rgba(255,255,255,0.6); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.totals-bar .t-value { color: white; font-size: 22px; font-weight: 800; line-height: 1; }
+.totals-bar .t-hrs   { color: rgba(255,255,255,0.55); font-size: 12px; }
 
-/* ─── METRICS ────────────────────────────────────────────────────────────── */
-.metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-.metric-tile { background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 12px 14px; text-align: center; box-shadow: var(--shadow-sm); }
-.metric-tile .val { font-size: 28px; font-weight: 800; line-height: 1; }
-.metric-tile .lbl { font-size: 10px; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
-.metric-tile.navy { background: var(--navy); color: white; }
-.metric-tile.navy .lbl { color: rgba(255,255,255,0.6); }
-.metric-tile.red  { background: var(--red); color: white; }
-.metric-tile.red  .lbl { color: rgba(255,255,255,0.7); }
-.metric-tile.purple { background: var(--purple); color: white; }
-.metric-tile.purple .lbl { color: rgba(255,255,255,0.7); }
-.metric-tile.green  { background: #1B6B2F; color: white; }
-.metric-tile.green  .lbl { color: rgba(255,255,255,0.7); }
+/* ── GENERATE BUTTON ─────────────────────────────────────────────────── */
+.btn-generate {
+  width: 100%;
+  padding: 14px;
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: background 0.15s, transform 0.1s;
+  margin-top: 12px;
+}
+.btn-generate:hover { background: var(--red-dark); }
+.btn-generate:active { transform: scale(0.99); }
 
-/* ─── TABLES ─────────────────────────────────────────────────────────────── */
+/* ── SUMMARY BAR (post-generate) ─────────────────────────────────────── */
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.summary-tile {
+  text-align: center;
+  padding: 14px 12px;
+  border-right: 1px solid var(--gray-100);
+}
+.summary-tile:last-child { border-right: none; }
+.summary-tile .s-val { font-size: 26px; font-weight: 800; line-height: 1; color: var(--black); }
+.summary-tile .s-val.red { color: var(--red); }
+.summary-tile .s-val.green { color: var(--green); }
+.summary-tile .s-lbl { font-size: 10px; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+
+/* ── WORKLOAD BARS ───────────────────────────────────────────────────── */
+.workload-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--gray-100); }
+.workload-row:last-child { border-bottom: none; }
+.workload-name { width: 160px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.workload-bar-wrap { flex: 1; background: var(--gray-100); border-radius: 4px; height: 12px; overflow: hidden; }
+.workload-bar { height: 100%; border-radius: 4px; transition: width 0.4s; }
+.workload-bar.ok   { background: var(--green); }
+.workload-bar.warn { background: var(--amber); }
+.workload-bar.over { background: var(--danger); }
+.workload-hrs { font-size: 11px; color: var(--gray-600); width: 56px; text-align: right; white-space: nowrap; }
+
+/* ── DRIVER CARDS ────────────────────────────────────────────────────── */
+.driver-cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.driver-card { border: 1.5px solid var(--gray-200); border-radius: var(--radius); overflow: hidden; background: white; box-shadow: var(--shadow); }
+.driver-card-header { background: var(--black); color: white; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+.drv-initial { background: var(--red); color: white; font-weight: 900; font-size: 13px; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.drv-name { font-weight: 700; font-size: 12px; line-height: 1.3; }
+.drv-base { font-size: 10px; color: rgba(255,255,255,0.5); }
+.driver-card-runs { padding: 0; }
+.run-row { display: flex; align-items: center; border-bottom: 1px solid var(--gray-100); padding: 6px 10px; gap: 8px; }
+.run-row:last-child { border-bottom: none; }
+.run-label { font-size: 9px; font-weight: 800; letter-spacing: 0.8px; color: white; background: var(--black); padding: 2px 5px; border-radius: 3px; width: 36px; text-align: center; flex-shrink: 0; }
+.run-label.run2 { background: var(--gray-600); }
+.run-label.run3 { background: var(--green); }
+.run-label.empty { background: var(--gray-200); color: var(--gray-400); }
+.run-phase { flex: 1; font-size: 11px; font-weight: 500; }
+.run-phase.empty { color: var(--gray-400); font-style: italic; }
+.run-hrs { font-size: 11px; font-weight: 700; color: var(--gray-600); white-space: nowrap; }
+.run-hrs.empty { color: var(--gray-400); font-weight: 400; }
+.driver-card-footer { background: var(--gray-50); border-top: 1.5px solid var(--gray-200); padding: 7px 10px; display: flex; justify-content: space-between; align-items: center; }
+.card-total-hrs { font-size: 12px; font-weight: 800; }
+.card-dot-status { font-size: 10px; font-weight: 700; }
+.card-dot-ok   { color: var(--green); }
+.card-dot-warn { color: var(--amber); }
+.card-dot-over { color: var(--danger); }
+.driver-card.is-shore { border-color: #C5B3E0; }
+.driver-card.is-shore .driver-card-header { background: var(--purple); }
+
+/* ── TABLES ──────────────────────────────────────────────────────────── */
 .tbl-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-thead tr { background: var(--navy); color: white; }
-thead th { padding: 8px 10px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+thead tr { background: var(--black); color: white; }
+thead th { padding: 9px 10px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
 tbody tr { border-bottom: 1px solid var(--gray-100); transition: background 0.1s; }
 tbody tr:hover { background: var(--gray-50); }
 tbody td { padding: 7px 10px; vertical-align: middle; }
@@ -130,7 +300,7 @@ tr.row-aub   { background: #FAF0FF; }
 tr.row-evg   { background: #F0FFFB; }
 tr.row-shore { background: var(--purple-bg); }
 
-/* ─── BADGES / TAGS ──────────────────────────────────────────────────────── */
+/* ── BADGES / TAGS ───────────────────────────────────────────────────── */
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
 .badge-ok    { background: var(--green-bg);  color: var(--green); }
 .badge-warn  { background: var(--amber-bg);  color: var(--amber); }
@@ -149,7 +319,20 @@ tr.row-shore { background: var(--purple-bg); }
 .tag-evg      { background: #CCFBF1; color: #0F766E; }
 .tag-shore    { background: #EDE9FE; color: #5B21B6; }
 
-/* ─── VACATION TOGGLE ────────────────────────────────────────────────────── */
+/* ── BUTTONS ─────────────────────────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: none; border-radius: var(--radius); font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.15s, transform 0.1s; }
+.btn:active { transform: scale(0.97); }
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: var(--red); color: white; }
+.btn-dark    { background: var(--black); color: white; }
+.btn-outline { background: white; color: var(--black); border: 1.5px solid var(--gray-200); }
+.btn-ghost   { background: var(--gray-100); color: var(--gray-600); }
+.btn-danger  { background: var(--danger-bg); color: var(--danger); border: 1px solid #f5c6c6; }
+.btn-green   { background: var(--green); color: white; }
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* ── TOGGLE ──────────────────────────────────────────────────────────── */
 .toggle-wrap { display: flex; align-items: center; gap: 6px; }
 .toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
 .toggle input { opacity: 0; width: 0; height: 0; }
@@ -158,163 +341,103 @@ tr.row-shore { background: var(--purple-bg); }
 input:checked + .slider { background: var(--amber); }
 input:checked + .slider::before { transform: translateX(18px); }
 
-/* ─── WORKLOAD BARS ──────────────────────────────────────────────────────── */
-.workload-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--gray-100); }
-.workload-name { width: 160px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.workload-bar-wrap { flex: 1; background: var(--gray-100); border-radius: 4px; height: 14px; overflow: hidden; }
-.workload-bar { height: 100%; border-radius: 4px; transition: width 0.4s; }
-.workload-bar.ok   { background: #2E7D32; }
-.workload-bar.warn { background: #E65100; }
-.workload-bar.over { background: var(--danger); }
-.workload-hrs { font-size: 11px; color: var(--gray-600); width: 52px; text-align: right; white-space: nowrap; }
-
-/* ─── DRIVER ASSIGNMENT CARDS ─────────────────────────────────────────────── */
-.driver-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 0;
+/* ── FORMS ───────────────────────────────────────────────────────────── */
+.field-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.field-group label { font-size: 11px; font-weight: 700; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.4px; }
+input[type="text"], input[type="number"].plain, select, textarea {
+  padding: 8px 10px; border: 1.5px solid var(--gray-200); border-radius: var(--radius);
+  font-size: 13px; width: 100%; color: var(--black); background: white; transition: border-color 0.15s;
 }
-.driver-card {
-  border: 1.5px solid var(--gray-200);
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: white;
-  box-shadow: var(--shadow-sm);
-}
-.driver-card-header {
-  background: var(--navy);
-  color: white;
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.driver-card-header .drv-initial {
-  background: var(--red);
-  color: white;
-  font-weight: 900;
-  font-size: 13px;
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.driver-card-header .drv-name { font-weight: 700; font-size: 12px; line-height: 1.2; }
-.driver-card-header .drv-base { font-size: 10px; color: rgba(255,255,255,0.55); }
-.driver-card-runs { padding: 0; }
-.run-row {
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--gray-100);
-  padding: 6px 10px;
-  gap: 8px;
-}
-.run-row:last-child { border-bottom: none; }
-.run-label {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.8px;
-  color: white;
-  background: var(--navy);
-  padding: 2px 5px;
-  border-radius: 3px;
-  width: 36px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.run-label.run2 { background: var(--navy-light); }
-.run-label.run3 { background: #2D6A4F; }
-.run-label.empty { background: var(--gray-200); color: var(--gray-400); }
-.run-phase { flex: 1; font-size: 11px; color: var(--gray-800); font-weight: 500; }
-.run-phase.empty { color: var(--gray-400); font-style: italic; }
-.run-hrs { font-size: 11px; font-weight: 700; color: var(--gray-600); white-space: nowrap; }
-.run-hrs.empty { color: var(--gray-400); font-weight: 400; }
-.driver-card-footer {
-  background: var(--gray-50);
-  border-top: 1.5px solid var(--gray-200);
-  padding: 6px 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.card-total-hrs { font-size: 12px; font-weight: 800; color: var(--gray-800); }
-.card-dot-status { font-size: 10px; font-weight: 700; }
-.card-dot-ok   { color: var(--green); }
-.card-dot-warn { color: var(--amber); }
-.card-dot-over { color: var(--danger); }
-.driver-card.is-shore { border-color: #C5B3E0; }
-.driver-card.is-shore .driver-card-header { background: var(--purple); }
-.driver-card.is-shore .driver-card-footer { background: var(--purple-bg); }
-
-/* ─── MODAL ──────────────────────────────────────────────────────────────── */
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,30,0.55); z-index: 1000; align-items: center; justify-content: center; }
-.modal-overlay.open { display: flex; }
-.modal { background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); width: 440px; max-width: 96vw; max-height: 92vh; overflow-y: auto; }
-.modal-header { background: var(--navy); color: white; padding: 14px 18px; font-weight: 700; font-size: 14px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; display: flex; justify-content: space-between; align-items: center; }
-.modal-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 20px; cursor: pointer; line-height: 1; }
-.modal-close:hover { color: white; }
-.modal-body { padding: 20px 18px; }
-.modal-footer { padding: 14px 18px; border-top: 1px solid var(--gray-100); display: flex; gap: 8px; justify-content: flex-end; }
-
-/* ─── SHORELINE PANEL ────────────────────────────────────────────────────── */
-.shoreline-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--purple-bg); }
-.shoreline-row:last-child { border-bottom: none; font-weight: 700; }
-.shoreline-row span { font-size: 13px; }
-.shoreline-num { font-size: 18px; font-weight: 800; color: var(--purple); }
-
-/* ─── SELECT CONTROLS ────────────────────────────────────────────────────── */
-select.override-sel { padding: 3px 6px; font-size: 11px; border: 1px solid var(--gray-200); border-radius: 4px; background: white; min-width: 130px; color: var(--gray-800); }
+input[type="text"]:focus, input[type="number"].plain:focus, select:focus { outline: none; border-color: var(--red); }
+select.override-sel { padding: 3px 6px; font-size: 11px; border: 1px solid var(--gray-200); border-radius: 4px; background: white; min-width: 130px; }
 select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; border: 1px solid var(--gray-200); min-width: 90px; }
 
-/* ─── MISC ───────────────────────────────────────────────────────────────── */
-.divider { height: 1px; background: var(--gray-200); margin: 12px 0; }
-.empty-state { text-align: center; color: var(--gray-400); padding: 32px; font-size: 13px; }
-.tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
-.text-right { text-align: right; }
+/* ── SECTION GAP ─────────────────────────────────────────────────────── */
+.stack { display: flex; flex-direction: column; gap: 14px; }
+
+/* ── MISC ────────────────────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--gray-100); margin: 14px 0; }
+.empty-state { text-align: center; color: var(--gray-400); padding: 28px; font-size: 13px; }
 .text-center { text-align: center; }
-.mt-8 { margin-top: 8px; }
+.text-right  { text-align: right; }
+.mt-8  { margin-top: 8px; }
 .mt-12 { margin-top: 12px; }
-.mt-16 { margin-top: 16px; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .warn-banner { background: var(--amber-bg); border: 1px solid #FFCC80; border-radius: var(--radius); padding: 10px 14px; font-size: 12px; color: var(--amber); display: flex; gap: 8px; align-items: flex-start; }
 .dot-ok   { color: var(--green); font-weight: 700; }
 .dot-over { color: var(--danger); font-weight: 700; }
-.confirm-box { background: var(--danger-bg); border: 1px solid #f5c6c6; border-radius: var(--radius); padding: 14px 16px; font-size: 13px; color: var(--danger); display: none; }
+.confirm-box { background: var(--danger-bg); border: 1px solid #f5c6c6; border-radius: var(--radius); padding: 14px 16px; font-size: 13px; color: var(--danger); display: none; margin-bottom: 10px; }
 .confirm-box.show { display: block; }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   PRINT STYLES
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ── DRIVER RULES (compact) ──────────────────────────────────────────── */
+.rules-bar { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 10px 14px; font-size: 12px; }
+
+/* ── SETTINGS MODAL ──────────────────────────────────────────────────── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: flex-start; justify-content: flex-end; }
+.modal-overlay.open { display: flex; }
+.settings-panel {
+  background: white;
+  width: 600px;
+  max-width: 96vw;
+  height: 100vh;
+  overflow-y: auto;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+}
+.settings-header {
+  background: var(--black);
+  color: white;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+}
+.settings-header h2 { font-size: 15px; font-weight: 700; }
+.modal-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 22px; cursor: pointer; line-height: 1; }
+.modal-close:hover { color: white; }
+.settings-body { padding: 20px; flex: 1; }
+.settings-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--gray-400); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--gray-100); }
+
+/* ── DRIVER MODAL ────────────────────────────────────────────────────── */
+.modal-overlay.driver-overlay { align-items: center; justify-content: center; }
+.modal { background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); width: 440px; max-width: 96vw; max-height: 92vh; overflow-y: auto; }
+.modal-header { background: var(--black); color: white; padding: 14px 18px; font-weight: 700; font-size: 14px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; display: flex; justify-content: space-between; align-items: center; }
+.modal-body { padding: 20px 18px; }
+.modal-footer { padding: 14px 18px; border-top: 1px solid var(--gray-100); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ── SHORELINE (inline) ──────────────────────────────────────────────── */
+.shoreline-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--gray-100); }
+.shoreline-row:last-child { border-bottom: none; font-weight: 700; }
+.shoreline-num { font-size: 18px; font-weight: 800; color: var(--purple); }
+
+/* ══════════════════════════ PRINT ═════════════════════════════════════ */
 @media print {
-  /* Hide all screen-only UI */
   header, .tab-bar, .no-print { display: none !important; }
   body { background: white; font-size: 10px; margin: 0; }
   .tab-content { display: none !important; padding: 0; }
   #tab-dashboard { display: block !important; }
-  #tab-fleet, #tab-settings { display: none !important; }
-
-  /* Print header (hidden on screen) */
   .print-header {
     display: flex !important;
     align-items: center;
     justify-content: space-between;
     padding: 10px 0 8px;
-    border-bottom: 3px solid #001F5B;
+    border-bottom: 3px solid #1A1A1A;
     margin-bottom: 10px;
   }
   .print-header-brand { display: flex; align-items: center; gap: 10px; }
   .print-header-badge { background: #E31837; color: white; font-size: 10px; font-weight: 900; padding: 4px 8px; border-radius: 3px; }
-  .print-header-title { font-size: 14px; font-weight: 800; color: #001F5B; }
+  .print-header-title { font-size: 14px; font-weight: 800; color: #1A1A1A; }
   .print-header-sub { font-size: 9px; color: #666; }
   .print-header-right { text-align: right; font-size: 10px; color: #333; }
-  .print-header-right strong { font-size: 13px; color: #001F5B; display: block; }
-
-  /* Print summary bar */
+  .print-header-right strong { font-size: 13px; color: #1A1A1A; display: block; }
   .print-summary-bar {
     display: flex !important;
     gap: 12px;
-    background: #001F5B;
+    background: #1A1A1A;
     color: white;
     padding: 8px 12px;
     border-radius: 6px;
@@ -324,32 +447,16 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
   .print-summary-bar .psb-item { text-align: center; flex: 1; }
   .print-summary-bar .psb-num { font-size: 18px; font-weight: 900; line-height: 1; }
   .print-summary-bar .psb-lbl { font-size: 8px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; }
-
-  /* Driver cards - compact for print */
   .two-col { display: none; }
   #driver-cards-section { display: block !important; }
-  .driver-cards-grid {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px !important;
-    page-break-inside: avoid;
-  }
+  .driver-cards-grid { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
   .driver-card { box-shadow: none; border: 1.5px solid #ccc; page-break-inside: avoid; }
-  .driver-card-header { padding: 6px 8px; }
-  .driver-card-header .drv-initial { width: 22px; height: 22px; font-size: 10px; }
-  .driver-card-header .drv-name { font-size: 10px; }
-  .driver-card-header .drv-base { font-size: 8px; }
+  .driver-card-header { padding: 6px 8px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .run-row { padding: 4px 8px; }
   .run-label { font-size: 8px; padding: 1px 4px; width: 30px; }
   .run-phase { font-size: 9px; }
   .run-hrs { font-size: 9px; }
   .driver-card-footer { padding: 4px 8px; }
-  .card-total-hrs { font-size: 10px; }
-  .card-dot-status { font-size: 9px; }
-  .driver-card-header .drv-initial { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .driver-card-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
-  /* DOT footer note */
   .print-dot-note {
     display: block !important;
     margin-top: 10px;
@@ -358,30 +465,19 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
     border-top: 1px solid #ccc;
     padding-top: 6px;
   }
-
-  /* Shoreline card */
-  .is-shore .driver-card-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
-  /* Full assignment table on page 2 */
-  #assignments-section {
-    page-break-before: always;
-    display: block !important;
-  }
+  #assignments-section { page-break-before: always; display: block !important; }
   .card { box-shadow: none; border: 1px solid #ccc; }
   table { font-size: 9px; }
-  thead th { background: #001F5B !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  tr.row-pan, tr.row-col, tr.row-dot, tr.row-aub, tr.row-evg, tr.row-shore
-    { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  thead th { background: #1A1A1A !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  tr.row-pan, tr.row-col, tr.row-dot, tr.row-aub, tr.row-evg, tr.row-shore { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .summary-bar, .btn-generate, .stack > .card:first-child { display: none; }
 }
-
-/* Hidden on screen */
 .print-header, .print-summary-bar, .print-dot-note { display: none; }
-#driver-cards-section { }
 </style>
 </head>
 <body>
 
-<!-- ═══════ PRINT-ONLY HEADER (hidden on screen) ═══════════════════════════ -->
+<!-- ═══ PRINT HEADER ═══════════════════════════════════════════════════ -->
 <div class="print-header">
   <div class="print-header-brand">
     <div class="print-header-badge">CCBCU</div>
@@ -399,123 +495,120 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
   <div class="psb-item"><div class="psb-num" id="psb-total">—</div><div class="psb-lbl">Total Loads</div></div>
   <div class="psb-item"><div class="psb-num" id="psb-internal">—</div><div class="psb-lbl">Internal</div></div>
   <div class="psb-item"><div class="psb-num" id="psb-shoreline">—</div><div class="psb-lbl">Shoreline</div></div>
-  <div class="psb-item"><div class="psb-num" id="psb-drivers">—</div><div class="psb-lbl">Drivers Out</div></div>
-  <div class="psb-item"><div class="psb-num">10h</div><div class="psb-lbl">DOT Limit</div></div>
+  <div class="psb-item"><div class="psb-num" id="psb-drivers">—</div><div class="psb-lbl">Drivers Used</div></div>
 </div>
 
-<!-- ═══════════════════════════════ HEADER ════════════════════════════════ -->
+<!-- ═══ HEADER ═════════════════════════════════════════════════════════ -->
 <header>
-  <div class="header-brand">
-    <div class="brand-logo">
-      <div class="brand-logo-coke">COCA‑COLA<span>BOTTLING CO.</span></div>
-      <div class="brand-logo-united">UNITED<span>since 1902</span></div>
+  <div class="hdr-left">
+    <div class="hdr-logo">
+      <div class="hdr-logo-coke">COCA‑COLA<span>BOTTLING CO.</span></div>
+      <div class="hdr-logo-united">UNITED<span>since 1902</span></div>
     </div>
     <div>
-      <div class="header-title">Route Optimizer</div>
-      <div class="header-sub">Montgomery DC  •  4919 Westport Blvd  •  DOT Compliant  •  3-Run System</div>
+      <div class="hdr-title">Route Optimizer</div>
+      <div class="hdr-sub">Montgomery DC &nbsp;·&nbsp; DOT Compliant &nbsp;·&nbsp; 3-Run System</div>
     </div>
   </div>
-  <div class="header-date">
-    <strong id="hdr-date"></strong>
-    <span id="hdr-day"></span>
+  <div class="hdr-right">
+    <div class="hdr-date">
+      <strong id="hdr-date"></strong>
+      <span id="hdr-day"></span>
+    </div>
+    <button class="hdr-settings-btn no-print" onclick="openSettings()" title="Settings">⚙</button>
   </div>
 </header>
 
-<!-- ══════════════════════════════ TAB BAR ═══════════════════════════════ -->
-<div class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('dashboard', event)">📦 Dashboard</button>
-  <button class="tab-btn" onclick="switchTab('fleet', event)">👤 Fleet &amp; Drivers</button>
-  <button class="tab-btn" onclick="switchTab('settings', event)">⚙️ Settings</button>
+<!-- ═══ TABS ════════════════════════════════════════════════════════════ -->
+<div class="tab-bar no-print">
+  <button class="tab-btn active" onclick="switchTab('dashboard', event)">Dashboard</button>
+  <button class="tab-btn" onclick="switchTab('fleet', event)">Drivers</button>
 </div>
 
-<!-- ════════════════════════ TAB: DASHBOARD ══════════════════════════════ -->
+<!-- ═══ TAB: DASHBOARD ══════════════════════════════════════════════════ -->
 <div id="tab-dashboard" class="tab-content active">
+  <div style="max-width: 860px; margin: 0 auto;">
+    <div class="stack">
 
-  <div class="two-col">
-
-    <!-- LEFT COLUMN -->
-    <div class="section-gap">
-
-      <div class="card">
-        <div class="card-header">📦 Daily Load Input — 7-Phase Build Order</div>
-        <div class="card-body" style="padding:8px 12px;">
-          <div id="phase-inputs"></div>
-          <div class="divider"></div>
-          <div class="form-row" style="background:var(--navy-dark);border-radius:6px;margin-top:4px;">
-            <div class="phase-num" style="background:var(--red);">Σ</div>
-            <label style="color:white;font-weight:700;">TOTAL LOADS</label>
-            <span id="total-loads-display" style="color:white;font-weight:800;font-size:18px;">0</span>
-            <span class="hrs-badge" style="color:rgba(255,255,255,0.6);" id="total-hrs-display">0.0 hrs</span>
+      <!-- Phase Inputs -->
+      <div class="card" style="overflow:hidden;">
+        <div class="card-header">Daily Load Input — 7-Phase Build Order</div>
+        <div id="phase-inputs"></div>
+        <div class="totals-bar">
+          <div>
+            <div class="t-label">Total Loads</div>
+            <div class="t-value" id="total-loads-display">0</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="t-label">Est. Drive Time</div>
+            <div class="t-hrs" id="total-hrs-display">0.0 hrs</div>
           </div>
         </div>
       </div>
 
-      <button class="btn btn-primary btn-full" onclick="generateAssignments()">⚡ Generate Load Assignments</button>
+      <!-- Generate Button -->
+      <button class="btn-generate no-print" onclick="generateAssignments()">⚡ Generate Load Assignments</button>
 
-      <div class="card">
-        <div class="card-header purple">🚛 Shoreline Overflow</div>
-        <div id="shoreline-panel"><div class="empty-state" style="padding:16px;">Run optimizer to see Shoreline loads</div></div>
-      </div>
-
-      <div class="card">
-        <div class="card-header dark">⚠️ Driver Rules</div>
-        <div class="card-body" style="padding:10px 14px;" id="driver-rules-panel"></div>
-      </div>
-
-    </div>
-
-    <!-- RIGHT COLUMN -->
-    <div class="section-gap">
-
-      <div class="metrics-grid" id="metrics-grid">
-        <div class="metric-tile navy"><div class="val" id="m-total">—</div><div class="lbl">Total Loads</div></div>
-        <div class="metric-tile navy"><div class="val" id="m-internal">—</div><div class="lbl">Internal</div></div>
-        <div class="metric-tile purple"><div class="val" id="m-shore">—</div><div class="lbl">Shoreline</div></div>
-        <div class="metric-tile"><div class="val" id="m-avail">—</div><div class="lbl">Drivers Available</div></div>
-        <div class="metric-tile"><div class="val" id="m-dot-limit">10</div><div class="lbl">DOT Limit (hrs)</div></div>
-        <div class="metric-tile"><div class="val" id="m-dot-ok">—</div><div class="lbl">DOT Compliant</div></div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          👤 Driver Workload Summary
-          <span id="dot-status-summary" style="margin-left:auto;font-size:11px;"></span>
-        </div>
-        <div class="card-body" style="padding:10px 14px;">
-          <div id="workload-list"><div class="empty-state" style="padding:16px;">Run optimizer to see workload</div></div>
-        </div>
-      </div>
-
-      <!-- ACTION BUTTONS -->
-      <div class="card no-print">
-        <div class="card-header dark">Actions</div>
-        <div class="card-body">
-          <div class="btn-group">
-            <button class="btn btn-navy" onclick="window.print()">🖨️ Print Assignment Sheet</button>
-            <button class="btn btn-ghost" onclick="exportCSV()">⬇️ Export CSV</button>
-            <button class="btn btn-ghost" onclick="resetLoads()">↺ Reset Loads</button>
+      <!-- Summary Metrics (post-generate) -->
+      <div id="metrics-grid" style="display:none;">
+        <div class="summary-bar">
+          <div class="summary-tile">
+            <div class="s-val red" id="m-total">—</div>
+            <div class="s-lbl">Total Loads</div>
           </div>
-          <div class="divider"></div>
-          <div class="btn-group">
-            <button class="btn btn-green" onclick="exportState()">📤 Export State</button>
-            <button class="btn btn-outline" onclick="document.getElementById('import-file-input').click()">📥 Import State</button>
+          <div class="summary-tile">
+            <div class="s-val" id="m-internal">—</div>
+            <div class="s-lbl">Internal</div>
           </div>
-          <p style="font-size:11px;color:var(--gray-400);margin-top:8px;">Export saves your drivers, settings &amp; loads to a file. Import restores them on any machine.</p>
+          <div class="summary-tile">
+            <div class="s-val" id="m-shore">—</div>
+            <div class="s-lbl">Shoreline</div>
+          </div>
+          <div class="summary-tile">
+            <div class="s-val green" id="m-dot-ok">—</div>
+            <div class="s-lbl">DOT Status</div>
+          </div>
         </div>
       </div>
+
+      <!-- Hidden metric tiles kept for JS compatibility -->
+      <span id="m-avail" style="display:none;"></span>
+      <span id="m-dot-limit" style="display:none;">10</span>
 
     </div>
   </div>
 
-  <!-- ═══ DRIVER ASSIGNMENT CARDS ════════════════════════════════════════ -->
-  <div id="driver-cards-section" style="margin-top:16px; display:none;">
-    <div class="card">
-      <div class="card-header flex-between">
-        <span>🪪 Driver Assignment Cards — Pass-Out Sheet</span>
-        <span style="font-size:11px;opacity:0.7;font-weight:400;">Shows each driver's Run 1 / 2 / 3</span>
-      </div>
-      <div class="card-body">
-        <div class="driver-cards-grid" id="driver-cards-grid"></div>
+  <!-- Driver Cards (post-generate) -->
+  <div id="driver-cards-section" style="display:none; margin-top:20px;">
+    <div style="max-width:860px; margin:0 auto;">
+      <div class="card">
+        <div class="card-header">
+          <span>Driver Assignments — Pass-Out Sheet</span>
+          <div class="btn-group no-print">
+            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+            <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ CSV</button>
+            <button class="btn btn-outline btn-sm" onclick="resetLoads()">↺ Reset</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Workload summary -->
+          <div style="margin-bottom:16px;">
+            <div class="flex-between" style="margin-bottom:8px;">
+              <span style="font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.4px;">Driver Workload</span>
+              <span id="dot-status-summary"></span>
+            </div>
+            <div id="workload-list"><div class="empty-state">Run optimizer to see workload</div></div>
+          </div>
+
+          <!-- Shoreline overflow (if any) -->
+          <div id="shoreline-panel" style="display:none;margin-bottom:16px;">
+            <div style="font-size:12px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">🚛 Shoreline Overflow</div>
+            <div id="shoreline-content"></div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="driver-cards-grid" id="driver-cards-grid"></div>
+        </div>
         <div class="print-dot-note">
           ⚖️ DOT COMPLIANCE: All drivers must stay within <strong>10-hour driving limit</strong>. Drivers showing ⚠️ OVER must not be dispatched for additional runs.
           Generated: <span id="print-gen-time"></span>  •  Coca-Cola Bottling Co. United — Montgomery DC
@@ -524,141 +617,125 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
     </div>
   </div>
 
-  <!-- ═══ FULL ASSIGNMENTS TABLE ══════════════════════════════════════════ -->
-  <div id="assignments-section" style="margin-top:16px; display:none;">
-    <div class="card">
-      <div class="card-header flex-between">
-        <span>🛣️ Full Load Assignments — Detailed View</span>
-        <div class="btn-group no-print" style="margin-left:auto;"></div>
-      </div>
-      <div class="tbl-wrap">
-        <table id="assignments-table">
-          <thead>
-            <tr>
-              <th class="tbl-num">#</th>
-              <th>Build Phase</th>
-              <th>Destination</th>
-              <th>Miles RT</th>
-              <th>Hrs</th>
-              <th>Auto-Assigned</th>
-              <th>Load #</th>
-              <th class="no-print">Override</th>
-              <th class="no-print">Status</th>
-              <th>Final Driver</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody id="assignments-tbody"></tbody>
-        </table>
+  <!-- Full Assignments Table (post-generate) -->
+  <div id="assignments-section" style="display:none; margin-top:16px;">
+    <div style="max-width:860px; margin:0 auto;">
+      <div class="card">
+        <div class="card-header">Full Load Assignments — Detailed View</div>
+        <div class="tbl-wrap">
+          <table id="assignments-table">
+            <thead>
+              <tr>
+                <th class="tbl-num">#</th>
+                <th>Build Phase</th>
+                <th>Destination</th>
+                <th>Miles RT</th>
+                <th>Hrs</th>
+                <th>Auto-Assigned</th>
+                <th>Load #</th>
+                <th class="no-print">Override</th>
+                <th class="no-print">Status</th>
+                <th>Final Driver</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="assignments-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
 </div><!-- /tab-dashboard -->
 
-<!-- ════════════════════════ TAB: FLEET ══════════════════════════════════ -->
+<!-- ═══ TAB: FLEET ══════════════════════════════════════════════════════ -->
 <div id="tab-fleet" class="tab-content">
-
-  <div class="flex-between" style="margin-bottom:14px;">
-    <div>
-      <h2 style="font-size:16px;font-weight:700;color:var(--navy);">Internal Fleet — Driver Roster</h2>
-      <p style="font-size:12px;color:var(--gray-400);margin-top:2px;">Manage drivers, home bases, restrictions, and vacation status.</p>
+  <div style="max-width:860px; margin:0 auto;">
+    <div class="flex-between" style="margin-bottom:16px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;">Driver Roster</div>
+        <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">Manage drivers, home bases, restrictions, and vacation status.</div>
+      </div>
+      <button class="btn btn-primary no-print" onclick="openAddDriver()">+ Add Driver</button>
     </div>
-    <button class="btn btn-navy" onclick="openAddDriver()">+ Add Driver</button>
-  </div>
-
-  <div class="warn-banner no-print" style="margin-bottom:12px;">
-    ☀️ <span>Toggle <strong>Vacation</strong> to remove a driver from load assignments. Their loads automatically redirect to the next available driver or Shoreline.</span>
-  </div>
-
-  <div class="card">
-    <div class="tbl-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Driver Name</th>
-            <th>Home Base</th>
-            <th>Restriction</th>
-            <th class="text-center">Max Loads/Day</th>
-            <th class="text-center">Vacation</th>
-            <th class="text-center">Status</th>
-            <th class="no-print">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="fleet-tbody"></tbody>
-      </table>
+    <div class="warn-banner no-print" style="margin-bottom:12px;">
+      ☀️ Toggle <strong>Vacation</strong> to remove a driver from load assignments. Their loads automatically redirect to the next available driver or Shoreline.
     </div>
+    <div class="card">
+      <div id="driver-rules-panel" style="padding:12px 16px;font-size:12px;border-bottom:1px solid var(--gray-100);background:var(--gray-50);"></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Driver Name</th>
+              <th>Home Base</th>
+              <th>Restriction</th>
+              <th class="text-center">Max Loads/Day</th>
+              <th class="text-center">Vacation</th>
+              <th class="text-center">Status</th>
+              <th class="no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="fleet-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--gray-400);">Changes take effect on the next Generate run.</div>
   </div>
-  <div style="margin-top:12px;font-size:11px;color:var(--gray-400);">Changes take effect on the next Generate run.</div>
-
 </div><!-- /tab-fleet -->
 
-<!-- ════════════════════════ TAB: SETTINGS ═══════════════════════════════ -->
-<div id="tab-settings" class="tab-content">
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
-
-    <div class="card">
-      <div class="card-header">📍 Destination Master</div>
-      <div class="card-body">
-        <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Edit one-way miles. Round-trip and hours auto-calculate.</p>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Code</th><th>Location</th><th>Miles (1-way)</th><th>Miles (RT)</th><th>Est. Hrs</th><th>Carrier</th></tr></thead>
-            <tbody id="dest-tbody"></tbody>
-          </table>
-        </div>
-        <button class="btn btn-navy btn-sm mt-12" onclick="saveDestinations()">Save Destinations</button>
-      </div>
+<!-- ═══ SETTINGS PANEL ════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="settings-modal" onclick="closeSettings(event)">
+  <div class="settings-panel" onclick="event.stopPropagation()">
+    <div class="settings-header">
+      <h2>⚙ Settings</h2>
+      <button class="modal-close" onclick="closeSettings()">&times;</button>
     </div>
+    <div class="settings-body">
 
-    <div class="section-gap">
-      <div class="card">
-        <div class="card-header">⚖️ DOT &amp; Operational Settings</div>
-        <div class="card-body">
-          <div class="field-group"><label>Average Speed (mph)</label><input type="number" class="plain" id="set-avg-speed" min="20" max="75" step="1"></div>
-          <div class="field-group"><label>DOT Max Driving Hours</label><input type="number" class="plain" id="set-dot-max" min="8" max="11" step="0.5"></div>
-          <div class="field-group"><label>Default Max Loads/Day (Montgomery drivers)</label><input type="number" class="plain" id="set-max-loads" min="1" max="5" step="1"></div>
-          <button class="btn btn-navy mt-8" onclick="saveSettings()">Save Settings</button>
+      <div class="settings-section-title">Destinations</div>
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Edit one-way miles. Round-trip and hours auto-calculate.</p>
+      <div class="tbl-wrap" style="margin-bottom:20px;">
+        <table>
+          <thead><tr><th>Code</th><th>Location</th><th>Miles (1-way)</th><th>Miles (RT)</th><th>Est. Hrs</th><th>Carrier</th></tr></thead>
+          <tbody id="dest-tbody"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-dark btn-sm mt-8" onclick="saveDestinations()" style="margin-bottom:24px;">Save Destinations</button>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Operational Settings</div>
+      <div class="field-group"><label>Average Speed (mph)</label><input type="number" class="plain" id="set-avg-speed" min="20" max="75" step="1"></div>
+      <div class="field-group"><label>DOT Max Driving Hours</label><input type="number" class="plain" id="set-dot-max" min="8" max="11" step="0.5"></div>
+      <div class="field-group"><label>Default Max Loads/Day (Montgomery drivers)</label><input type="number" class="plain" id="set-max-loads" min="1" max="5" step="1"></div>
+      <button class="btn btn-dark btn-sm" onclick="saveSettings()" style="margin-bottom:24px;">Save Settings</button>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Data</div>
+      <div class="btn-group" style="margin-bottom:10px;">
+        <button class="btn btn-green btn-sm" onclick="exportState()">📤 Export State</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file-input').click()">📥 Import State</button>
+        <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:20px;">Export saves your drivers, settings &amp; loads. Import restores them on any machine.</p>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Danger Zone</div>
+      <div id="reset-confirm-box" class="confirm-box">
+        ⚠️ This will erase all driver changes. Are you sure?
+        <div class="btn-group mt-8">
+          <button class="btn btn-danger btn-sm" onclick="hardReset()">Yes, Reset Everything</button>
+          <button class="btn btn-ghost btn-sm" onclick="hideResetConfirm()">Cancel</button>
         </div>
       </div>
+      <button class="btn btn-danger btn-sm" onclick="showResetConfirm()" id="reset-btn">↺ Reset to Defaults</button>
 
-      <div class="card">
-        <div class="card-header dark">🏭 Distribution Center</div>
-        <div class="card-body" style="font-size:13px;line-height:1.8;color:var(--gray-600);">
-          <strong style="color:var(--navy);">Coca-Cola Bottling Co. United</strong><br>
-          Montgomery DC — 4919 Westport Blvd, Montgomery, AL<br>
-          Operating Hours: 5:00 AM – 8:00 PM<br>
-          <div class="divider"></div>
-          <strong>Shoreline</strong> — Outside carrier for Panama City &amp; Columbus overflow.<br>
-          <strong>JR Mesi:</strong> Panama City ONLY (1 load/day max).<br>
-          <strong>Marcus Hood:</strong> Columbus ONLY (2 loads/day max).
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header dark">🗑️ Data Management</div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">Reset all data back to factory defaults.</p>
-          <div id="reset-confirm-box" class="confirm-box">
-            ⚠️ This will erase all driver changes. Are you sure?
-            <div class="btn-group mt-8">
-              <button class="btn btn-danger btn-sm" onclick="hardReset()">Yes, Reset Everything</button>
-              <button class="btn btn-ghost btn-sm" onclick="hideResetConfirm()">Cancel</button>
-            </div>
-          </div>
-          <button class="btn btn-danger btn-sm" onclick="showResetConfirm()" id="reset-btn">↺ Reset to Defaults</button>
-        </div>
-      </div>
     </div>
-
   </div>
-</div><!-- /tab-settings -->
+</div>
 
-<!-- Hidden file input for state import -->
-<input type="file" id="import-file-input" accept=".json" style="display:none" onchange="handleImportFile(event)">
-
-<!-- ═══════════════════════ ADD/EDIT DRIVER MODAL ════════════════════════ -->
-<div class="modal-overlay" id="driver-modal">
+<!-- ═══ ADD/EDIT DRIVER MODAL ════════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="driver-modal">
   <div class="modal">
     <div class="modal-header">
       <span id="modal-title">Add New Driver</span>
@@ -703,10 +780,16 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-navy" onclick="saveDriver()">Save Driver</button>
+      <button class="btn btn-primary" onclick="saveDriver()">Save Driver</button>
     </div>
   </div>
 </div>
+
+<!-- Hidden file input -->
+<input type="file" id="import-file-input" accept=".json" style="display:none" onchange="handleImportFile(event)">
+
+<!-- ═══ TAB: SETTINGS (hidden, kept for JS switchTab compatibility) ══ -->
+<div id="tab-settings" class="tab-content" style="display:none!important;"></div>
 
 <script>
 // ════════════════════════════════════════════════════════════════════════════
@@ -859,12 +942,12 @@ function renderPhaseInputs() {
   PHASES.forEach((phase, idx) => {
     const hrs = getHrsForDest(phase.dest);
     const row = document.createElement('div');
-    row.className = 'form-row';
+    row.className = 'phase-row';
     row.innerHTML = `<div class="phase-num">${idx+1}</div>
-      <label>${phase.label}</label>
-      <input type="number" min="0" max="99" value="${state.loads[idx]||0}" id="phase-input-${idx}"
+      <label class="phase-label">${phase.label}</label>
+      <input type="number" class="phase-input" min="0" max="99" value="${state.loads[idx]||0}" id="phase-input-${idx}"
              onchange="updateLoad(${idx},this.value)" oninput="updateLoad(${idx},this.value)">
-      <span class="hrs-badge">${hrs.toFixed(2)}h ea</span>`;
+      <span class="phase-hrs">${hrs.toFixed(2)}h ea</span>`;
     c.appendChild(row);
   });
   updateTotalsDisplay();
@@ -889,6 +972,7 @@ function resetLoads() {
   renderPhaseInputs();
   document.getElementById('assignments-section').style.display = 'none';
   document.getElementById('driver-cards-section').style.display = 'none';
+  document.getElementById('metrics-grid').style.display = 'none';
   renderMetrics(null);
   renderWorkload(null);
   renderShoreline(null);
@@ -917,11 +1001,10 @@ function renderMetrics(result) {
   document.getElementById('m-total').textContent    = total;
   document.getElementById('m-internal').textContent = internal;
   document.getElementById('m-shore').textContent    = shore;
-  document.getElementById('m-dot-ok').textContent   = dotOver > 0 ? `⚠️ ${dotOver}` : `✓ ${dotOk}`;
+  document.getElementById('m-dot-ok').textContent   = dotOver > 0 ? `⚠️ ${dotOver} Over` : `✓ ${dotOk} OK`;
   document.getElementById('m-dot-ok').style.color   = dotOver > 0 ? 'var(--danger)' : 'var(--green)';
-  document.getElementById('m-dot-ok').style.fontWeight = '700';
+  document.getElementById('metrics-grid').style.display = 'block';
 
-  // Print summary bar
   document.getElementById('psb-total').textContent    = total;
   document.getElementById('psb-internal').textContent = internal;
   document.getElementById('psb-shoreline').textContent= shore;
@@ -966,9 +1049,11 @@ function renderWorkload(result) {
 //  RENDER: SHORELINE PANEL
 // ════════════════════════════════════════════════════════════════════════════
 function renderShoreline(result) {
-  const el = document.getElementById('shoreline-panel');
-  if (!result) { el.innerHTML = '<div class="empty-state" style="padding:16px;">Run optimizer to see Shoreline loads</div>'; return; }
+  const panel = document.getElementById('shoreline-panel');
+  const el    = document.getElementById('shoreline-content');
+  if (!result) { panel.style.display='none'; return; }
   const shore = result.assignments.filter(a => !a.internal);
+  if (!shore.length) { panel.style.display='none'; return; }
   const byDest = {};
   shore.forEach(a => { byDest[a.dest] = (byDest[a.dest]||0)+1; });
   const dNames = {PAN:'Panama City',COL:'Columbus',DOT:'Dothan',AUB:'Auburn',EVG:'Evergreen'};
@@ -977,12 +1062,9 @@ function renderShoreline(result) {
       <span><span class="tag ${DEST_TAGS[code]}">${code}</span> ${dNames[code]}</span>
       <span class="shoreline-num">${cnt}</span>
     </div>`).join('');
-  if (!rows) {
-    rows = '<div class="shoreline-row" style="color:var(--green);font-weight:600;justify-content:center;">✓ No Shoreline overflow</div>';
-  } else {
-    rows += `<div class="shoreline-row"><span style="font-weight:700;">TOTAL</span><span class="shoreline-num">${shore.length}</span></div>`;
-  }
-  el.innerHTML = `<div style="padding:4px 0;">${rows}</div>`;
+  rows += `<div class="shoreline-row"><span style="font-weight:700;">TOTAL</span><span class="shoreline-num">${shore.length}</span></div>`;
+  el.innerHTML = rows;
+  panel.style.display = 'block';
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -993,7 +1075,6 @@ function renderDriverCards(result) {
   const section = document.getElementById('driver-cards-section');
   if (!result) { section.style.display='none'; return; }
 
-  // Group assignments by final driver
   const byDriver = {};
   result.assignments.forEach(a => {
     const finalDrv = a.override || a.autoDriver;
@@ -1001,10 +1082,8 @@ function renderDriverCards(result) {
     byDriver[finalDrv].push(a);
   });
 
-  // Get ordered internal drivers (only those with loads) + Shoreline last
   const internalDriversWithLoads = getAvailableDrivers()
     .filter(d => byDriver[d.name] && byDriver[d.name].length > 0);
-
   const shoreLoads = byDriver['SHORELINE'] || [];
 
   function runCard(driverName, runs, homeBase, totalHrs, dotMax) {
@@ -1048,14 +1127,12 @@ function renderDriverCards(result) {
     </div>`;
   }
 
-  // Build internal driver cards
   let cardsHTML = internalDriversWithLoads.map(d => {
     const runs   = byDriver[d.name] || [];
     const totalHrs = runs.reduce((s,r) => s + r.hrs, 0);
     return runCard(d.name, runs, d.homeBase, totalHrs, state.settings.dotMaxHours);
   }).join('');
 
-  // Build Shoreline card
   if (shoreLoads.length > 0) {
     const dNames = {PAN:'Panama City',COL:'Columbus',DOT:'Dothan',AUB:'Auburn',EVG:'Evergreen'};
     const byDest = {};
@@ -1082,7 +1159,6 @@ function renderDriverCards(result) {
   grid.innerHTML = cardsHTML;
   section.style.display = 'block';
 
-  // Update print gen time
   const now = new Date();
   document.getElementById('print-gen-time').textContent =
     now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
@@ -1276,6 +1352,20 @@ function closeModal() { document.getElementById('driver-modal').classList.remove
 document.getElementById('driver-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
 
 // ════════════════════════════════════════════════════════════════════════════
+//  SETTINGS PANEL
+// ════════════════════════════════════════════════════════════════════════════
+function openSettings() {
+  renderDestinations();
+  renderSettings();
+  document.getElementById('settings-modal').classList.add('open');
+}
+function closeSettings(e) {
+  if (!e || e.target === document.getElementById('settings-modal')) {
+    document.getElementById('settings-modal').classList.remove('open');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  DESTINATIONS & SETTINGS
 // ════════════════════════════════════════════════════════════════════════════
 function renderDestinations() {
@@ -1329,7 +1419,7 @@ function renderDriverRules() {
   if (col.length) rules.push(`⚓ <strong>${col.map(d=>d.name).join(', ')}</strong> → Columbus (${colCap} load${colCap!==1?'s':''}/day)`);
   else rules.push(`⚠️ <span style="color:var(--danger)">No Columbus driver — all COL loads → Shoreline</span>`);
   rules.push(`🚚 <strong>${gen.length} Montgomery driver${gen.length!==1?'s':''}</strong> for Dothan / Auburn / Evergreen`);
-  el.innerHTML = rules.map(r=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--gray-100);">${r}</div>`).join('');
+  el.innerHTML = rules.map(r=>`<div style="padding:3px 0;border-bottom:1px solid var(--gray-100);">${r}</div>`).join('');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1359,22 +1449,16 @@ function exportCSV() {
 // ════════════════════════════════════════════════════════════════════════════
 function exportState() {
   const snapshot = {
-    _version: 1,
-    _app: 'CCBCU Route Optimizer',
-    _exported: new Date().toISOString(),
-    drivers:      deepCopy(state.drivers),
-    destinations: deepCopy(state.destinations),
-    settings:     deepCopy(state.settings),
-    loads:        deepCopy(state.loads),
-    lastResult:   state.lastResult ? deepCopy(state.lastResult) : null,
+    _version: 1, _app: 'CCBCU Route Optimizer', _exported: new Date().toISOString(),
+    drivers: deepCopy(state.drivers), destinations: deepCopy(state.destinations),
+    settings: deepCopy(state.settings), loads: deepCopy(state.loads),
+    lastResult: state.lastResult ? deepCopy(state.lastResult) : null,
   };
-  const json = JSON.stringify(snapshot, null, 2);
-  const blob = new Blob([json], {type: 'application/json'});
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], {type: 'application/json'});
   const url  = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  const date = new Date().toISOString().slice(0,10);
-  link.href     = url;
-  link.download = `CCBCU_RouteOptimizer_${date}.json`;
+  link.href = url;
+  link.download = `CCBCU_RouteOptimizer_${new Date().toISOString().slice(0,10)}.json`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -1391,24 +1475,17 @@ function handleImportFile(evt) {
         return;
       }
       if (!confirm(`Import state from ${file.name}?\n\nThis will replace your current drivers, settings, and load counts.`)) return;
-
-      // Restore state
       state.drivers      = data.drivers;
       state.destinations = data.destinations || deepCopy(DEFAULT_DESTINATIONS);
       state.settings     = data.settings;
       state.loads        = data.loads || [0,0,0,0,0,0,0];
       state.lastResult   = data.lastResult || null;
-
-      // Persist to localStorage
       saveDrivers(); saveDests(); saveSettings_(); saveLoads(); saveResult();
-
-      // Re-render everything
       init();
       alert(`✅ State imported from ${file.name}\n${data.drivers.length} drivers loaded.`);
     } catch(err) {
       alert('❌ Could not read file: ' + err.message);
     }
-    // Reset the input so the same file can be re-imported if needed
     evt.target.value = '';
   };
   reader.readAsText(file);
@@ -1420,10 +1497,10 @@ function handleImportFile(evt) {
 function switchTab(tab, evt) {
   document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
-  document.getElementById(`tab-${tab}`).classList.add('active');
+  const tabEl = document.getElementById(`tab-${tab}`);
+  if (tabEl) tabEl.classList.add('active');
   if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
-  if (tab==='fleet')    renderFleetTable();
-  if (tab==='settings') { renderDestinations(); renderSettings(); }
+  if (tab==='fleet') { renderFleetTable(); renderDriverRules(); }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1433,7 +1510,7 @@ function showResetConfirm()  { document.getElementById('reset-confirm-box').clas
 function hideResetConfirm()  { document.getElementById('reset-confirm-box').classList.remove('show'); document.getElementById('reset-btn').style.display=''; }
 function hardReset() {
   ['ccu_drivers','ccu_dests','ccu_settings','ccu_loads','ccu_lastresult'].forEach(k=>localStorage.removeItem(k));
-  state = loadState(); init(); hideResetConfirm(); alert('✅ Reset to defaults.');
+  state = loadState(); init(); hideResetConfirm(); closeSettings(); alert('✅ Reset to defaults.');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1444,8 +1521,8 @@ function updateHeaderDate() {
   const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const ds = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
-  document.getElementById('hdr-date').textContent     = ds;
-  document.getElementById('hdr-day').textContent      = days[now.getDay()];
+  document.getElementById('hdr-date').textContent      = ds;
+  document.getElementById('hdr-day').textContent       = days[now.getDay()];
   document.getElementById('print-date-hdr').textContent = ds + ' — ' + days[now.getDay()];
 }
 
