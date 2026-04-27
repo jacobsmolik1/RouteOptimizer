@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCBCU | Route Optimizer — Montgomery DC</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#001F5B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Route Optimizer">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root {
+  --red:        #E31837;
+  --navy:       #001F5B;
+  --navy-dark:  #001040;
+  --navy-light: #0D2E80;
+  --white:      #FFFFFF;
+  --gray-50:    #F7F8FC;
+  --gray-100:   #EEF0F6;
+  --gray-200:   #DDE1ED;
+  --gray-400:   #9199B4;
+  --gray-600:   #4A5275;
+  --gray-800:   #1E2440;
+  --green:      #1B6B2F;
+  --green-bg:   #E6F4EA;
+  --amber:      #7A4800;
+  --amber-bg:   #FFF4E0;
+  --danger:     #B71C1C;
+  --danger-bg:  #FDECEA;
+  --purple:     #4A148C;
+  --purple-bg:  #F3E5F5;
+  --blue:       #0D47A1;
+  --blue-bg:    #E3F2FD;
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.10);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.12);
+  --radius:     8px;
+  --radius-lg:  12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; background: var(--gray-50); color: var(--gray-800); min-height: 100vh; }
+
+/* ─── HEADER ─────────────────────────────────────────────────────────────── */
+header { background: var(--navy); color: var(--white); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 60px; box-shadow: var(--shadow-md); position: sticky; top: 0; z-index: 100; }
+.header-brand { display: flex; align-items: center; gap: 12px; }
+.brand-logo { display: flex; align-items: center; gap: 0; }
+.brand-logo-coke { background: var(--red); color: white; font-weight: 900; font-size: 11px; padding: 5px 8px; border-radius: 4px 0 0 4px; letter-spacing: 0.3px; line-height: 1.2; text-align: center; }
+.brand-logo-coke span { display: block; font-size: 9px; font-weight: 600; opacity: 0.85; letter-spacing: 0.5px; }
+.brand-logo-united { background: white; color: var(--navy); font-weight: 900; font-size: 10px; padding: 5px 8px; border-radius: 0 4px 4px 0; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1.2; text-align: center; }
+.brand-logo-united span { display: block; font-size: 8px; color: var(--gray-600); letter-spacing: 0.3px; }
+.header-title { font-size: 15px; font-weight: 700; letter-spacing: 0.3px; }
+.header-sub { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 1px; }
+.header-date { font-size: 12px; color: var(--gray-400); text-align: right; }
+.header-date strong { display: block; color: var(--white); font-size: 14px; font-weight: 700; }
+
+/* ─── TABS ───────────────────────────────────────────────────────────────── */
+.tab-bar { background: var(--navy-dark); display: flex; padding: 0 24px; gap: 4px; }
+.tab-btn { background: none; border: none; color: var(--gray-400); font-size: 13px; font-weight: 500; padding: 12px 18px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.15s; letter-spacing: 0.3px; }
+.tab-btn:hover { color: var(--white); }
+.tab-btn.active { color: var(--white); border-bottom-color: var(--red); }
+.tab-content { display: none; padding: 20px 24px; }
+.tab-content.active { display: block; }
+
+/* ─── LAYOUT ─────────────────────────────────────────────────────────────── */
+.two-col { display: grid; grid-template-columns: 360px 1fr; gap: 16px; align-items: start; }
+.card { background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); overflow: hidden; }
+.card-header { background: var(--navy); color: var(--white); padding: 10px 16px; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.card-header.red    { background: var(--red); }
+.card-header.dark   { background: var(--navy-dark); }
+.card-header.purple { background: var(--purple); }
+.card-body { padding: 16px; }
+.section-gap { display: flex; flex-direction: column; gap: 16px; }
+
+/* ─── FORMS ──────────────────────────────────────────────────────────────── */
+.form-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; border-radius: 6px; gap: 8px; }
+.form-row:nth-child(even) { background: var(--gray-50); }
+.form-row label { font-size: 13px; color: var(--gray-600); flex: 1; }
+.form-row .phase-num { background: var(--navy); color: white; font-size: 10px; font-weight: 700; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.form-row input[type="number"] { width: 72px; padding: 5px 8px; border: 2px solid var(--gray-200); border-radius: 6px; font-size: 14px; font-weight: 600; text-align: center; color: var(--blue); background: var(--blue-bg); transition: border-color 0.15s; }
+.form-row input[type="number"]:focus { outline: none; border-color: var(--navy); }
+.form-row .hrs-badge { font-size: 11px; color: var(--gray-400); width: 52px; text-align: right; }
+input[type="text"], input[type="number"].plain, select, textarea { padding: 7px 10px; border: 1px solid var(--gray-200); border-radius: 6px; font-size: 13px; width: 100%; color: var(--gray-800); transition: border-color 0.15s; }
+input[type="text"]:focus, input[type="number"].plain:focus, select:focus { outline: none; border-color: var(--navy); }
+.field-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.field-group label { font-size: 12px; font-weight: 600; color: var(--gray-600); }
+
+/* ─── BUTTONS ────────────────────────────────────────────────────────────── */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius); font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s, transform 0.1s; letter-spacing: 0.2px; }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--red); color: white; }
+.btn-navy    { background: var(--navy); color: white; }
+.btn-green   { background: #1B6B2F; color: white; }
+.btn-outline { background: white; color: var(--navy); border: 1.5px solid var(--navy); }
+.btn-ghost   { background: var(--gray-100); color: var(--gray-600); }
+.btn-danger  { background: var(--danger-bg); color: var(--danger); border: 1px solid #f5c6c6; }
+.btn:hover   { opacity: 0.88; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-full { width: 100%; justify-content: center; padding: 11px; font-size: 14px; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ─── METRICS ────────────────────────────────────────────────────────────── */
+.metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.metric-tile { background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 12px 14px; text-align: center; box-shadow: var(--shadow-sm); }
+.metric-tile .val { font-size: 28px; font-weight: 800; line-height: 1; }
+.metric-tile .lbl { font-size: 10px; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+.metric-tile.navy { background: var(--navy); color: white; }
+.metric-tile.navy .lbl { color: rgba(255,255,255,0.6); }
+.metric-tile.red  { background: var(--red); color: white; }
+.metric-tile.red  .lbl { color: rgba(255,255,255,0.7); }
+.metric-tile.purple { background: var(--purple); color: white; }
+.metric-tile.purple .lbl { color: rgba(255,255,255,0.7); }
+.metric-tile.green  { background: #1B6B2F; color: white; }
+.metric-tile.green  .lbl { color: rgba(255,255,255,0.7); }
+
+/* ─── TABLES ─────────────────────────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+thead tr { background: var(--navy); color: white; }
+thead th { padding: 8px 10px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid var(--gray-100); transition: background 0.1s; }
+tbody tr:hover { background: var(--gray-50); }
+tbody td { padding: 7px 10px; vertical-align: middle; }
+.tbl-num { color: var(--gray-400); font-size: 11px; text-align: center; width: 36px; }
+tr.row-pan   { background: #FFFBF0; }
+tr.row-col   { background: #F0F6FF; }
+tr.row-dot   { background: #F0FBF2; }
+tr.row-aub   { background: #FAF0FF; }
+tr.row-evg   { background: #F0FFFB; }
+tr.row-shore { background: var(--purple-bg); }
+
+/* ─── BADGES / TAGS ──────────────────────────────────────────────────────── */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badge-ok    { background: var(--green-bg);  color: var(--green); }
+.badge-warn  { background: var(--amber-bg);  color: var(--amber); }
+.badge-over  { background: var(--danger-bg); color: var(--danger); }
+.badge-shore { background: var(--purple-bg); color: var(--purple); }
+.badge-vac   { background: var(--amber-bg);  color: var(--amber); }
+.badge-avail { background: var(--green-bg);  color: var(--green); }
+.badge-pan   { background: #FFF9E0; color: #7A5800; border: 1px solid #F5DBA0; }
+.badge-col   { background: var(--blue-bg);   color: var(--blue);  border: 1px solid #BBDEFB; }
+.badge-any   { background: var(--gray-100);  color: var(--gray-600); border: 1px solid var(--gray-200); }
+.tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
+.tag-panama   { background: #FFF3CD; color: #7A5800; }
+.tag-columbus { background: #DBEAFE; color: #1D4ED8; }
+.tag-dothan   { background: #DCFCE7; color: #166534; }
+.tag-auburn   { background: #F3E8FF; color: #6B21A8; }
+.tag-evg      { background: #CCFBF1; color: #0F766E; }
+.tag-shore    { background: #EDE9FE; color: #5B21B6; }
+
+/* ─── VACATION TOGGLE ────────────────────────────────────────────────────── */
+.toggle-wrap { display: flex; align-items: center; gap: 6px; }
+.toggle { position: relative; display: inline-block; width: 40px; height: 22px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; inset: 0; background: var(--gray-200); border-radius: 22px; cursor: pointer; transition: background 0.2s; }
+.slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+input:checked + .slider { background: var(--amber); }
+input:checked + .slider::before { transform: translateX(18px); }
+
+/* ─── WORKLOAD BARS ──────────────────────────────────────────────────────── */
+.workload-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--gray-100); }
+.workload-name { width: 160px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.workload-bar-wrap { flex: 1; background: var(--gray-100); border-radius: 4px; height: 14px; overflow: hidden; }
+.workload-bar { height: 100%; border-radius: 4px; transition: width 0.4s; }
+.workload-bar.ok   { background: #2E7D32; }
+.workload-bar.warn { background: #E65100; }
+.workload-bar.over { background: var(--danger); }
+.workload-hrs { font-size: 11px; color: var(--gray-600); width: 52px; text-align: right; white-space: nowrap; }
+
+/* ─── DRIVER ASSIGNMENT CARDS ─────────────────────────────────────────────── */
+.driver-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 0;
+}
+.driver-card {
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: white;
+  box-shadow: var(--shadow-sm);
+}
+.driver-card-header {
+  background: var(--navy);
+  color: white;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.driver-card-header .drv-initial {
+  background: var(--red);
+  color: white;
+  font-weight: 900;
+  font-size: 13px;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.driver-card-header .drv-name { font-weight: 700; font-size: 12px; line-height: 1.2; }
+.driver-card-header .drv-base { font-size: 10px; color: rgba(255,255,255,0.55); }
+.driver-card-runs { padding: 0; }
+.run-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--gray-100);
+  padding: 6px 10px;
+  gap: 8px;
+}
+.run-row:last-child { border-bottom: none; }
+.run-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: white;
+  background: var(--navy);
+  padding: 2px 5px;
+  border-radius: 3px;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.run-label.run2 { background: var(--navy-light); }
+.run-label.run3 { background: #2D6A4F; }
+.run-label.empty { background: var(--gray-200); color: var(--gray-400); }
+.run-phase { flex: 1; font-size: 11px; color: var(--gray-800); font-weight: 500; }
+.run-phase.empty { color: var(--gray-400); font-style: italic; }
+.run-hrs { font-size: 11px; font-weight: 700; color: var(--gray-600); white-space: nowrap; }
+.run-hrs.empty { color: var(--gray-400); font-weight: 400; }
+.driver-card-footer {
+  background: var(--gray-50);
+  border-top: 1.5px solid var(--gray-200);
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card-total-hrs { font-size: 12px; font-weight: 800; color: var(--gray-800); }
+.card-dot-status { font-size: 10px; font-weight: 700; }
+.card-dot-ok   { color: var(--green); }
+.card-dot-warn { color: var(--amber); }
+.card-dot-over { color: var(--danger); }
+.driver-card.is-shore { border-color: #C5B3E0; }
+.driver-card.is-shore .driver-card-header { background: var(--purple); }
+.driver-card.is-shore .driver-card-footer { background: var(--purple-bg); }
+
+/* ─── MODAL ──────────────────────────────────────────────────────────────── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,30,0.55); z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); width: 440px; max-width: 96vw; max-height: 92vh; overflow-y: auto; }
+.modal-header { background: var(--navy); color: white; padding: 14px 18px; font-weight: 700; font-size: 14px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; display: flex; justify-content: space-between; align-items: center; }
+.modal-close { background: none; border: none; color: rgba(255,255,255,0.7); font-size: 20px; cursor: pointer; line-height: 1; }
+.modal-close:hover { color: white; }
+.modal-body { padding: 20px 18px; }
+.modal-footer { padding: 14px 18px; border-top: 1px solid var(--gray-100); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ─── SHORELINE PANEL ────────────────────────────────────────────────────── */
+.shoreline-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--purple-bg); }
+.shoreline-row:last-child { border-bottom: none; font-weight: 700; }
+.shoreline-row span { font-size: 13px; }
+.shoreline-num { font-size: 18px; font-weight: 800; color: var(--purple); }
+
+/* ─── SELECT CONTROLS ────────────────────────────────────────────────────── */
+select.override-sel { padding: 3px 6px; font-size: 11px; border: 1px solid var(--gray-200); border-radius: 4px; background: white; min-width: 130px; color: var(--gray-800); }
+select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; border: 1px solid var(--gray-200); min-width: 90px; }
+
+/* ─── MISC ───────────────────────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--gray-200); margin: 12px 0; }
+.empty-state { text-align: center; color: var(--gray-400); padding: 32px; font-size: 13px; }
+.tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.warn-banner { background: var(--amber-bg); border: 1px solid #FFCC80; border-radius: var(--radius); padding: 10px 14px; font-size: 12px; color: var(--amber); display: flex; gap: 8px; align-items: flex-start; }
+.dot-ok   { color: var(--green); font-weight: 700; }
+.dot-over { color: var(--danger); font-weight: 700; }
+.confirm-box { background: var(--danger-bg); border: 1px solid #f5c6c6; border-radius: var(--radius); padding: 14px 16px; font-size: 13px; color: var(--danger); display: none; }
+.confirm-box.show { display: block; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRINT STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media print {
+  /* Hide all screen-only UI */
+  header, .tab-bar, .no-print { display: none !important; }
+  body { background: white; font-size: 10px; margin: 0; }
+  .tab-content { display: none !important; padding: 0; }
+  #tab-dashboard { display: block !important; }
+  #tab-fleet, #tab-settings { display: none !important; }
+
+  /* Print header (hidden on screen) */
+  .print-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0 8px;
+    border-bottom: 3px solid #001F5B;
+    margin-bottom: 10px;
+  }
+  .print-header-brand { display: flex; align-items: center; gap: 10px; }
+  .print-header-badge { background: #E31837; color: white; font-size: 10px; font-weight: 900; padding: 4px 8px; border-radius: 3px; }
+  .print-header-title { font-size: 14px; font-weight: 800; color: #001F5B; }
+  .print-header-sub { font-size: 9px; color: #666; }
+  .print-header-right { text-align: right; font-size: 10px; color: #333; }
+  .print-header-right strong { font-size: 13px; color: #001F5B; display: block; }
+
+  /* Print summary bar */
+  .print-summary-bar {
+    display: flex !important;
+    gap: 12px;
+    background: #001F5B;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 10px;
+  }
+  .print-summary-bar .psb-item { text-align: center; flex: 1; }
+  .print-summary-bar .psb-num { font-size: 18px; font-weight: 900; line-height: 1; }
+  .print-summary-bar .psb-lbl { font-size: 8px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Driver cards - compact for print */
+  .two-col { display: none; }
+  #driver-cards-section { display: block !important; }
+  .driver-cards-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    page-break-inside: avoid;
+  }
+  .driver-card { box-shadow: none; border: 1.5px solid #ccc; page-break-inside: avoid; }
+  .driver-card-header { padding: 6px 8px; }
+  .driver-card-header .drv-initial { width: 22px; height: 22px; font-size: 10px; }
+  .driver-card-header .drv-name { font-size: 10px; }
+  .driver-card-header .drv-base { font-size: 8px; }
+  .run-row { padding: 4px 8px; }
+  .run-label { font-size: 8px; padding: 1px 4px; width: 30px; }
+  .run-phase { font-size: 9px; }
+  .run-hrs { font-size: 9px; }
+  .driver-card-footer { padding: 4px 8px; }
+  .card-total-hrs { font-size: 10px; }
+  .card-dot-status { font-size: 9px; }
+  .driver-card-header .drv-initial { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .driver-card-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* DOT footer note */
+  .print-dot-note {
+    display: block !important;
+    margin-top: 10px;
+    font-size: 8px;
+    color: #666;
+    border-top: 1px solid #ccc;
+    padding-top: 6px;
+  }
+
+  /* Shoreline card */
+  .is-shore .driver-card-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Full assignment table on page 2 */
+  #assignments-section {
+    page-break-before: always;
+    display: block !important;
+  }
+  .card { box-shadow: none; border: 1px solid #ccc; }
+  table { font-size: 9px; }
+  thead th { background: #001F5B !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  tr.row-pan, tr.row-col, tr.row-dot, tr.row-aub, tr.row-evg, tr.row-shore
+    { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* Hidden on screen */
+.print-header, .print-summary-bar, .print-dot-note { display: none; }
+#driver-cards-section { }
+</style>
+</head>
+<body>
+
+<!-- ═══════ PRINT-ONLY HEADER (hidden on screen) ═══════════════════════════ -->
+<div class="print-header">
+  <div class="print-header-brand">
+    <div class="print-header-badge">CCBCU</div>
+    <div>
+      <div class="print-header-title">Route Optimizer — Daily Load Assignments</div>
+      <div class="print-header-sub">Coca-Cola Bottling Co. United • Montgomery DC • 4919 Westport Blvd</div>
+    </div>
+  </div>
+  <div class="print-header-right">
+    <strong id="print-date-hdr"></strong>
+    <span id="print-dc-info">Montgomery DC • DOT Compliant</span>
+  </div>
+</div>
+<div class="print-summary-bar" id="print-summary-bar">
+  <div class="psb-item"><div class="psb-num" id="psb-total">—</div><div class="psb-lbl">Total Loads</div></div>
+  <div class="psb-item"><div class="psb-num" id="psb-internal">—</div><div class="psb-lbl">Internal</div></div>
+  <div class="psb-item"><div class="psb-num" id="psb-shoreline">—</div><div class="psb-lbl">Shoreline</div></div>
+  <div class="psb-item"><div class="psb-num" id="psb-drivers">—</div><div class="psb-lbl">Drivers Out</div></div>
+  <div class="psb-item"><div class="psb-num">10h</div><div class="psb-lbl">DOT Limit</div></div>
+</div>
+
+<!-- ═══════════════════════════════ HEADER ════════════════════════════════ -->
+<header>
+  <div class="header-brand">
+    <div class="brand-logo">
+      <div class="brand-logo-coke">COCA‑COLA<span>BOTTLING CO.</span></div>
+      <div class="brand-logo-united">UNITED<span>since 1902</span></div>
+    </div>
+    <div>
+      <div class="header-title">Route Optimizer</div>
+      <div class="header-sub">Montgomery DC  •  4919 Westport Blvd  •  DOT Compliant  •  3-Run System</div>
+    </div>
+  </div>
+  <div class="header-date">
+    <strong id="hdr-date"></strong>
+    <span id="hdr-day"></span>
+  </div>
+</header>
+
+<!-- ══════════════════════════════ TAB BAR ═══════════════════════════════ -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('dashboard', event)">📦 Dashboard</button>
+  <button class="tab-btn" onclick="switchTab('fleet', event)">👤 Fleet &amp; Drivers</button>
+  <button class="tab-btn" onclick="switchTab('settings', event)">⚙️ Settings</button>
+</div>
+
+<!-- ════════════════════════ TAB: DASHBOARD ══════════════════════════════ -->
+<div id="tab-dashboard" class="tab-content active">
+
+  <div class="two-col">
+
+    <!-- LEFT COLUMN -->
+    <div class="section-gap">
+
+      <div class="card">
+        <div class="card-header">📦 Daily Load Input — 7-Phase Build Order</div>
+        <div class="card-body" style="padding:8px 12px;">
+          <div id="phase-inputs"></div>
+          <div class="divider"></div>
+          <div class="form-row" style="background:var(--navy-dark);border-radius:6px;margin-top:4px;">
+            <div class="phase-num" style="background:var(--red);">Σ</div>
+            <label style="color:white;font-weight:700;">TOTAL LOADS</label>
+            <span id="total-loads-display" style="color:white;font-weight:800;font-size:18px;">0</span>
+            <span class="hrs-badge" style="color:rgba(255,255,255,0.6);" id="total-hrs-display">0.0 hrs</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="generateAssignments()">⚡ Generate Load Assignments</button>
+
+      <div class="card">
+        <div class="card-header purple">🚛 Shoreline Overflow</div>
+        <div id="shoreline-panel"><div class="empty-state" style="padding:16px;">Run optimizer to see Shoreline loads</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header dark">⚠️ Driver Rules</div>
+        <div class="card-body" style="padding:10px 14px;" id="driver-rules-panel"></div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="section-gap">
+
+      <div class="metrics-grid" id="metrics-grid">
+        <div class="metric-tile navy"><div class="val" id="m-total">—</div><div class="lbl">Total Loads</div></div>
+        <div class="metric-tile navy"><div class="val" id="m-internal">—</div><div class="lbl">Internal</div></div>
+        <div class="metric-tile purple"><div class="val" id="m-shore">—</div><div class="lbl">Shoreline</div></div>
+        <div class="metric-tile"><div class="val" id="m-avail">—</div><div class="lbl">Drivers Available</div></div>
+        <div class="metric-tile"><div class="val" id="m-dot-limit">10</div><div class="lbl">DOT Limit (hrs)</div></div>
+        <div class="metric-tile"><div class="val" id="m-dot-ok">—</div><div class="lbl">DOT Compliant</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          👤 Driver Workload Summary
+          <span id="dot-status-summary" style="margin-left:auto;font-size:11px;"></span>
+        </div>
+        <div class="card-body" style="padding:10px 14px;">
+          <div id="workload-list"><div class="empty-state" style="padding:16px;">Run optimizer to see workload</div></div>
+        </div>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="card no-print">
+        <div class="card-header dark">Actions</div>
+        <div class="card-body">
+          <div class="btn-group">
+            <button class="btn btn-navy" onclick="window.print()">🖨️ Print Assignment Sheet</button>
+            <button class="btn btn-ghost" onclick="exportCSV()">⬇️ Export CSV</button>
+            <button class="btn btn-ghost" onclick="resetLoads()">↺ Reset Loads</button>
+          </div>
+          <div class="divider"></div>
+          <div class="btn-group">
+            <button class="btn btn-green" onclick="exportState()">📤 Export State</button>
+            <button class="btn btn-outline" onclick="document.getElementById('import-file-input').click()">📥 Import State</button>
+          </div>
+          <p style="font-size:11px;color:var(--gray-400);margin-top:8px;">Export saves your drivers, settings &amp; loads to a file. Import restores them on any machine.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ DRIVER ASSIGNMENT CARDS ════════════════════════════════════════ -->
+  <div id="driver-cards-section" style="margin-top:16px; display:none;">
+    <div class="card">
+      <div class="card-header flex-between">
+        <span>🪪 Driver Assignment Cards — Pass-Out Sheet</span>
+        <span style="font-size:11px;opacity:0.7;font-weight:400;">Shows each driver's Run 1 / 2 / 3</span>
+      </div>
+      <div class="card-body">
+        <div class="driver-cards-grid" id="driver-cards-grid"></div>
+        <div class="print-dot-note">
+          ⚖️ DOT COMPLIANCE: All drivers must stay within <strong>10-hour driving limit</strong>. Drivers showing ⚠️ OVER must not be dispatched for additional runs.
+          Generated: <span id="print-gen-time"></span>  •  Coca-Cola Bottling Co. United — Montgomery DC
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FULL ASSIGNMENTS TABLE ══════════════════════════════════════════ -->
+  <div id="assignments-section" style="margin-top:16px; display:none;">
+    <div class="card">
+      <div class="card-header flex-between">
+        <span>🛣️ Full Load Assignments — Detailed View</span>
+        <div class="btn-group no-print" style="margin-left:auto;"></div>
+      </div>
+      <div class="tbl-wrap">
+        <table id="assignments-table">
+          <thead>
+            <tr>
+              <th class="tbl-num">#</th>
+              <th>Build Phase</th>
+              <th>Destination</th>
+              <th>Miles RT</th>
+              <th>Hrs</th>
+              <th>Auto-Assigned</th>
+              <th>Load #</th>
+              <th class="no-print">Override</th>
+              <th class="no-print">Status</th>
+              <th>Final Driver</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="assignments-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-dashboard -->
+
+<!-- ════════════════════════ TAB: FLEET ══════════════════════════════════ -->
+<div id="tab-fleet" class="tab-content">
+
+  <div class="flex-between" style="margin-bottom:14px;">
+    <div>
+      <h2 style="font-size:16px;font-weight:700;color:var(--navy);">Internal Fleet — Driver Roster</h2>
+      <p style="font-size:12px;color:var(--gray-400);margin-top:2px;">Manage drivers, home bases, restrictions, and vacation status.</p>
+    </div>
+    <button class="btn btn-navy" onclick="openAddDriver()">+ Add Driver</button>
+  </div>
+
+  <div class="warn-banner no-print" style="margin-bottom:12px;">
+    ☀️ <span>Toggle <strong>Vacation</strong> to remove a driver from load assignments. Their loads automatically redirect to the next available driver or Shoreline.</span>
+  </div>
+
+  <div class="card">
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Driver Name</th>
+            <th>Home Base</th>
+            <th>Restriction</th>
+            <th class="text-center">Max Loads/Day</th>
+            <th class="text-center">Vacation</th>
+            <th class="text-center">Status</th>
+            <th class="no-print">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="fleet-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div style="margin-top:12px;font-size:11px;color:var(--gray-400);">Changes take effect on the next Generate run.</div>
+
+</div><!-- /tab-fleet -->
+
+<!-- ════════════════════════ TAB: SETTINGS ═══════════════════════════════ -->
+<div id="tab-settings" class="tab-content">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+
+    <div class="card">
+      <div class="card-header">📍 Destination Master</div>
+      <div class="card-body">
+        <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Edit one-way miles. Round-trip and hours auto-calculate.</p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Code</th><th>Location</th><th>Miles (1-way)</th><th>Miles (RT)</th><th>Est. Hrs</th><th>Carrier</th></tr></thead>
+            <tbody id="dest-tbody"></tbody>
+          </table>
+        </div>
+        <button class="btn btn-navy btn-sm mt-12" onclick="saveDestinations()">Save Destinations</button>
+      </div>
+    </div>
+
+    <div class="section-gap">
+      <div class="card">
+        <div class="card-header">⚖️ DOT &amp; Operational Settings</div>
+        <div class="card-body">
+          <div class="field-group"><label>Average Speed (mph)</label><input type="number" class="plain" id="set-avg-speed" min="20" max="75" step="1"></div>
+          <div class="field-group"><label>DOT Max Driving Hours</label><input type="number" class="plain" id="set-dot-max" min="8" max="11" step="0.5"></div>
+          <div class="field-group"><label>Default Max Loads/Day (Montgomery drivers)</label><input type="number" class="plain" id="set-max-loads" min="1" max="5" step="1"></div>
+          <button class="btn btn-navy mt-8" onclick="saveSettings()">Save Settings</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header dark">🏭 Distribution Center</div>
+        <div class="card-body" style="font-size:13px;line-height:1.8;color:var(--gray-600);">
+          <strong style="color:var(--navy);">Coca-Cola Bottling Co. United</strong><br>
+          Montgomery DC — 4919 Westport Blvd, Montgomery, AL<br>
+          Operating Hours: 5:00 AM – 8:00 PM<br>
+          <div class="divider"></div>
+          <strong>Shoreline</strong> — Outside carrier for Panama City &amp; Columbus overflow.<br>
+          <strong>JR Mesi:</strong> Panama City ONLY (1 load/day max).<br>
+          <strong>Marcus Hood:</strong> Columbus ONLY (2 loads/day max).
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header dark">🗑️ Data Management</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">Reset all data back to factory defaults.</p>
+          <div id="reset-confirm-box" class="confirm-box">
+            ⚠️ This will erase all driver changes. Are you sure?
+            <div class="btn-group mt-8">
+              <button class="btn btn-danger btn-sm" onclick="hardReset()">Yes, Reset Everything</button>
+              <button class="btn btn-ghost btn-sm" onclick="hideResetConfirm()">Cancel</button>
+            </div>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="showResetConfirm()" id="reset-btn">↺ Reset to Defaults</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /tab-settings -->
+
+<!-- Hidden file input for state import -->
+<input type="file" id="import-file-input" accept=".json" style="display:none" onchange="handleImportFile(event)">
+
+<!-- ═══════════════════════ ADD/EDIT DRIVER MODAL ════════════════════════ -->
+<div class="modal-overlay" id="driver-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="modal-title">Add New Driver</span>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-driver-id">
+      <div class="field-group"><label>Full Name *</label><input type="text" id="drv-name" placeholder="e.g. John Smith"></div>
+      <div class="field-group">
+        <label>Home Base *</label>
+        <select id="drv-home">
+          <option value="Montgomery, AL">Montgomery, AL (Internal)</option>
+          <option value="Panama City, FL">Panama City, FL</option>
+          <option value="Columbus, GA">Columbus, GA</option>
+          <option value="Dothan, AL">Dothan, AL</option>
+          <option value="Auburn, AL">Auburn, AL</option>
+          <option value="Evergreen, AL">Evergreen, AL</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Route Restriction *</label>
+        <select id="drv-restriction">
+          <option value="Any">Any Route (Montgomery Team)</option>
+          <option value="Panama City ONLY">Panama City ONLY</option>
+          <option value="Columbus ONLY">Columbus ONLY</option>
+          <option value="Dothan ONLY">Dothan ONLY</option>
+          <option value="Auburn ONLY">Auburn ONLY</option>
+          <option value="Evergreen ONLY">Evergreen ONLY</option>
+        </select>
+      </div>
+      <div class="field-group"><label>Max Loads Per Day</label><input type="number" class="plain" id="drv-maxloads" value="3" min="1" max="5"></div>
+      <div class="field-group">
+        <label>On Vacation?</label>
+        <select id="drv-vacation">
+          <option value="false">No — Available</option>
+          <option value="true">Yes — On Vacation</option>
+        </select>
+      </div>
+      <div class="field-group"><label>Notes (optional)</label><input type="text" id="drv-notes" placeholder="Any special notes..."></div>
+      <div id="modal-error" style="color:var(--danger);font-size:12px;margin-top:6px;display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-navy" onclick="saveDriver()">Save Driver</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+//  DATA DEFAULTS
+// ════════════════════════════════════════════════════════════════════════════
+const DEFAULT_DRIVERS = [
+  {id:'D001',name:'JR Mesi',            homeBase:'Panama City, FL',  maxLoads:1, restriction:'Panama City ONLY', onVacation:false, notes:'Panama City ONLY · 1 load/day'},
+  {id:'D002',name:'Marcus Hood',        homeBase:'Columbus, GA',     maxLoads:2, restriction:'Columbus ONLY',    onVacation:false, notes:'Columbus ONLY · 2 loads/day'},
+  {id:'D003',name:'Aaron Smith',        homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D004',name:'Braxton Parker',     homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D005',name:'Charles Carmack',    homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D006',name:'Chauma Bowman',      homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D007',name:'Cleveland Gamble',   homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D008',name:'David Gadsden',      homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D009',name:'Elkanie Moorer',     homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D010',name:'Frederick Young',    homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D011',name:'James Gilmore',      homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D012',name:'Javoris Williams',   homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D013',name:'Mcarthure Newman II',homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D014',name:'Michael Cook',       homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D015',name:'Quad Whatley',       homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D016',name:'Sean Tellis',        homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D017',name:'Wilmer Mixon',       homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+];
+
+const DEFAULT_DESTINATIONS = [
+  {code:'PAN',name:'Panama City, FL',  address:'2825 Forester Trail, Panama City, FL 32405',  miles1Way:188, carrier:'Internal/Shoreline'},
+  {code:'COL',name:'Columbus, GA',     address:'6055 Coca-Cola Blvd, Columbus, GA 31909',      miles1Way:105, carrier:'Internal/Shoreline'},
+  {code:'DOT',name:'Dothan, AL',       address:'3936 Napier Field Road, Dothan, AL 36303',     miles1Way:104, carrier:'Internal Only'},
+  {code:'EVG',name:'Evergreen, AL',    address:'14230 U.S. Highway 84, Evergreen, AL 36460',   miles1Way:78,  carrier:'Internal Only'},
+  {code:'AUB',name:'Auburn, AL',       address:'511 W Veterans Blvd, Auburn, AL 36832',        miles1Way:55,  carrier:'Internal Only'},
+];
+
+const DEFAULT_SETTINGS = { avgSpeed:45, dotMaxHours:10, defaultMaxLoads:3 };
+
+const PHASES = [
+  {label:'Panama City (Small Store)', dest:'PAN'},
+  {label:'Columbus (Small Store)',    dest:'COL'},
+  {label:'Panama City (Bulk)',        dest:'PAN'},
+  {label:'Columbus (Bulk)',           dest:'COL'},
+  {label:'Dothan (OFS)',              dest:'DOT'},
+  {label:'Auburn (Bulk)',             dest:'AUB'},
+  {label:'Evergreen',                 dest:'EVG'},
+];
+
+const DEST_COLORS = {PAN:'pan',COL:'col',DOT:'dot',EVG:'evg',AUB:'aub'};
+const DEST_TAGS   = {PAN:'tag-panama',COL:'tag-columbus',DOT:'tag-dothan',AUB:'tag-auburn',EVG:'tag-evg'};
+
+// ════════════════════════════════════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════════════════════════════════════
+function loadState() {
+  try {
+    return {
+      drivers:     JSON.parse(localStorage.getItem('ccu_drivers'))    || deepCopy(DEFAULT_DRIVERS),
+      destinations:JSON.parse(localStorage.getItem('ccu_dests'))      || deepCopy(DEFAULT_DESTINATIONS),
+      settings:    JSON.parse(localStorage.getItem('ccu_settings'))   || deepCopy(DEFAULT_SETTINGS),
+      loads:       JSON.parse(localStorage.getItem('ccu_loads'))      || [0,0,0,0,0,0,0],
+      lastResult:  JSON.parse(localStorage.getItem('ccu_lastresult')) || null,
+    };
+  } catch(e) {
+    return {drivers:deepCopy(DEFAULT_DRIVERS),destinations:deepCopy(DEFAULT_DESTINATIONS),settings:deepCopy(DEFAULT_SETTINGS),loads:[0,0,0,0,0,0,0],lastResult:null};
+  }
+}
+const saveDrivers   = () => localStorage.setItem('ccu_drivers',    JSON.stringify(state.drivers));
+const saveDests     = () => localStorage.setItem('ccu_dests',      JSON.stringify(state.destinations));
+const saveSettings_ = () => localStorage.setItem('ccu_settings',   JSON.stringify(state.settings));
+const saveLoads     = () => localStorage.setItem('ccu_loads',      JSON.stringify(state.loads));
+const saveResult    = () => localStorage.setItem('ccu_lastresult', JSON.stringify(state.lastResult));
+const deepCopy      = x  => JSON.parse(JSON.stringify(x));
+let state = loadState();
+
+// ════════════════════════════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════════════════════════════
+function getHrsForDest(code) {
+  const d = state.destinations.find(x => x.code === code);
+  return d ? (d.miles1Way * 2) / state.settings.avgSpeed : 0;
+}
+function fmtHrs(h) { return h.toFixed(2) + ' hrs'; }
+function getAvailableDrivers() { return state.drivers.filter(d => !d.onVacation); }
+function nextId() {
+  const nums = state.drivers.map(d => parseInt(d.id.replace('D','')) || 0);
+  return 'D' + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3,'0');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  OPTIMIZER
+// ════════════════════════════════════════════════════════════════════════════
+function runOptimizer(loadCounts) {
+  const available = getAvailableDrivers();
+  const dotMax    = state.settings.dotMaxHours;
+  const ds = {};
+  available.forEach(d => { ds[d.id] = {hours:0, loadCount:0}; });
+
+  function findExclusive(restriction) {
+    return available
+      .filter(d => d.restriction === restriction && ds[d.id].loadCount < d.maxLoads)
+      .sort((a,b) => ds[a.id].loadCount - ds[b.id].loadCount)[0] || null;
+  }
+  function findGeneral(hrs) {
+    return available
+      .filter(d => d.restriction === 'Any' && ds[d.id].loadCount < d.maxLoads && (ds[d.id].hours + hrs) <= dotMax)
+      .sort((a,b) => ds[a.id].hours !== ds[b.id].hours
+        ? ds[a.id].hours - ds[b.id].hours
+        : state.drivers.indexOf(a) - state.drivers.indexOf(b))[0] || null;
+  }
+
+  const assignments = [];
+  let globalNum = 0;
+
+  PHASES.forEach((phase, pi) => {
+    const count = loadCounts[pi] || 0;
+    const hrs   = getHrsForDest(phase.dest);
+    for (let i = 0; i < count; i++) {
+      globalNum++;
+      let drv = null;
+      if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY');
+      else if (phase.dest === 'COL') drv = findExclusive('Columbus ONLY');
+      else                            drv = findGeneral(hrs);
+      if (drv) { ds[drv.id].hours += hrs; ds[drv.id].loadCount++; }
+      assignments.push({
+        loadNum: globalNum, phase: phase.label, dest: phase.dest, hrs,
+        autoDriver: drv ? drv.name : 'SHORELINE',
+        driverLoadNum: drv ? ds[drv.id].loadCount : null,
+        override: '', status: 'Pending', notes: '',
+        internal: !!drv,
+      });
+    }
+  });
+
+  const workload = available.map(d => ({
+    id: d.id, name: d.name,
+    hours: ds[d.id]?.hours || 0,
+    loads: ds[d.id]?.loadCount || 0,
+    dotMax,
+    status: (ds[d.id]?.hours || 0) > dotMax ? 'over'
+          : (ds[d.id]?.hours || 0) > dotMax * 0.9 ? 'warn' : 'ok',
+  }));
+
+  return {assignments, workload};
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RENDER: PHASE INPUTS
+// ════════════════════════════════════════════════════════════════════════════
+function renderPhaseInputs() {
+  const c = document.getElementById('phase-inputs');
+  c.innerHTML = '';
+  PHASES.forEach((phase, idx) => {
+    const hrs = getHrsForDest(phase.dest);
+    const row = document.createElement('div');
+    row.className = 'form-row';
+    row.innerHTML = `<div class="phase-num">${idx+1}</div>
+      <label>${phase.label}</label>
+      <input type="number" min="0" max="99" value="${state.loads[idx]||0}" id="phase-input-${idx}"
+             onchange="updateLoad(${idx},this.value)" oninput="updateLoad(${idx},this.value)">
+      <span class="hrs-badge">${hrs.toFixed(2)}h ea</span>`;
+    c.appendChild(row);
+  });
+  updateTotalsDisplay();
+}
+
+function updateLoad(idx, val) {
+  state.loads[idx] = Math.max(0, parseInt(val)||0);
+  saveLoads();
+  updateTotalsDisplay();
+}
+
+function updateTotalsDisplay() {
+  let tl=0, th=0;
+  PHASES.forEach((p,i) => { tl += state.loads[i]||0; th += (state.loads[i]||0)*getHrsForDest(p.dest); });
+  document.getElementById('total-loads-display').textContent = tl;
+  document.getElementById('total-hrs-display').textContent   = fmtHrs(th);
+}
+
+function resetLoads() {
+  state.loads = [0,0,0,0,0,0,0];
+  saveLoads();
+  renderPhaseInputs();
+  document.getElementById('assignments-section').style.display = 'none';
+  document.getElementById('driver-cards-section').style.display = 'none';
+  renderMetrics(null);
+  renderWorkload(null);
+  renderShoreline(null);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RENDER: METRICS
+// ════════════════════════════════════════════════════════════════════════════
+function renderMetrics(result) {
+  const avail = getAvailableDrivers().length;
+  document.getElementById('m-avail').textContent    = avail;
+  document.getElementById('m-dot-limit').textContent = state.settings.dotMaxHours;
+  if (!result) {
+    document.getElementById('m-total').textContent    = '—';
+    document.getElementById('m-internal').textContent = '—';
+    document.getElementById('m-shore').textContent    = '—';
+    document.getElementById('m-dot-ok').textContent   = '—';
+    return;
+  }
+  const total    = result.assignments.length;
+  const internal = result.assignments.filter(a => a.internal).length;
+  const shore    = total - internal;
+  const dotOver  = result.workload.filter(w => w.status === 'over').length;
+  const dotOk    = result.workload.length - dotOver;
+
+  document.getElementById('m-total').textContent    = total;
+  document.getElementById('m-internal').textContent = internal;
+  document.getElementById('m-shore').textContent    = shore;
+  document.getElementById('m-dot-ok').textContent   = dotOver > 0 ? `⚠️ ${dotOver}` : `✓ ${dotOk}`;
+  document.getElementById('m-dot-ok').style.color   = dotOver > 0 ? 'var(--danger)' : 'var(--green)';
+  document.getElementById('m-dot-ok').style.fontWeight = '700';
+
+  // Print summary bar
+  document.getElementById('psb-total').textContent    = total;
+  document.getElementById('psb-internal').textContent = internal;
+  document.getElementById('psb-shoreline').textContent= shore;
+  document.getElementById('psb-drivers').textContent  = result.workload.filter(w=>w.loads>0).length;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RENDER: WORKLOAD BARS
+// ════════════════════════════════════════════════════════════════════════════
+function renderWorkload(result) {
+  const el = document.getElementById('workload-list');
+  const ds = document.getElementById('dot-status-summary');
+  if (!result) { el.innerHTML = '<div class="empty-state" style="padding:16px;">Run optimizer to see workload</div>'; return; }
+  const overCount = result.workload.filter(w => w.status==='over').length;
+  ds.innerHTML = overCount > 0
+    ? `<span class="badge badge-over">⚠️ ${overCount} Over Limit</span>`
+    : `<span class="badge badge-ok">✓ All DOT Compliant</span>`;
+  el.innerHTML = result.workload.sort((a,b) => b.hours-a.hours).map(w => {
+    const pct = Math.min(100,(w.hours/w.dotMax)*100);
+    const lbl = w.status==='over' ? `<span class="dot-over">⚠️ OVER</span>`
+              : w.status==='warn' ? `<span style="color:var(--amber);font-weight:700;">⚡</span>`
+              : `<span class="dot-ok">✓</span>`;
+    return `<div class="workload-row">
+      <div class="workload-name" title="${w.name}">${w.name}</div>
+      <div class="workload-bar-wrap"><div class="workload-bar ${w.status}" style="width:${pct}%"></div></div>
+      <div class="workload-hrs">${w.hours.toFixed(2)}h ${lbl}</div>
+    </div>`;
+  }).join('');
+  const vac = state.drivers.filter(d=>d.onVacation);
+  if (vac.length) {
+    el.innerHTML += `<div class="divider"></div>
+      <div style="font-size:11px;color:var(--amber);font-weight:600;padding:4px 0 2px;">☀️ ON VACATION</div>
+      ${vac.map(d=>`<div class="workload-row">
+        <div class="workload-name">${d.name}</div>
+        <div class="workload-bar-wrap"><div class="workload-bar" style="width:0%;background:var(--gray-200)"></div></div>
+        <div class="workload-hrs"><span class="badge badge-vac">Vacation</span></div>
+      </div>`).join('')}`;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RENDER: SHORELINE PANEL
+// ════════════════════════════════════════════════════════════════════════════
+function renderShoreline(result) {
+  const el = document.getElementById('shoreline-panel');
+  if (!result) { el.innerHTML = '<div class="empty-state" style="padding:16px;">Run optimizer to see Shoreline loads</div>'; return; }
+  const shore = result.assignments.filter(a => !a.internal);
+  const byDest = {};
+  shore.forEach(a => { byDest[a.dest] = (byDest[a.dest]||0)+1; });
+  const dNames = {PAN:'Panama City',COL:'Columbus',DOT:'Dothan',AUB:'Auburn',EVG:'Evergreen'};
+  let rows = Object.entries(byDest).map(([code,cnt]) =>
+    `<div class="shoreline-row">
+      <span><span class="tag ${DEST_TAGS[code]}">${code}</span> ${dNames[code]}</span>
+      <span class="shoreline-num">${cnt}</span>
+    </div>`).join('');
+  if (!rows) {
+    rows = '<div class="shoreline-row" style="color:var(--green);font-weight:600;justify-content:center;">✓ No Shoreline overflow</div>';
+  } else {
+    rows += `<div class="shoreline-row"><span style="font-weight:700;">TOTAL</span><span class="shoreline-num">${shore.length}</span></div>`;
+  }
+  el.innerHTML = `<div style="padding:4px 0;">${rows}</div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RENDER: DRIVER ASSIGNMENT CARDS
+// ════════════════════════════════════════════════════════════════════════════
+function renderDriverCards(result) {
+  const grid    = document.getElementById('driver-cards-grid');
+  const section = document.getElementById('driver-cards-section');
+  if (!result) { section.style.display='none'; return; }
+
+  // Group assignments by final driver
+  const byDriver = {};
+  result.assignments.forEach(a => {
+    const finalDrv = a.override || a.autoDriver;
+    if (!byDriver[finalDrv]) byDriver[finalDrv] = [];
+    byDriver[finalDrv].push(a);
+  });
+
+  // Get ordered internal drivers (only those with loads) + Shoreline last
+  const internalDriversWithLoads = getAvailableDrivers()
+    .filter(d => byDriver[d.name] && byDriver[d.name].length > 0);
+
+  const shoreLoads = byDriver['SHORELINE'] || [];
+
+  function runCard(driverName, runs, homeBase, totalHrs, dotMax) {
+    const status = totalHrs > dotMax ? 'over' : totalHrs > dotMax * 0.9 ? 'warn' : 'ok';
+    const statusHTML = status==='over'
+      ? `<span class="card-dot-status card-dot-over">⚠️ OVER DOT LIMIT</span>`
+      : status==='warn'
+      ? `<span class="card-dot-status card-dot-warn">⚡ Near Limit</span>`
+      : `<span class="card-dot-status card-dot-ok">✓ DOT OK</span>`;
+
+    const runLabels = ['RUN 1','RUN 2','RUN 3'];
+    const runColors = ['','run2','run3'];
+    const runRows   = [0,1,2].map(i => {
+      const r = runs[i];
+      if (r) {
+        return `<div class="run-row">
+          <span class="run-label ${runColors[i]}">${runLabels[i]}</span>
+          <span class="run-phase">${r.phase}</span>
+          <span class="run-hrs">${r.hrs.toFixed(2)}h</span>
+        </div>`;
+      } else {
+        return `<div class="run-row">
+          <span class="run-label empty">${runLabels[i]}</span>
+          <span class="run-phase empty">—</span>
+          <span class="run-hrs empty">—</span>
+        </div>`;
+      }
+    }).join('');
+
+    const initial = driverName.charAt(0).toUpperCase();
+    return `<div class="driver-card">
+      <div class="driver-card-header">
+        <div class="drv-initial">${initial}</div>
+        <div><div class="drv-name">${driverName}</div><div class="drv-base">${homeBase}</div></div>
+      </div>
+      <div class="driver-card-runs">${runRows}</div>
+      <div class="driver-card-footer">
+        <span class="card-total-hrs">${totalHrs.toFixed(2)} hrs</span>
+        ${statusHTML}
+      </div>
+    </div>`;
+  }
+
+  // Build internal driver cards
+  let cardsHTML = internalDriversWithLoads.map(d => {
+    const runs   = byDriver[d.name] || [];
+    const totalHrs = runs.reduce((s,r) => s + r.hrs, 0);
+    return runCard(d.name, runs, d.homeBase, totalHrs, state.settings.dotMaxHours);
+  }).join('');
+
+  // Build Shoreline card
+  if (shoreLoads.length > 0) {
+    const dNames = {PAN:'Panama City',COL:'Columbus',DOT:'Dothan',AUB:'Auburn',EVG:'Evergreen'};
+    const byDest = {};
+    shoreLoads.forEach(a => { byDest[a.dest] = (byDest[a.dest]||0)+1; });
+    const runRows = Object.entries(byDest).map(([code,cnt]) =>
+      `<div class="run-row">
+        <span class="run-label" style="background:var(--purple);width:auto;padding:2px 6px;">${code}</span>
+        <span class="run-phase">${dNames[code]} × ${cnt} load${cnt!==1?'s':''}</span>
+        <span class="run-hrs">${(cnt * getHrsForDest(code)).toFixed(2)}h</span>
+      </div>`).join('');
+    cardsHTML += `<div class="driver-card is-shore">
+      <div class="driver-card-header">
+        <div class="drv-initial" style="background:white;color:var(--purple);">S</div>
+        <div><div class="drv-name">SHORELINE CARRIER</div><div class="drv-base">Outside Carrier — Overflow</div></div>
+      </div>
+      <div class="driver-card-runs">${runRows}</div>
+      <div class="driver-card-footer">
+        <span class="card-total-hrs">${shoreLoads.length} total loads</span>
+        <span class="card-dot-status" style="color:var(--purple);">📋 External</span>
+      </div>
+    </div>`;
+  }
+
+  grid.innerHTML = cardsHTML;
+  section.style.display = 'block';
+
+  // Update print gen time
+  const now = new Date();
+  document.getElementById('print-gen-time').textContent =
+    now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RENDER: ASSIGNMENTS TABLE
+// ════════════════════════════════════════════════════════════════════════════
+function renderAssignmentsTable(result) {
+  const tbody = document.getElementById('assignments-tbody');
+  const allDriverOptions = [...state.drivers.map(d=>d.name),'SHORELINE']
+    .map(n=>`<option value="${n}">${n}</option>`).join('');
+  const statusOptions = ['Pending','Assigned','In Transit','Delivered','Complete']
+    .map(s=>`<option value="${s}">${s}</option>`).join('');
+
+  tbody.innerHTML = result.assignments.map((a,idx) => {
+    const finalDriver = a.override || a.autoDriver;
+    const dest = state.destinations.find(d=>d.code===a.dest);
+    const rowClass = a.internal ? `row-${DEST_COLORS[a.dest]}` : 'row-shore';
+    const driverCell = a.internal
+      ? `<strong>${finalDriver}</strong>`
+      : `<span class="badge badge-shore">🚛 ${finalDriver}</span>`;
+    const overrideSel = `<select class="override-sel" onchange="setOverride(${idx},this.value)">
+      <option value="">— Auto —</option>
+      ${allDriverOptions.replace(`value="${a.override}"`,`value="${a.override}" selected`)}
+    </select>`;
+    const statusSel = `<select class="status-sel" onchange="setStatus(${idx},this.value)">
+      ${statusOptions.replace(`value="${a.status}"`,`value="${a.status}" selected`)}
+    </select>`;
+    return `<tr class="${rowClass}">
+      <td class="tbl-num">${a.loadNum}</td>
+      <td><span class="tag ${DEST_TAGS[a.dest]}">${a.dest}</span> ${a.phase}</td>
+      <td style="font-size:11px;color:var(--gray-600);">${dest?dest.name:a.dest}</td>
+      <td class="text-center">${dest?dest.miles1Way*2:'—'}</td>
+      <td class="text-center">${a.hrs.toFixed(2)}</td>
+      <td>${a.autoDriver==='SHORELINE'?'<span class="badge badge-shore">SHORELINE</span>':a.autoDriver}</td>
+      <td class="text-center">${a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—'}</td>
+      <td class="no-print">${overrideSel}</td>
+      <td class="no-print">${statusSel}</td>
+      <td>${driverCell}</td>
+      <td style="font-size:11px;color:var(--gray-400);">${a.notes}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('assignments-section').style.display='block';
+}
+
+function setOverride(idx,val) {
+  state.lastResult.assignments[idx].override = val;
+  saveResult();
+  const rows = document.querySelectorAll('#assignments-tbody tr');
+  if (rows[idx]) {
+    const a = state.lastResult.assignments[idx];
+    const final = val || a.autoDriver;
+    rows[idx].querySelectorAll('td')[9].innerHTML =
+      a.internal||val ? `<strong>${final}</strong>` : `<span class="badge badge-shore">🚛 ${final}</span>`;
+  }
+  renderDriverCards(state.lastResult);
+}
+
+function setStatus(idx,val) {
+  if (state.lastResult) { state.lastResult.assignments[idx].status=val; saveResult(); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  MAIN: GENERATE
+// ════════════════════════════════════════════════════════════════════════════
+function generateAssignments() {
+  if (state.loads.reduce((a,b)=>a+b,0) === 0) {
+    alert('Please enter at least one load before generating assignments.');
+    return;
+  }
+  const result = runOptimizer(state.loads);
+  state.lastResult = result;
+  saveResult();
+  renderMetrics(result);
+  renderWorkload(result);
+  renderShoreline(result);
+  renderDriverCards(result);
+  renderAssignmentsTable(result);
+  document.getElementById('driver-cards-section').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  FLEET TABLE
+// ════════════════════════════════════════════════════════════════════════════
+function renderFleetTable() {
+  const tbody = document.getElementById('fleet-tbody');
+  tbody.innerHTML = state.drivers.map(d => {
+    const resBadge = d.restriction==='Panama City ONLY' ? `<span class="badge badge-pan">🌴 Panama Only</span>`
+                   : d.restriction==='Columbus ONLY'    ? `<span class="badge badge-col">⚓ Columbus Only</span>`
+                   : `<span class="badge badge-any">Any Route</span>`;
+    const statusBadge = d.onVacation
+      ? `<span class="badge badge-vac">☀️ Vacation</span>`
+      : `<span class="badge badge-avail">✓ Available</span>`;
+    return `<tr style="${d.onVacation?'opacity:0.6;':''}">
+      <td><strong>${d.name}</strong>${d.notes?`<div style="font-size:10px;color:var(--gray-400);">${d.notes}</div>`:''}</td>
+      <td style="font-size:12px;color:var(--gray-600);">${d.homeBase}</td>
+      <td>${resBadge}</td>
+      <td class="text-center">${d.maxLoads}</td>
+      <td class="text-center">
+        <div class="toggle-wrap" style="justify-content:center;">
+          <label class="toggle" title="${d.onVacation?'On Vacation':'Available'}">
+            <input type="checkbox" ${d.onVacation?'checked':''} onchange="toggleVacation('${d.id}',this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:11px;color:var(--gray-400);">${d.onVacation?'On Vac':'In'}</span>
+        </div>
+      </td>
+      <td>${statusBadge}</td>
+      <td class="no-print">
+        <div class="btn-group">
+          <button class="btn btn-ghost btn-sm" onclick="openEditDriver('${d.id}')">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="confirmDeleteDriver('${d.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleVacation(id, val) {
+  const d = state.drivers.find(x=>x.id===id);
+  if (d) { d.onVacation=val; saveDrivers(); renderFleetTable(); renderDriverRules(); updateMetricsAvail(); }
+}
+function updateMetricsAvail() { document.getElementById('m-avail').textContent = getAvailableDrivers().length; }
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ADD / EDIT / DELETE DRIVER
+// ════════════════════════════════════════════════════════════════════════════
+function openAddDriver() {
+  document.getElementById('modal-title').textContent = 'Add New Driver';
+  document.getElementById('edit-driver-id').value   = '';
+  document.getElementById('drv-name').value         = '';
+  document.getElementById('drv-home').value         = 'Montgomery, AL';
+  document.getElementById('drv-restriction').value  = 'Any';
+  document.getElementById('drv-maxloads').value     = '3';
+  document.getElementById('drv-vacation').value     = 'false';
+  document.getElementById('drv-notes').value        = '';
+  document.getElementById('modal-error').style.display = 'none';
+  document.getElementById('driver-modal').classList.add('open');
+}
+
+function openEditDriver(id) {
+  const d = state.drivers.find(x=>x.id===id);
+  if (!d) return;
+  document.getElementById('modal-title').textContent = 'Edit Driver';
+  document.getElementById('edit-driver-id').value   = d.id;
+  document.getElementById('drv-name').value         = d.name;
+  document.getElementById('drv-home').value         = d.homeBase;
+  document.getElementById('drv-restriction').value  = d.restriction;
+  document.getElementById('drv-maxloads').value     = d.maxLoads;
+  document.getElementById('drv-vacation').value     = d.onVacation ? 'true' : 'false';
+  document.getElementById('drv-notes').value        = d.notes || '';
+  document.getElementById('modal-error').style.display = 'none';
+  document.getElementById('driver-modal').classList.add('open');
+}
+
+function saveDriver() {
+  const name = document.getElementById('drv-name').value.trim();
+  if (!name) {
+    document.getElementById('modal-error').textContent = 'Driver name is required.';
+    document.getElementById('modal-error').style.display = 'block';
+    return;
+  }
+  const editId = document.getElementById('edit-driver-id').value;
+  const data = {
+    name, homeBase: document.getElementById('drv-home').value,
+    restriction: document.getElementById('drv-restriction').value,
+    maxLoads: parseInt(document.getElementById('drv-maxloads').value)||3,
+    onVacation: document.getElementById('drv-vacation').value==='true',
+    notes: document.getElementById('drv-notes').value.trim(),
+  };
+  if (editId) {
+    const idx = state.drivers.findIndex(x=>x.id===editId);
+    if (idx>=0) state.drivers[idx] = {...state.drivers[idx],...data};
+  } else {
+    state.drivers.push({id:nextId(),...data});
+  }
+  saveDrivers(); renderFleetTable(); renderDriverRules(); updateMetricsAvail(); closeModal();
+}
+
+function confirmDeleteDriver(id) {
+  const d = state.drivers.find(x=>x.id===id);
+  if (!d) return;
+  if (confirm(`Remove ${d.name} from the roster?\n\nTip: If they're just on vacation, use the vacation toggle instead.`)) {
+    state.drivers = state.drivers.filter(x=>x.id!==id);
+    saveDrivers(); renderFleetTable(); renderDriverRules(); updateMetricsAvail();
+  }
+}
+
+function closeModal() { document.getElementById('driver-modal').classList.remove('open'); }
+document.getElementById('driver-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DESTINATIONS & SETTINGS
+// ════════════════════════════════════════════════════════════════════════════
+function renderDestinations() {
+  const spd = state.settings.avgSpeed;
+  document.getElementById('dest-tbody').innerHTML = state.destinations.map((d,idx) => {
+    const rt = d.miles1Way*2;
+    const hrs= (rt/spd).toFixed(2);
+    return `<tr>
+      <td><span class="tag ${DEST_TAGS[d.code]||''}">${d.code}</span></td>
+      <td>${d.name}</td>
+      <td><input type="number" class="plain" id="dest-miles-${idx}" value="${d.miles1Way}" min="0" style="width:70px;" onchange="updateDestMiles(${idx},this.value)"></td>
+      <td class="text-center">${rt}</td>
+      <td class="text-center"><strong>${hrs}</strong></td>
+      <td style="font-size:11px;color:var(--gray-400);">${d.carrier}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateDestMiles(idx,val) {
+  state.destinations[idx].miles1Way = parseFloat(val)||0;
+  renderDestinations(); renderPhaseInputs();
+}
+function saveDestinations() { saveDests(); renderPhaseInputs(); alert('✅ Destinations saved!'); }
+
+function renderSettings() {
+  document.getElementById('set-avg-speed').value  = state.settings.avgSpeed;
+  document.getElementById('set-dot-max').value    = state.settings.dotMaxHours;
+  document.getElementById('set-max-loads').value  = state.settings.defaultMaxLoads;
+}
+function saveSettings() {
+  state.settings.avgSpeed        = parseFloat(document.getElementById('set-avg-speed').value)||45;
+  state.settings.dotMaxHours     = parseFloat(document.getElementById('set-dot-max').value)||10;
+  state.settings.defaultMaxLoads = parseInt(document.getElementById('set-max-loads').value)||3;
+  saveSettings_(); renderDestinations(); renderPhaseInputs(); alert('✅ Settings saved!');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DRIVER RULES PANEL
+// ════════════════════════════════════════════════════════════════════════════
+function renderDriverRules() {
+  const el    = document.getElementById('driver-rules-panel');
+  const avail = getAvailableDrivers();
+  const pan   = avail.filter(d=>d.restriction==='Panama City ONLY');
+  const col   = avail.filter(d=>d.restriction==='Columbus ONLY');
+  const gen   = avail.filter(d=>d.restriction==='Any');
+  const panCap= pan.reduce((s,d)=>s+d.maxLoads,0);
+  const colCap= col.reduce((s,d)=>s+d.maxLoads,0);
+  const rules = [];
+  if (pan.length) rules.push(`🌴 <strong>${pan.map(d=>d.name).join(', ')}</strong> → Panama City (${panCap} load${panCap!==1?'s':''}/day)`);
+  else rules.push(`⚠️ <span style="color:var(--danger)">No Panama City driver — all PC loads → Shoreline</span>`);
+  if (col.length) rules.push(`⚓ <strong>${col.map(d=>d.name).join(', ')}</strong> → Columbus (${colCap} load${colCap!==1?'s':''}/day)`);
+  else rules.push(`⚠️ <span style="color:var(--danger)">No Columbus driver — all COL loads → Shoreline</span>`);
+  rules.push(`🚚 <strong>${gen.length} Montgomery driver${gen.length!==1?'s':''}</strong> for Dothan / Auburn / Evergreen`);
+  el.innerHTML = rules.map(r=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--gray-100);">${r}</div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  EXPORT CSV
+// ════════════════════════════════════════════════════════════════════════════
+function exportCSV() {
+  if (!state.lastResult) return;
+  const rows = [['Load#','Phase','Destination','Miles RT','Hours','Auto-Assigned','Load #','Final Driver','Status','Notes']];
+  state.lastResult.assignments.forEach(a => {
+    const dest = state.destinations.find(d=>d.code===a.dest);
+    rows.push([a.loadNum,a.phase,dest?dest.name:a.dest,dest?dest.miles1Way*2:'',a.hrs.toFixed(2),
+               a.autoDriver,a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—',
+               a.override||a.autoDriver,a.status,a.notes]);
+  });
+  const csv  = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `CCBCU_Routes_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  EXPORT / IMPORT STATE
+// ════════════════════════════════════════════════════════════════════════════
+function exportState() {
+  const snapshot = {
+    _version: 1,
+    _app: 'CCBCU Route Optimizer',
+    _exported: new Date().toISOString(),
+    drivers:      deepCopy(state.drivers),
+    destinations: deepCopy(state.destinations),
+    settings:     deepCopy(state.settings),
+    loads:        deepCopy(state.loads),
+    lastResult:   state.lastResult ? deepCopy(state.lastResult) : null,
+  };
+  const json = JSON.stringify(snapshot, null, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10);
+  link.href     = url;
+  link.download = `CCBCU_RouteOptimizer_${date}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function handleImportFile(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data._app || !data.drivers || !data.settings) {
+        alert('❌ Invalid file — this does not look like a CCBCU Route Optimizer export.');
+        return;
+      }
+      if (!confirm(`Import state from ${file.name}?\n\nThis will replace your current drivers, settings, and load counts.`)) return;
+
+      // Restore state
+      state.drivers      = data.drivers;
+      state.destinations = data.destinations || deepCopy(DEFAULT_DESTINATIONS);
+      state.settings     = data.settings;
+      state.loads        = data.loads || [0,0,0,0,0,0,0];
+      state.lastResult   = data.lastResult || null;
+
+      // Persist to localStorage
+      saveDrivers(); saveDests(); saveSettings_(); saveLoads(); saveResult();
+
+      // Re-render everything
+      init();
+      alert(`✅ State imported from ${file.name}\n${data.drivers.length} drivers loaded.`);
+    } catch(err) {
+      alert('❌ Could not read file: ' + err.message);
+    }
+    // Reset the input so the same file can be re-imported if needed
+    evt.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════════════════════════════════════
+function switchTab(tab, evt) {
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+  if (tab==='fleet')    renderFleetTable();
+  if (tab==='settings') { renderDestinations(); renderSettings(); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  RESET
+// ════════════════════════════════════════════════════════════════════════════
+function showResetConfirm()  { document.getElementById('reset-confirm-box').classList.add('show'); document.getElementById('reset-btn').style.display='none'; }
+function hideResetConfirm()  { document.getElementById('reset-confirm-box').classList.remove('show'); document.getElementById('reset-btn').style.display=''; }
+function hardReset() {
+  ['ccu_drivers','ccu_dests','ccu_settings','ccu_loads','ccu_lastresult'].forEach(k=>localStorage.removeItem(k));
+  state = loadState(); init(); hideResetConfirm(); alert('✅ Reset to defaults.');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════════════════════
+function updateHeaderDate() {
+  const now = new Date();
+  const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const ds = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  document.getElementById('hdr-date').textContent     = ds;
+  document.getElementById('hdr-day').textContent      = days[now.getDay()];
+  document.getElementById('print-date-hdr').textContent = ds + ' — ' + days[now.getDay()];
+}
+
+function init() {
+  updateHeaderDate();
+  renderPhaseInputs();
+  renderDriverRules();
+  updateMetricsAvail();
+  renderMetrics(state.lastResult);
+  if (state.lastResult) {
+    renderWorkload(state.lastResult);
+    renderShoreline(state.lastResult);
+    renderDriverCards(state.lastResult);
+    renderAssignmentsTable(state.lastResult);
+  } else {
+    renderWorkload(null);
+    renderShoreline(null);
+  }
+}
+
+init();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
+</html>
