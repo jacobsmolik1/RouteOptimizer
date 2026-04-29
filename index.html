@@ -916,12 +916,11 @@ function runOptimizer(loadCounts) {
   // availableAt: earliest dispatch time (mins from midnight) the driver can take a new load
   available.forEach(d => { ds[d.id] = {hours:0, loadCount:0, availableAt:0}; });
 
-  // Exclusive-route drivers (JR/Marcus/Robert): pick by fewest loads, must be physically back
-  function findExclusive(restriction, dispatchMins) {
+  // Exclusive-route drivers (JR/Marcus/Robert): domiciled at their endpoint, so turn time
+  // doesn't gate their second load — maxLoads already caps their daily capacity.
+  function findExclusive(restriction) {
     return available
-      .filter(d => d.restriction === restriction
-               && ds[d.id].loadCount < d.maxLoads
-               && ds[d.id].availableAt <= dispatchMins)
+      .filter(d => d.restriction === restriction && ds[d.id].loadCount < d.maxLoads)
       .sort((a,b) => ds[a.id].loadCount !== ds[b.id].loadCount
         ? ds[a.id].loadCount - ds[b.id].loadCount
         : ds[a.id].hours - ds[b.id].hours)[0] || null;
@@ -950,8 +949,8 @@ function runOptimizer(loadCounts) {
     for (let i = 0; i < count; i++) {
       globalNum++;
       let drv = null;
-      if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY', dispatchMins);
-      else if (phase.dest === 'COL') drv = findExclusive('Columbus ONLY',    dispatchMins);
+      if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY');
+      else if (phase.dest === 'COL') drv = findExclusive('Columbus ONLY');
       else                            drv = findGeneral(hrs, dispatchMins);
 
       if (drv) {
