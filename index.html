@@ -164,10 +164,18 @@ header {
   display: flex;
   align-items: center;
   padding: 9px 16px;
-  gap: 12px;
+  gap: 10px;
   border-bottom: 1px solid var(--gray-100);
 }
 .phase-row:last-child { border-bottom: none; }
+.phase-reorder { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+.phase-reorder button {
+  background: none; border: none; cursor: pointer; color: var(--gray-400);
+  font-size: 11px; line-height: 1; padding: 1px 3px; border-radius: 3px;
+  transition: color 0.1s, background 0.1s;
+}
+.phase-reorder button:hover { color: var(--red); background: var(--gray-100); }
+.phase-reorder button:disabled { opacity: 0.2; cursor: default; }
 .phase-num {
   background: var(--red);
   color: white;
@@ -179,6 +187,18 @@ header {
   flex-shrink: 0;
 }
 .phase-label { flex: 1; font-size: 13px; color: var(--black); }
+.phase-time {
+  padding: 4px 6px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-600);
+  background: var(--gray-50);
+  width: 84px;
+  flex-shrink: 0;
+}
+.phase-time:focus { outline: none; border-color: var(--red); background: white; }
 .phase-input {
   width: 64px;
   padding: 6px 8px;
@@ -629,6 +649,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
                 <th class="tbl-num">#</th>
                 <th>Build Phase</th>
                 <th>Destination</th>
+                <th>Dispatch</th>
                 <th>Miles RT</th>
                 <th>Hrs</th>
                 <th>Auto-Assigned</th>
@@ -798,6 +819,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
 const DEFAULT_DRIVERS = [
   {id:'D001',name:'JR Mesi',            homeBase:'Panama City, FL',  maxLoads:1, restriction:'Panama City ONLY', onVacation:false, notes:'Panama City ONLY · 1 load/day'},
   {id:'D002',name:'Marcus Hood',        homeBase:'Columbus, GA',     maxLoads:2, restriction:'Columbus ONLY',    onVacation:false, notes:'Columbus ONLY · 2 loads/day'},
+  {id:'D018',name:'Robert Pride',       homeBase:'Columbus, GA',     maxLoads:2, restriction:'Columbus ONLY',    onVacation:false, notes:'Columbus ONLY · 2 loads/day'},
   {id:'D003',name:'Aaron Smith',        homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
   {id:'D004',name:'Braxton Parker',     homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
   {id:'D005',name:'Charles Carmack',    homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
@@ -825,14 +847,14 @@ const DEFAULT_DESTINATIONS = [
 
 const DEFAULT_SETTINGS = { avgSpeed:45, dotMaxHours:10, defaultMaxLoads:3 };
 
-const PHASES = [
-  {label:'Panama City (Small Store)', dest:'PAN'},
-  {label:'Columbus (Small Store)',    dest:'COL'},
-  {label:'Panama City (Bulk)',        dest:'PAN'},
-  {label:'Columbus (Bulk)',           dest:'COL'},
-  {label:'Dothan (OFS)',              dest:'DOT'},
-  {label:'Auburn (Bulk)',             dest:'AUB'},
-  {label:'Evergreen',                 dest:'EVG'},
+const DEFAULT_PHASES = [
+  {label:'Panama City (Small Store)', dest:'PAN', dispatchTime:'06:00'},
+  {label:'Columbus (Small Store)',    dest:'COL', dispatchTime:'06:00'},
+  {label:'Panama City (Bulk)',        dest:'PAN', dispatchTime:'07:30'},
+  {label:'Columbus (Bulk)',           dest:'COL', dispatchTime:'07:30'},
+  {label:'Dothan (OFS)',              dest:'DOT', dispatchTime:'08:00'},
+  {label:'Auburn (Bulk)',             dest:'AUB', dispatchTime:'08:30'},
+  {label:'Evergreen',                 dest:'EVG', dispatchTime:'09:00'},
 ];
 
 const DEST_COLORS = {PAN:'pan',COL:'col',DOT:'dot',EVG:'evg',AUB:'aub'};
@@ -843,20 +865,23 @@ const DEST_TAGS   = {PAN:'tag-panama',COL:'tag-columbus',DOT:'tag-dothan',AUB:'t
 // ════════════════════════════════════════════════════════════════════════════
 function loadState() {
   try {
+    const phases = JSON.parse(localStorage.getItem('ccu_phases')) || deepCopy(DEFAULT_PHASES);
     return {
       drivers:     JSON.parse(localStorage.getItem('ccu_drivers'))    || deepCopy(DEFAULT_DRIVERS),
       destinations:JSON.parse(localStorage.getItem('ccu_dests'))      || deepCopy(DEFAULT_DESTINATIONS),
       settings:    JSON.parse(localStorage.getItem('ccu_settings'))   || deepCopy(DEFAULT_SETTINGS),
-      loads:       JSON.parse(localStorage.getItem('ccu_loads'))      || [0,0,0,0,0,0,0],
+      phases,
+      loads:       JSON.parse(localStorage.getItem('ccu_loads'))      || Array(phases.length).fill(0),
       lastResult:  JSON.parse(localStorage.getItem('ccu_lastresult')) || null,
     };
   } catch(e) {
-    return {drivers:deepCopy(DEFAULT_DRIVERS),destinations:deepCopy(DEFAULT_DESTINATIONS),settings:deepCopy(DEFAULT_SETTINGS),loads:[0,0,0,0,0,0,0],lastResult:null};
+    return {drivers:deepCopy(DEFAULT_DRIVERS),destinations:deepCopy(DEFAULT_DESTINATIONS),settings:deepCopy(DEFAULT_SETTINGS),phases:deepCopy(DEFAULT_PHASES),loads:Array(DEFAULT_PHASES.length).fill(0),lastResult:null};
   }
 }
 const saveDrivers   = () => localStorage.setItem('ccu_drivers',    JSON.stringify(state.drivers));
 const saveDests     = () => localStorage.setItem('ccu_dests',      JSON.stringify(state.destinations));
 const saveSettings_ = () => localStorage.setItem('ccu_settings',   JSON.stringify(state.settings));
+const savePhases    = () => localStorage.setItem('ccu_phases',     JSON.stringify(state.phases));
 const saveLoads     = () => localStorage.setItem('ccu_loads',      JSON.stringify(state.loads));
 const saveResult    = () => localStorage.setItem('ccu_lastresult', JSON.stringify(state.lastResult));
 const deepCopy      = x  => JSON.parse(JSON.stringify(x));
@@ -879,20 +904,36 @@ function nextId() {
 // ════════════════════════════════════════════════════════════════════════════
 //  OPTIMIZER
 // ════════════════════════════════════════════════════════════════════════════
+function timeToMins(t) {
+  const [h, m] = (t || '06:00').split(':').map(Number);
+  return h * 60 + m;
+}
+
 function runOptimizer(loadCounts) {
   const available = getAvailableDrivers();
   const dotMax    = state.settings.dotMaxHours;
   const ds = {};
-  available.forEach(d => { ds[d.id] = {hours:0, loadCount:0}; });
+  // availableAt: earliest dispatch time (mins from midnight) the driver can take a new load
+  available.forEach(d => { ds[d.id] = {hours:0, loadCount:0, availableAt:0}; });
 
-  function findExclusive(restriction) {
+  // Exclusive-route drivers (JR/Marcus/Robert): pick by fewest loads, must be physically back
+  function findExclusive(restriction, dispatchMins) {
     return available
-      .filter(d => d.restriction === restriction && ds[d.id].loadCount < d.maxLoads)
-      .sort((a,b) => ds[a.id].loadCount - ds[b.id].loadCount)[0] || null;
+      .filter(d => d.restriction === restriction
+               && ds[d.id].loadCount < d.maxLoads
+               && ds[d.id].availableAt <= dispatchMins)
+      .sort((a,b) => ds[a.id].loadCount !== ds[b.id].loadCount
+        ? ds[a.id].loadCount - ds[b.id].loadCount
+        : ds[a.id].hours - ds[b.id].hours)[0] || null;
   }
-  function findGeneral(hrs) {
+
+  // General Montgomery drivers: pick least-hours available driver who is physically back
+  function findGeneral(hrs, dispatchMins) {
     return available
-      .filter(d => d.restriction === 'Any' && ds[d.id].loadCount < d.maxLoads && (ds[d.id].hours + hrs) <= dotMax)
+      .filter(d => d.restriction === 'Any'
+               && ds[d.id].loadCount < d.maxLoads
+               && (ds[d.id].hours + hrs) <= dotMax
+               && ds[d.id].availableAt <= dispatchMins)
       .sort((a,b) => ds[a.id].hours !== ds[b.id].hours
         ? ds[a.id].hours - ds[b.id].hours
         : state.drivers.indexOf(a) - state.drivers.indexOf(b))[0] || null;
@@ -901,18 +942,26 @@ function runOptimizer(loadCounts) {
   const assignments = [];
   let globalNum = 0;
 
-  PHASES.forEach((phase, pi) => {
-    const count = loadCounts[pi] || 0;
-    const hrs   = getHrsForDest(phase.dest);
+  state.phases.forEach((phase, pi) => {
+    const count       = loadCounts[pi] || 0;
+    const hrs         = getHrsForDest(phase.dest);
+    const dispatchMins = timeToMins(phase.dispatchTime);
+
     for (let i = 0; i < count; i++) {
       globalNum++;
       let drv = null;
-      if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY');
-      else if (phase.dest === 'COL') drv = findExclusive('Columbus ONLY');
-      else                            drv = findGeneral(hrs);
-      if (drv) { ds[drv.id].hours += hrs; ds[drv.id].loadCount++; }
+      if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY', dispatchMins);
+      else if (phase.dest === 'COL') drv = findExclusive('Columbus ONLY',    dispatchMins);
+      else                            drv = findGeneral(hrs, dispatchMins);
+
+      if (drv) {
+        ds[drv.id].hours       += hrs;
+        ds[drv.id].loadCount++;
+        ds[drv.id].availableAt  = dispatchMins + hrs * 60; // when they're back
+      }
       assignments.push({
         loadNum: globalNum, phase: phase.label, dest: phase.dest, hrs,
+        dispatchTime: phase.dispatchTime,
         autoDriver: drv ? drv.name : 'SHORELINE',
         driverLoadNum: drv ? ds[drv.id].loadCount : null,
         override: '', status: 'Pending', notes: '',
@@ -939,12 +988,20 @@ function runOptimizer(loadCounts) {
 function renderPhaseInputs() {
   const c = document.getElementById('phase-inputs');
   c.innerHTML = '';
-  PHASES.forEach((phase, idx) => {
+  const n = state.phases.length;
+  state.phases.forEach((phase, idx) => {
     const hrs = getHrsForDest(phase.dest);
     const row = document.createElement('div');
     row.className = 'phase-row';
-    row.innerHTML = `<div class="phase-num">${idx+1}</div>
+    row.innerHTML = `
+      <div class="phase-reorder">
+        <button onclick="movePhase(${idx},-1)" ${idx===0?'disabled':''} title="Move up">▲</button>
+        <button onclick="movePhase(${idx},1)"  ${idx===n-1?'disabled':''} title="Move down">▼</button>
+      </div>
+      <div class="phase-num">${idx+1}</div>
       <label class="phase-label">${phase.label}</label>
+      <input type="time" class="phase-time" value="${phase.dispatchTime||'06:00'}"
+             onchange="setPhaseTime(${idx},this.value)" title="Dispatch time">
       <input type="number" class="phase-input" min="0" max="99" value="${state.loads[idx]||0}" id="phase-input-${idx}"
              onchange="updateLoad(${idx},this.value)" oninput="updateLoad(${idx},this.value)">
       <span class="phase-hrs">${hrs.toFixed(2)}h ea</span>`;
@@ -961,13 +1018,13 @@ function updateLoad(idx, val) {
 
 function updateTotalsDisplay() {
   let tl=0, th=0;
-  PHASES.forEach((p,i) => { tl += state.loads[i]||0; th += (state.loads[i]||0)*getHrsForDest(p.dest); });
+  state.phases.forEach((p,i) => { tl += state.loads[i]||0; th += (state.loads[i]||0)*getHrsForDest(p.dest); });
   document.getElementById('total-loads-display').textContent = tl;
   document.getElementById('total-hrs-display').textContent   = fmtHrs(th);
 }
 
 function resetLoads() {
-  state.loads = [0,0,0,0,0,0,0];
+  state.loads = Array(state.phases.length).fill(0);
   saveLoads();
   renderPhaseInputs();
   document.getElementById('assignments-section').style.display = 'none';
@@ -976,6 +1033,33 @@ function resetLoads() {
   renderMetrics(null);
   renderWorkload(null);
   renderShoreline(null);
+}
+
+function movePhase(idx, dir) {
+  const n = state.phases.length;
+  const to = idx + dir;
+  if (to < 0 || to >= n) return;
+  [state.phases[idx], state.phases[to]] = [state.phases[to], state.phases[idx]];
+  [state.loads[idx],  state.loads[to]]  = [state.loads[to],  state.loads[idx]];
+  savePhases(); saveLoads();
+  // clear stale results since order changed
+  state.lastResult = null; saveResult();
+  document.getElementById('assignments-section').style.display = 'none';
+  document.getElementById('driver-cards-section').style.display = 'none';
+  document.getElementById('metrics-grid').style.display = 'none';
+  renderMetrics(null); renderWorkload(null); renderShoreline(null);
+  renderPhaseInputs();
+}
+
+function setPhaseTime(idx, val) {
+  state.phases[idx].dispatchTime = val;
+  savePhases();
+  // clear stale results
+  state.lastResult = null; saveResult();
+  document.getElementById('assignments-section').style.display = 'none';
+  document.getElementById('driver-cards-section').style.display = 'none';
+  document.getElementById('metrics-grid').style.display = 'none';
+  renderMetrics(null); renderWorkload(null); renderShoreline(null);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1192,6 +1276,7 @@ function renderAssignmentsTable(result) {
       <td class="tbl-num">${a.loadNum}</td>
       <td><span class="tag ${DEST_TAGS[a.dest]}">${a.dest}</span> ${a.phase}</td>
       <td style="font-size:11px;color:var(--gray-600);">${dest?dest.name:a.dest}</td>
+      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${a.dispatchTime||'—'}</td>
       <td class="text-center">${dest?dest.miles1Way*2:'—'}</td>
       <td class="text-center">${a.hrs.toFixed(2)}</td>
       <td>${a.autoDriver==='SHORELINE'?'<span class="badge badge-shore">SHORELINE</span>':a.autoDriver}</td>
@@ -1449,9 +1534,10 @@ function exportCSV() {
 // ════════════════════════════════════════════════════════════════════════════
 function exportState() {
   const snapshot = {
-    _version: 1, _app: 'CCBCU Route Optimizer', _exported: new Date().toISOString(),
+    _version: 2, _app: 'CCBCU Route Optimizer', _exported: new Date().toISOString(),
     drivers: deepCopy(state.drivers), destinations: deepCopy(state.destinations),
-    settings: deepCopy(state.settings), loads: deepCopy(state.loads),
+    settings: deepCopy(state.settings), phases: deepCopy(state.phases),
+    loads: deepCopy(state.loads),
     lastResult: state.lastResult ? deepCopy(state.lastResult) : null,
   };
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], {type: 'application/json'});
@@ -1478,9 +1564,10 @@ function handleImportFile(evt) {
       state.drivers      = data.drivers;
       state.destinations = data.destinations || deepCopy(DEFAULT_DESTINATIONS);
       state.settings     = data.settings;
-      state.loads        = data.loads || [0,0,0,0,0,0,0];
+      state.phases       = data.phases || deepCopy(DEFAULT_PHASES);
+      state.loads        = data.loads  || Array(state.phases.length).fill(0);
       state.lastResult   = data.lastResult || null;
-      saveDrivers(); saveDests(); saveSettings_(); saveLoads(); saveResult();
+      saveDrivers(); saveDests(); saveSettings_(); savePhases(); saveLoads(); saveResult();
       init();
       alert(`✅ State imported from ${file.name}\n${data.drivers.length} drivers loaded.`);
     } catch(err) {
@@ -1509,7 +1596,7 @@ function switchTab(tab, evt) {
 function showResetConfirm()  { document.getElementById('reset-confirm-box').classList.add('show'); document.getElementById('reset-btn').style.display='none'; }
 function hideResetConfirm()  { document.getElementById('reset-confirm-box').classList.remove('show'); document.getElementById('reset-btn').style.display=''; }
 function hardReset() {
-  ['ccu_drivers','ccu_dests','ccu_settings','ccu_loads','ccu_lastresult'].forEach(k=>localStorage.removeItem(k));
+  ['ccu_drivers','ccu_dests','ccu_settings','ccu_phases','ccu_loads','ccu_lastresult'].forEach(k=>localStorage.removeItem(k));
   state = loadState(); init(); hideResetConfirm(); closeSettings(); alert('✅ Reset to defaults.');
 }
 
