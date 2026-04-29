@@ -227,6 +227,35 @@ header {
   padding: 8px 12px; font-size: 12px; color: var(--blue); display: flex;
   align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 
+/* ── TEMPLATES ───────────────────────────────────────────────────────── */
+.day-chip {
+  padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+  border: 1.5px solid var(--gray-200); background: white; color: var(--gray-400);
+  cursor: pointer; transition: all 0.15s;
+}
+.day-chip:hover { border-color: var(--red); color: var(--red); }
+.day-chip.saved { border-color: var(--black); color: var(--black); background: var(--gray-100); }
+.day-chip.today { border-color: var(--red); color: var(--red); background: #FFF0F0; }
+
+/* ── HISTORY TAB ─────────────────────────────────────────────────────── */
+.hist-entry { border: 1px solid var(--gray-200); border-radius: var(--radius); background: white;
+  box-shadow: var(--shadow); overflow: hidden; }
+.hist-date-bar { background: var(--black); color: white; padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; }
+.hist-date-label { font-size: 13px; font-weight: 700; }
+.hist-date-sub { font-size: 11px; opacity: 0.6; }
+.hist-metrics-row { display: flex; gap: 0; border-bottom: 1px solid var(--gray-100); }
+.hist-metric { flex: 1; text-align: center; padding: 10px 8px; border-right: 1px solid var(--gray-100); }
+.hist-metric:last-child { border-right: none; }
+.hist-metric .hm-val { font-size: 20px; font-weight: 800; color: var(--black); line-height: 1; }
+.hist-metric .hm-lbl { font-size: 10px; color: var(--gray-400); text-transform: uppercase;
+  letter-spacing: 0.4px; margin-top: 2px; }
+.hist-drivers { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 6px; }
+.hist-driver-chip { font-size: 11px; padding: 3px 10px; border-radius: 20px;
+  background: var(--gray-100); color: var(--gray-600); white-space: nowrap; }
+.hist-driver-chip.over { background: var(--danger-bg); color: var(--danger); }
+.wk-hrs { font-size: 10px; color: var(--gray-400); margin-left: 4px; }
+
 .totals-bar {
   display: flex;
   align-items: center;
@@ -556,6 +585,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
 <div class="tab-bar no-print">
   <button class="tab-btn active" onclick="switchTab('dashboard', event)">Dashboard</button>
   <button class="tab-btn" onclick="switchTab('fleet', event)">Drivers</button>
+  <button class="tab-btn" onclick="switchTab('history', event)">History</button>
 </div>
 
 <!-- ═══ TAB: DASHBOARD ══════════════════════════════════════════════════ -->
@@ -576,6 +606,18 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
             <div class="t-label">Est. Drive Time</div>
             <div class="t-hrs" id="total-hrs-display">0.0 hrs</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Templates -->
+      <div class="card no-print" style="overflow:hidden;">
+        <div class="card-header">
+          Load Templates — By Day of Week
+          <button class="btn btn-ghost btn-sm" onclick="saveTemplate()">💾 Save Today's Counts</button>
+        </div>
+        <div style="padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--gray-400);">Load template:</span>
+          <div id="template-days" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
         </div>
       </div>
 
@@ -618,6 +660,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
         <div class="card-header">
           <span>Driver Assignments — Pass-Out Sheet</span>
           <div class="btn-group no-print">
+            <button class="btn btn-green btn-sm" onclick="commitToHistory()">📅 Commit Day</button>
             <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
             <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ CSV</button>
             <button class="btn btn-outline btn-sm" onclick="resetLoads()">↺ Reset</button>
@@ -717,6 +760,24 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
     <div style="margin-top:10px;font-size:11px;color:var(--gray-400);">Changes take effect on the next Generate run.</div>
   </div>
 </div><!-- /tab-fleet -->
+
+<!-- ═══ TAB: HISTORY ════════════════════════════════════════════════════ -->
+<div id="tab-history" class="tab-content">
+  <div style="max-width:860px;margin:0 auto;">
+    <div class="flex-between" style="margin-bottom:16px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;">Daily Log</div>
+        <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">Committed days — source for rolling 7-day DOT hour tracking.</div>
+      </div>
+      <button class="btn btn-danger btn-sm no-print" onclick="clearHistory()">🗑 Clear Log</button>
+    </div>
+    <div id="history-content" class="stack">
+      <div class="empty-state" style="background:white;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:40px;">
+        No days committed yet. Generate assignments and click <strong>📅 Commit Day</strong> to start logging.
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ SETTINGS PANEL ════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="settings-modal" onclick="closeSettings(event)">
@@ -888,9 +949,11 @@ function loadState() {
       loads:       JSON.parse(localStorage.getItem('ccu_loads'))      || Array(phases.length).fill(0),
       lastResult:  JSON.parse(localStorage.getItem('ccu_lastresult')) || null,
       returned:    JSON.parse(localStorage.getItem('ccu_returned'))   || {},
+      templates:   JSON.parse(localStorage.getItem('ccu_templates'))  || {},
+      history:     JSON.parse(localStorage.getItem('ccu_history'))    || [],
     };
   } catch(e) {
-    return {drivers:deepCopy(DEFAULT_DRIVERS),destinations:deepCopy(DEFAULT_DESTINATIONS),settings:deepCopy(DEFAULT_SETTINGS),phases:deepCopy(DEFAULT_PHASES),loads:Array(DEFAULT_PHASES.length).fill(0),lastResult:null,returned:{}};
+    return {drivers:deepCopy(DEFAULT_DRIVERS),destinations:deepCopy(DEFAULT_DESTINATIONS),settings:deepCopy(DEFAULT_SETTINGS),phases:deepCopy(DEFAULT_PHASES),loads:Array(DEFAULT_PHASES.length).fill(0),lastResult:null,returned:{},templates:{},history:[]};
   }
 }
 const saveDrivers   = () => localStorage.setItem('ccu_drivers',    JSON.stringify(state.drivers));
@@ -900,6 +963,8 @@ const savePhases    = () => localStorage.setItem('ccu_phases',     JSON.stringif
 const saveLoads     = () => localStorage.setItem('ccu_loads',      JSON.stringify(state.loads));
 const saveResult    = () => localStorage.setItem('ccu_lastresult', JSON.stringify(state.lastResult));
 const saveReturned  = () => localStorage.setItem('ccu_returned',   JSON.stringify(state.returned));
+const saveTemplates = () => localStorage.setItem('ccu_templates',  JSON.stringify(state.templates));
+const saveHistory   = () => localStorage.setItem('ccu_history',    JSON.stringify(state.history));
 const deepCopy      = x  => JSON.parse(JSON.stringify(x));
 let state = loadState();
 
@@ -996,6 +1061,125 @@ function runOptimizer(loadCounts) {
   }));
 
   return {assignments, workload};
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  TEMPLATES
+// ════════════════════════════════════════════════════════════════════════════
+const DAY_KEYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function renderTemplateDays() {
+  const el = document.getElementById('template-days');
+  if (!el) return;
+  const todayKey = DAY_KEYS[new Date().getDay()];
+  el.innerHTML = DAY_KEYS.map(d => {
+    const hasSaved = !!state.templates[d];
+    const isToday  = d === todayKey;
+    return `<button class="day-chip ${hasSaved?'saved':''} ${isToday?'today':''}"
+      onclick="loadTemplate('${d}')" title="${hasSaved?'Click to load':'No template saved'}">${d}</button>`;
+  }).join('');
+}
+
+function saveTemplate() {
+  const todayKey = DAY_KEYS[new Date().getDay()];
+  state.templates[todayKey] = deepCopy(state.loads);
+  saveTemplates();
+  renderTemplateDays();
+  alert(`✅ Today's load counts saved as ${todayKey} template.`);
+}
+
+function loadTemplate(day) {
+  if (!state.templates[day]) { alert(`No template saved for ${day} yet.`); return; }
+  state.loads = deepCopy(state.templates[day]);
+  // Pad or trim to current phase count
+  while (state.loads.length < state.phases.length) state.loads.push(0);
+  state.loads = state.loads.slice(0, state.phases.length);
+  saveLoads();
+  renderPhaseInputs();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  HISTORY & ROLLING DOT
+// ════════════════════════════════════════════════════════════════════════════
+function fmtReturnTime(dispatchTime, hrs) {
+  if (!dispatchTime) return null;
+  const [h, m] = dispatchTime.split(':').map(Number);
+  const total  = h * 60 + m + Math.round(hrs * 60);
+  const rh     = Math.floor(total / 60) % 24;
+  const rm     = total % 60;
+  const ampm   = rh >= 12 ? 'PM' : 'AM';
+  const dh     = rh > 12 ? rh - 12 : (rh === 0 ? 12 : rh);
+  return `${dh}:${String(rm).padStart(2,'0')} ${ampm}`;
+}
+
+function getRollingHours(driverId) {
+  const last7 = state.history.slice(-7);
+  return last7.reduce((sum, entry) => sum + (entry.driverHours[driverId] || 0), 0);
+}
+
+function commitToHistory() {
+  if (!state.lastResult) { alert('Generate assignments first.'); return; }
+  const now  = new Date();
+  const date = now.toISOString().slice(0, 10);
+  const dayLabel = now.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
+
+  const driverHours = {};
+  state.lastResult.workload.forEach(w => { driverHours[w.id] = w.hours; });
+
+  const total    = state.lastResult.assignments.length;
+  const internal = state.lastResult.assignments.filter(a => a.internal).length;
+
+  const entry = { date, dayLabel, total, internal, shoreline: total - internal, driverHours, loads: deepCopy(state.loads) };
+
+  // Replace existing entry for same date or append
+  const idx = state.history.findIndex(e => e.date === date);
+  if (idx >= 0) state.history[idx] = entry;
+  else state.history.push(entry);
+
+  // Keep last 60 days
+  state.history = state.history.slice(-60);
+  saveHistory();
+  renderWorkload(state.lastResult); // refresh weekly hrs display
+  alert(`✅ ${dayLabel} committed to log.`);
+}
+
+function clearHistory() {
+  if (!confirm('Clear the entire daily log? This cannot be undone.')) return;
+  state.history = [];
+  saveHistory();
+  renderHistoryTab();
+}
+
+function renderHistoryTab() {
+  const el = document.getElementById('history-content');
+  if (!el) return;
+  if (!state.history.length) {
+    el.innerHTML = `<div class="empty-state" style="background:white;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:40px;">
+      No days committed yet. Generate assignments and click <strong>📅 Commit Day</strong> to start logging.
+    </div>`;
+    return;
+  }
+  const dotMax = state.settings.dotMaxHours;
+  el.innerHTML = [...state.history].reverse().map(entry => {
+    const driverChips = Object.entries(entry.driverHours).map(([id, hrs]) => {
+      const drv = state.drivers.find(d => d.id === id);
+      const name = drv ? drv.name.split(' ')[0] : id;
+      const over = hrs > dotMax;
+      return `<span class="hist-driver-chip ${over?'over':''}">${name}: ${hrs.toFixed(1)}h${over?' ⚠️':''}</span>`;
+    }).join('');
+    return `<div class="hist-entry">
+      <div class="hist-date-bar">
+        <div><div class="hist-date-label">${entry.dayLabel}</div></div>
+        <div style="font-size:11px;opacity:0.6;">${entry.date}</div>
+      </div>
+      <div class="hist-metrics-row">
+        <div class="hist-metric"><div class="hm-val">${entry.total}</div><div class="hm-lbl">Total</div></div>
+        <div class="hist-metric"><div class="hm-val" style="color:var(--green);">${entry.internal}</div><div class="hm-lbl">Internal</div></div>
+        <div class="hist-metric"><div class="hm-val" style="color:var(--purple);">${entry.shoreline}</div><div class="hm-lbl">Shoreline</div></div>
+      </div>
+      <div class="hist-drivers">${driverChips || '<span style="font-size:11px;color:var(--gray-400);">No driver data</span>'}</div>
+    </div>`;
+  }).join('');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1146,7 +1330,7 @@ function renderWorkload(result) {
     return `<div class="workload-row">
       <div class="workload-name" title="${w.name}">${w.name}</div>
       <div class="workload-bar-wrap"><div class="workload-bar ${w.status}" style="width:${pct}%"></div></div>
-      <div class="workload-hrs">${w.hours.toFixed(2)}h ${lbl}</div>
+      <div class="workload-hrs">${w.hours.toFixed(1)}h <span class="wk-hrs">${getRollingHours(w.id).toFixed(1)}wk</span> ${lbl}</div>
       ${retBtn}
     </div>`;
   }).join('');
@@ -1263,9 +1447,10 @@ function renderDriverCards(result) {
     const runRows   = [0,1,2].map(i => {
       const r = runs[i];
       if (r) {
+        const retTime = fmtReturnTime(r.dispatchTime, r.hrs);
         return `<div class="run-row">
           <span class="run-label ${runColors[i]}">${runLabels[i]}</span>
-          <span class="run-phase">${r.phase}</span>
+          <span class="run-phase">${r.phase}${retTime ? `<span style="display:block;font-size:9px;color:var(--gray-400);font-weight:400;">Back ~${retTime}</span>` : ''}</span>
           <span class="run-hrs">${r.hrs.toFixed(2)}h</span>
         </div>`;
       } else {
@@ -1629,6 +1814,7 @@ function exportState() {
     drivers: deepCopy(state.drivers), destinations: deepCopy(state.destinations),
     settings: deepCopy(state.settings), phases: deepCopy(state.phases),
     loads: deepCopy(state.loads), returned: deepCopy(state.returned),
+    templates: deepCopy(state.templates), history: deepCopy(state.history),
     lastResult: state.lastResult ? deepCopy(state.lastResult) : null,
   };
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], {type: 'application/json'});
@@ -1657,9 +1843,11 @@ function handleImportFile(evt) {
       state.settings     = data.settings;
       state.phases       = data.phases   || deepCopy(DEFAULT_PHASES);
       state.loads        = data.loads    || Array(state.phases.length).fill(0);
-      state.returned     = data.returned || {};
+      state.returned     = data.returned   || {};
+      state.templates    = data.templates  || {};
+      state.history      = data.history    || [];
       state.lastResult   = data.lastResult || null;
-      saveDrivers(); saveDests(); saveSettings_(); savePhases(); saveLoads(); saveReturned(); saveResult();
+      saveDrivers(); saveDests(); saveSettings_(); savePhases(); saveLoads(); saveReturned(); saveTemplates(); saveHistory(); saveResult();
       init();
       alert(`✅ State imported from ${file.name}\n${data.drivers.length} drivers loaded.`);
     } catch(err) {
@@ -1679,7 +1867,8 @@ function switchTab(tab, evt) {
   const tabEl = document.getElementById(`tab-${tab}`);
   if (tabEl) tabEl.classList.add('active');
   if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
-  if (tab==='fleet') { renderFleetTable(); renderDriverRules(); }
+  if (tab==='fleet')   { renderFleetTable(); renderDriverRules(); }
+  if (tab==='history') { renderHistoryTab(); }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1688,7 +1877,7 @@ function switchTab(tab, evt) {
 function showResetConfirm()  { document.getElementById('reset-confirm-box').classList.add('show'); document.getElementById('reset-btn').style.display='none'; }
 function hideResetConfirm()  { document.getElementById('reset-confirm-box').classList.remove('show'); document.getElementById('reset-btn').style.display=''; }
 function hardReset() {
-  ['ccu_drivers','ccu_dests','ccu_settings','ccu_phases','ccu_loads','ccu_lastresult','ccu_returned'].forEach(k=>localStorage.removeItem(k));
+  ['ccu_drivers','ccu_dests','ccu_settings','ccu_phases','ccu_loads','ccu_lastresult','ccu_returned','ccu_templates','ccu_history'].forEach(k=>localStorage.removeItem(k));
   state = loadState(); init(); hideResetConfirm(); closeSettings(); alert('✅ Reset to defaults.');
 }
 
@@ -1708,6 +1897,7 @@ function updateHeaderDate() {
 function init() {
   updateHeaderDate();
   renderPhaseInputs();
+  renderTemplateDays();
   renderDriverRules();
   updateMetricsAvail();
   renderMetrics(state.lastResult);
