@@ -214,6 +214,19 @@ header {
 .phase-input:focus { outline: none; border-color: var(--red); background: white; }
 .phase-hrs { font-size: 11px; color: var(--gray-400); width: 56px; text-align: right; }
 
+/* ── RETURNED BUTTON ─────────────────────────────────────────────────── */
+.btn-return {
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  border: 1.5px solid var(--gray-200); background: white; color: var(--gray-400);
+  cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s;
+  line-height: 1.6;
+}
+.btn-return:hover { border-color: var(--green); color: var(--green); }
+.btn-return.returned { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+.reassign-banner { background: var(--blue-bg); border: 1px solid #BBDEFB; border-radius: var(--radius);
+  padding: 8px 12px; font-size: 12px; color: var(--blue); display: flex;
+  align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+
 .totals-bar {
   display: flex;
   align-items: center;
@@ -781,6 +794,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
         <label>Route Restriction *</label>
         <select id="drv-restriction">
           <option value="Any">Any Route (Montgomery Team)</option>
+          <option value="Any + Columbus">Any Route + Columbus Assist</option>
           <option value="Panama City ONLY">Panama City ONLY</option>
           <option value="Columbus ONLY">Columbus ONLY</option>
           <option value="Dothan ONLY">Dothan ONLY</option>
@@ -873,9 +887,10 @@ function loadState() {
       phases,
       loads:       JSON.parse(localStorage.getItem('ccu_loads'))      || Array(phases.length).fill(0),
       lastResult:  JSON.parse(localStorage.getItem('ccu_lastresult')) || null,
+      returned:    JSON.parse(localStorage.getItem('ccu_returned'))   || {},
     };
   } catch(e) {
-    return {drivers:deepCopy(DEFAULT_DRIVERS),destinations:deepCopy(DEFAULT_DESTINATIONS),settings:deepCopy(DEFAULT_SETTINGS),phases:deepCopy(DEFAULT_PHASES),loads:Array(DEFAULT_PHASES.length).fill(0),lastResult:null};
+    return {drivers:deepCopy(DEFAULT_DRIVERS),destinations:deepCopy(DEFAULT_DESTINATIONS),settings:deepCopy(DEFAULT_SETTINGS),phases:deepCopy(DEFAULT_PHASES),loads:Array(DEFAULT_PHASES.length).fill(0),lastResult:null,returned:{}};
   }
 }
 const saveDrivers   = () => localStorage.setItem('ccu_drivers',    JSON.stringify(state.drivers));
@@ -884,6 +899,7 @@ const saveSettings_ = () => localStorage.setItem('ccu_settings',   JSON.stringif
 const savePhases    = () => localStorage.setItem('ccu_phases',     JSON.stringify(state.phases));
 const saveLoads     = () => localStorage.setItem('ccu_loads',      JSON.stringify(state.loads));
 const saveResult    = () => localStorage.setItem('ccu_lastresult', JSON.stringify(state.lastResult));
+const saveReturned  = () => localStorage.setItem('ccu_returned',   JSON.stringify(state.returned));
 const deepCopy      = x  => JSON.parse(JSON.stringify(x));
 let state = loadState();
 
@@ -913,8 +929,9 @@ function runOptimizer(loadCounts) {
   const available = getAvailableDrivers();
   const dotMax    = state.settings.dotMaxHours;
   const ds = {};
-  // availableAt: earliest dispatch time (mins from midnight) the driver can take a new load
-  available.forEach(d => { ds[d.id] = {hours:0, loadCount:0, availableAt:0}; });
+  // availableAt: earliest dispatch time (mins from midnight) the driver can take a new load.
+  // If a driver is marked "returned" by the dispatcher, clear their gate so they can take another.
+  available.forEach(d => { ds[d.id] = {hours:0, loadCount:0, availableAt: state.returned[d.id] ? 0 : 0}; });
 
   // Exclusive-route drivers (JR/Marcus/Robert): domiciled at their endpoint, so turn time
   // doesn't gate their second load — maxLoads already caps their daily capacity.
@@ -926,13 +943,25 @@ function runOptimizer(loadCounts) {
         : ds[a.id].hours - ds[b.id].hours)[0] || null;
   }
 
-  // General Montgomery drivers: pick least-hours available driver who is physically back
+  // General Montgomery drivers (Any or Any+Columbus): pick least-hours driver who is back in time
   function findGeneral(hrs, dispatchMins) {
     return available
-      .filter(d => d.restriction === 'Any'
+      .filter(d => (d.restriction === 'Any' || d.restriction === 'Any + Columbus')
                && ds[d.id].loadCount < d.maxLoads
                && (ds[d.id].hours + hrs) <= dotMax
-               && ds[d.id].availableAt <= dispatchMins)
+               && (state.returned[d.id] || ds[d.id].availableAt <= dispatchMins))
+      .sort((a,b) => ds[a.id].hours !== ds[b.id].hours
+        ? ds[a.id].hours - ds[b.id].hours
+        : state.drivers.indexOf(a) - state.drivers.indexOf(b))[0] || null;
+  }
+
+  // Columbus assist drivers (Any+Columbus only): used as overflow when Columbus ONLY drivers are full
+  function findColumbusAssist(hrs, dispatchMins) {
+    return available
+      .filter(d => d.restriction === 'Any + Columbus'
+               && ds[d.id].loadCount < d.maxLoads
+               && (ds[d.id].hours + hrs) <= dotMax
+               && (state.returned[d.id] || ds[d.id].availableAt <= dispatchMins))
       .sort((a,b) => ds[a.id].hours !== ds[b.id].hours
         ? ds[a.id].hours - ds[b.id].hours
         : state.drivers.indexOf(a) - state.drivers.indexOf(b))[0] || null;
@@ -950,7 +979,7 @@ function runOptimizer(loadCounts) {
       globalNum++;
       let drv = null;
       if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY');
-      else if (phase.dest === 'COL') drv = findExclusive('Columbus ONLY');
+      else if (phase.dest === 'COL') { drv = findExclusive('Columbus ONLY'); if (!drv) drv = findColumbusAssist(hrs, dispatchMins); }
       else                            drv = findGeneral(hrs, dispatchMins);
 
       if (drv) {
@@ -1105,15 +1134,32 @@ function renderWorkload(result) {
   ds.innerHTML = overCount > 0
     ? `<span class="badge badge-over">⚠️ ${overCount} Over Limit</span>`
     : `<span class="badge badge-ok">✓ All DOT Compliant</span>`;
-  el.innerHTML = result.workload.sort((a,b) => b.hours-a.hours).map(w => {
+
+  const hasShore = result.assignments.some(a => !a.override && a.autoDriver === 'SHORELINE');
+  const anyReturned = result.workload.some(w => state.returned[w.id]);
+  const showReassign = hasShore && anyReturned;
+  const banner = showReassign
+    ? `<div class="reassign-banner">
+        <span>🔄 Returned drivers available — open Shoreline loads can be reassigned.</span>
+        <button class="btn btn-primary btn-sm" onclick="reassignShorelineToReturned()">Reassign Shoreline</button>
+       </div>`
+    : '';
+
+  el.innerHTML = banner + result.workload.sort((a,b) => b.hours-a.hours).map(w => {
+    const drv = state.drivers.find(d => d.id === w.id);
     const pct = Math.min(100,(w.hours/w.dotMax)*100);
     const lbl = w.status==='over' ? `<span class="dot-over">⚠️ OVER</span>`
               : w.status==='warn' ? `<span style="color:var(--amber);font-weight:700;">⚡</span>`
               : `<span class="dot-ok">✓</span>`;
+    const isReturned = !!state.returned[w.id];
+    const retBtn = w.loads > 0
+      ? `<button class="btn-return ${isReturned?'returned':''}" onclick="toggleReturned('${w.id}')">${isReturned ? '← Back' : 'Out →'}</button>`
+      : '';
     return `<div class="workload-row">
       <div class="workload-name" title="${w.name}">${w.name}</div>
       <div class="workload-bar-wrap"><div class="workload-bar ${w.status}" style="width:${pct}%"></div></div>
       <div class="workload-hrs">${w.hours.toFixed(2)}h ${lbl}</div>
+      ${retBtn}
     </div>`;
   }).join('');
   const vac = state.drivers.filter(d=>d.onVacation);
@@ -1126,6 +1172,53 @@ function renderWorkload(result) {
         <div class="workload-hrs"><span class="badge badge-vac">Vacation</span></div>
       </div>`).join('')}`;
   }
+}
+
+function toggleReturned(id) {
+  state.returned[id] = !state.returned[id];
+  saveReturned();
+  renderWorkload(state.lastResult);
+}
+
+function reassignShorelineToReturned() {
+  if (!state.lastResult) return;
+  // Count loads already assigned per driver in the current result
+  const loadCounts = {};
+  state.lastResult.assignments.forEach(a => {
+    const finalDrv = a.override || a.autoDriver;
+    const drv = state.drivers.find(d => d.name === finalDrv);
+    if (drv) loadCounts[drv.id] = (loadCounts[drv.id] || 0) + 1;
+  });
+  // Returned drivers with remaining capacity, ordered by current load count ascending
+  const candidates = state.drivers.filter(d =>
+    !d.onVacation && state.returned[d.id] && (loadCounts[d.id] || 0) < d.maxLoads
+  ).sort((a,b) => (loadCounts[a.id]||0) - (loadCounts[b.id]||0));
+
+  state.lastResult.assignments.forEach((a, i) => {
+    if (a.override || a.autoDriver !== 'SHORELINE') return;
+    const drv = candidates.find(d => {
+      if ((loadCounts[d.id] || 0) >= d.maxLoads) return false;
+      if (d.restriction === 'Any + Columbus') return true; // can do any route
+      if (d.restriction === 'Any') return a.dest !== 'PAN' && a.dest !== 'COL';
+      if (d.restriction === 'Columbus ONLY') return a.dest === 'COL';
+      if (d.restriction === 'Panama City ONLY') return a.dest === 'PAN';
+      return d.restriction === a.dest + ' ONLY' || d.restriction.startsWith(a.dest);
+    });
+    if (drv) {
+      state.lastResult.assignments[i].autoDriver = drv.name;
+      state.lastResult.assignments[i].internal   = true;
+      loadCounts[drv.id] = (loadCounts[drv.id] || 0) + 1;
+      // Recalculate hours for workload
+      const wEntry = state.lastResult.workload.find(w => w.id === drv.id);
+      if (wEntry) wEntry.hours += a.hrs;
+    }
+  });
+  saveResult();
+  renderMetrics(state.lastResult);
+  renderWorkload(state.lastResult);
+  renderShoreline(state.lastResult);
+  renderDriverCards(state.lastResult);
+  renderAssignmentsTable(state.lastResult);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1331,8 +1424,9 @@ function generateAssignments() {
 function renderFleetTable() {
   const tbody = document.getElementById('fleet-tbody');
   tbody.innerHTML = state.drivers.map(d => {
-    const resBadge = d.restriction==='Panama City ONLY' ? `<span class="badge badge-pan">🌴 Panama Only</span>`
-                   : d.restriction==='Columbus ONLY'    ? `<span class="badge badge-col">⚓ Columbus Only</span>`
+    const resBadge = d.restriction==='Panama City ONLY'  ? `<span class="badge badge-pan">🌴 Panama Only</span>`
+                   : d.restriction==='Columbus ONLY'     ? `<span class="badge badge-col">⚓ Columbus Only</span>`
+                   : d.restriction==='Any + Columbus'    ? `<span class="badge badge-col" style="background:#E3F2FD;color:#1565C0;border:1px solid #BBDEFB;">⚓+ Any + Columbus</span>`
                    : `<span class="badge badge-any">Any Route</span>`;
     const statusBadge = d.onVacation
       ? `<span class="badge badge-vac">☀️ Vacation</span>`
@@ -1498,11 +1592,21 @@ function renderDriverRules() {
   const panCap= pan.reduce((s,d)=>s+d.maxLoads,0);
   const colCap= col.reduce((s,d)=>s+d.maxLoads,0);
   const rules = [];
+  const flex  = avail.filter(d=>d.restriction==='Any + Columbus');
+  const flexCap = flex.reduce((s,d)=>s+d.maxLoads,0);
   if (pan.length) rules.push(`🌴 <strong>${pan.map(d=>d.name).join(', ')}</strong> → Panama City (${panCap} load${panCap!==1?'s':''}/day)`);
   else rules.push(`⚠️ <span style="color:var(--danger)">No Panama City driver — all PC loads → Shoreline</span>`);
-  if (col.length) rules.push(`⚓ <strong>${col.map(d=>d.name).join(', ')}</strong> → Columbus (${colCap} load${colCap!==1?'s':''}/day)`);
-  else rules.push(`⚠️ <span style="color:var(--danger)">No Columbus driver — all COL loads → Shoreline</span>`);
-  rules.push(`🚚 <strong>${gen.length} Montgomery driver${gen.length!==1?'s':''}</strong> for Dothan / Auburn / Evergreen`);
+  if (col.length) {
+    let colLine = `⚓ <strong>${col.map(d=>d.name).join(', ')}</strong> → Columbus primary (${colCap} load${colCap!==1?'s':''}/day)`;
+    if (flex.length) colLine += ` + <strong>${flex.map(d=>d.name).join(', ')}</strong> Columbus assist`;
+    rules.push(colLine);
+  } else {
+    let colLine = `⚠️ <span style="color:var(--danger)">No Columbus ONLY driver</span>`;
+    if (flex.length) colLine += ` — <strong>${flex.map(d=>d.name).join(', ')}</strong> will assist (${flexCap} cap)`;
+    else colLine += ` — all COL loads → Shoreline`;
+    rules.push(colLine);
+  }
+  rules.push(`🚚 <strong>${gen.length} Montgomery driver${gen.length!==1?'s':''}</strong>${flex.length ? ` + ${flex.length} flex` : ''} for Dothan / Auburn / Evergreen`);
   el.innerHTML = rules.map(r=>`<div style="padding:3px 0;border-bottom:1px solid var(--gray-100);">${r}</div>`).join('');
 }
 
@@ -1536,7 +1640,7 @@ function exportState() {
     _version: 2, _app: 'CCBCU Route Optimizer', _exported: new Date().toISOString(),
     drivers: deepCopy(state.drivers), destinations: deepCopy(state.destinations),
     settings: deepCopy(state.settings), phases: deepCopy(state.phases),
-    loads: deepCopy(state.loads),
+    loads: deepCopy(state.loads), returned: deepCopy(state.returned),
     lastResult: state.lastResult ? deepCopy(state.lastResult) : null,
   };
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], {type: 'application/json'});
@@ -1563,10 +1667,11 @@ function handleImportFile(evt) {
       state.drivers      = data.drivers;
       state.destinations = data.destinations || deepCopy(DEFAULT_DESTINATIONS);
       state.settings     = data.settings;
-      state.phases       = data.phases || deepCopy(DEFAULT_PHASES);
-      state.loads        = data.loads  || Array(state.phases.length).fill(0);
+      state.phases       = data.phases   || deepCopy(DEFAULT_PHASES);
+      state.loads        = data.loads    || Array(state.phases.length).fill(0);
+      state.returned     = data.returned || {};
       state.lastResult   = data.lastResult || null;
-      saveDrivers(); saveDests(); saveSettings_(); savePhases(); saveLoads(); saveResult();
+      saveDrivers(); saveDests(); saveSettings_(); savePhases(); saveLoads(); saveReturned(); saveResult();
       init();
       alert(`✅ State imported from ${file.name}\n${data.drivers.length} drivers loaded.`);
     } catch(err) {
@@ -1595,7 +1700,7 @@ function switchTab(tab, evt) {
 function showResetConfirm()  { document.getElementById('reset-confirm-box').classList.add('show'); document.getElementById('reset-btn').style.display='none'; }
 function hideResetConfirm()  { document.getElementById('reset-confirm-box').classList.remove('show'); document.getElementById('reset-btn').style.display=''; }
 function hardReset() {
-  ['ccu_drivers','ccu_dests','ccu_settings','ccu_phases','ccu_loads','ccu_lastresult'].forEach(k=>localStorage.removeItem(k));
+  ['ccu_drivers','ccu_dests','ccu_settings','ccu_phases','ccu_loads','ccu_lastresult','ccu_returned'].forEach(k=>localStorage.removeItem(k));
   state = loadState(); init(); hideResetConfirm(); closeSettings(); alert('✅ Reset to defaults.');
 }
 
