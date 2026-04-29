@@ -920,21 +920,13 @@ function nextId() {
 // ════════════════════════════════════════════════════════════════════════════
 //  OPTIMIZER
 // ════════════════════════════════════════════════════════════════════════════
-function timeToMins(t) {
-  const [h, m] = (t || '06:00').split(':').map(Number);
-  return h * 60 + m;
-}
-
 function runOptimizer(loadCounts) {
   const available = getAvailableDrivers();
   const dotMax    = state.settings.dotMaxHours;
   const ds = {};
-  // availableAt: earliest dispatch time (mins from midnight) the driver can take a new load.
-  // If a driver is marked "returned" by the dispatcher, clear their gate so they can take another.
-  available.forEach(d => { ds[d.id] = {hours:0, loadCount:0, availableAt: state.returned[d.id] ? 0 : 0}; });
+  available.forEach(d => { ds[d.id] = {hours:0, loadCount:0}; });
 
-  // Exclusive-route drivers (JR/Marcus/Robert): domiciled at their endpoint, so turn time
-  // doesn't gate their second load — maxLoads already caps their daily capacity.
+  // Exclusive-route drivers (JR/Marcus/Robert): domiciled at endpoint, gated only by maxLoads.
   function findExclusive(restriction) {
     return available
       .filter(d => d.restriction === restriction && ds[d.id].loadCount < d.maxLoads)
@@ -943,25 +935,23 @@ function runOptimizer(loadCounts) {
         : ds[a.id].hours - ds[b.id].hours)[0] || null;
   }
 
-  // General Montgomery drivers (Any or Any+Columbus): pick least-hours driver who is back in time
-  function findGeneral(hrs, dispatchMins) {
+  // General drivers (Any or Any+Columbus): always pick least-hours driver within DOT limit.
+  function findGeneral(hrs) {
     return available
       .filter(d => (d.restriction === 'Any' || d.restriction === 'Any + Columbus')
                && ds[d.id].loadCount < d.maxLoads
-               && (ds[d.id].hours + hrs) <= dotMax
-               && (state.returned[d.id] || ds[d.id].availableAt <= dispatchMins))
+               && (ds[d.id].hours + hrs) <= dotMax)
       .sort((a,b) => ds[a.id].hours !== ds[b.id].hours
         ? ds[a.id].hours - ds[b.id].hours
         : state.drivers.indexOf(a) - state.drivers.indexOf(b))[0] || null;
   }
 
-  // Columbus assist drivers (Any+Columbus only): used as overflow when Columbus ONLY drivers are full
-  function findColumbusAssist(hrs, dispatchMins) {
+  // Columbus assist drivers: overflow after Columbus ONLY drivers are full.
+  function findColumbusAssist(hrs) {
     return available
       .filter(d => d.restriction === 'Any + Columbus'
                && ds[d.id].loadCount < d.maxLoads
-               && (ds[d.id].hours + hrs) <= dotMax
-               && (state.returned[d.id] || ds[d.id].availableAt <= dispatchMins))
+               && (ds[d.id].hours + hrs) <= dotMax)
       .sort((a,b) => ds[a.id].hours !== ds[b.id].hours
         ? ds[a.id].hours - ds[b.id].hours
         : state.drivers.indexOf(a) - state.drivers.indexOf(b))[0] || null;
@@ -971,21 +961,19 @@ function runOptimizer(loadCounts) {
   let globalNum = 0;
 
   state.phases.forEach((phase, pi) => {
-    const count       = loadCounts[pi] || 0;
-    const hrs         = getHrsForDest(phase.dest);
-    const dispatchMins = timeToMins(phase.dispatchTime);
+    const count = loadCounts[pi] || 0;
+    const hrs   = getHrsForDest(phase.dest);
 
     for (let i = 0; i < count; i++) {
       globalNum++;
       let drv = null;
       if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY');
-      else if (phase.dest === 'COL') { drv = findExclusive('Columbus ONLY'); if (!drv) drv = findColumbusAssist(hrs, dispatchMins); }
-      else                            drv = findGeneral(hrs, dispatchMins);
+      else if (phase.dest === 'COL') { drv = findExclusive('Columbus ONLY'); if (!drv) drv = findColumbusAssist(hrs); }
+      else                            drv = findGeneral(hrs);
 
       if (drv) {
-        ds[drv.id].hours       += hrs;
+        ds[drv.id].hours += hrs;
         ds[drv.id].loadCount++;
-        ds[drv.id].availableAt  = dispatchMins + hrs * 60; // when they're back
       }
       assignments.push({
         loadNum: globalNum, phase: phase.label, dest: phase.dest, hrs,
