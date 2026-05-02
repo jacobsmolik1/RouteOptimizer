@@ -989,7 +989,7 @@ function runOptimizer(loadCounts) {
   const available = getAvailableDrivers();
   const dotMax    = state.settings.dotMaxHours;
   const ds = {};
-  available.forEach(d => { ds[d.id] = {hours:0, loadCount:0}; });
+  available.forEach(d => { ds[d.id] = {hours:0, loadCount:0, colCount:0}; });
 
   // Exclusive-route drivers (JR/Marcus/Robert): domiciled at endpoint, gated only by maxLoads.
   function findExclusive(restriction) {
@@ -1012,9 +1012,11 @@ function runOptimizer(loadCounts) {
   }
 
   // Columbus assist drivers: overflow after Columbus ONLY drivers are full.
+  // Capped at 1 Columbus load per assist driver regardless of their maxLoads.
   function findColumbusAssist(hrs) {
     return available
       .filter(d => d.restriction === 'Any + Columbus'
+               && ds[d.id].colCount < 1
                && ds[d.id].loadCount < d.maxLoads
                && (ds[d.id].hours + hrs) <= dotMax)
       .sort((a,b) => ds[a.id].hours !== ds[b.id].hours
@@ -1039,6 +1041,7 @@ function runOptimizer(loadCounts) {
       if (drv) {
         ds[drv.id].hours += hrs;
         ds[drv.id].loadCount++;
+        if (phase.dest === 'COL' && drv.restriction === 'Any + Columbus') ds[drv.id].colCount++;
       }
       assignments.push({
         loadNum: globalNum, phase: phase.label, dest: phase.dest, hrs,
