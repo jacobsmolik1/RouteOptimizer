@@ -1359,10 +1359,15 @@ function reassignShorelineToReturned() {
   if (!state.lastResult) return;
   // Count loads already assigned per driver in the current result
   const loadCounts = {};
+  const colCounts  = {};
   state.lastResult.assignments.forEach(a => {
     const finalDrv = a.override || a.autoDriver;
     const drv = state.drivers.find(d => d.name === finalDrv);
-    if (drv) loadCounts[drv.id] = (loadCounts[drv.id] || 0) + 1;
+    if (drv) {
+      loadCounts[drv.id] = (loadCounts[drv.id] || 0) + 1;
+      if (a.dest === 'COL' && drv.restriction === 'Any + Columbus')
+        colCounts[drv.id] = (colCounts[drv.id] || 0) + 1;
+    }
   });
   // Returned drivers with remaining capacity, ordered by current load count ascending
   const candidates = state.drivers.filter(d =>
@@ -1373,7 +1378,11 @@ function reassignShorelineToReturned() {
     if (a.override || a.autoDriver !== 'SHORELINE') return;
     const drv = candidates.find(d => {
       if ((loadCounts[d.id] || 0) >= d.maxLoads) return false;
-      if (d.restriction === 'Any + Columbus') return true; // can do any route
+      if (d.restriction === 'Any + Columbus') {
+        // Assist drivers can take COL only if they haven't already taken one
+        if (a.dest === 'COL' && (colCounts[d.id] || 0) >= 1) return false;
+        return true;
+      }
       if (d.restriction === 'Any') return a.dest !== 'PAN' && a.dest !== 'COL';
       if (d.restriction === 'Columbus ONLY') return a.dest === 'COL';
       if (d.restriction === 'Panama City ONLY') return a.dest === 'PAN';
@@ -1383,6 +1392,8 @@ function reassignShorelineToReturned() {
       state.lastResult.assignments[i].autoDriver = drv.name;
       state.lastResult.assignments[i].internal   = true;
       loadCounts[drv.id] = (loadCounts[drv.id] || 0) + 1;
+      if (a.dest === 'COL' && drv.restriction === 'Any + Columbus')
+        colCounts[drv.id] = (colCounts[drv.id] || 0) + 1;
       // Recalculate hours for workload
       const wEntry = state.lastResult.workload.find(w => w.id === drv.id);
       if (wEntry) wEntry.hours += a.hrs;
