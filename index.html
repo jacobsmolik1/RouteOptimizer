@@ -1066,7 +1066,7 @@ function runOptimizer(loadCounts) {
     // Only charge morning deadhead upfront. Evening deadhead is reserved in the capacity
     // check and settled in post-processing (saved if last load is home destination).
     const mDH = d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0;
-    ds[d.id] = {hours: mDH, morningDH: mDH, eveningDH: mDH, loadCount: 0, colCount: 0};
+    ds[d.id] = {hours: mDH, morningDH: mDH, eveningDH: mDH, loadCount: 0, colCount: 0, colOfs: 0};
   });
 
   // Exclusive-route drivers (JR/Marcus/Robert): domiciled at endpoint, gated only by maxLoads.
@@ -1164,7 +1164,18 @@ function runOptimizer(loadCounts) {
       globalNum++;
       let drv = null;
       if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY');
-      else if (phase.dest === 'COL') { drv = findExclusive('Columbus ONLY'); if (!drv) drv = findColumbusAssist(hrs, phase.dest); }
+      else if (phase.dest === 'COL') {
+        const isOfs = phase.label.includes('Small Store');
+        if (isOfs) {
+          // Cap Columbus ONLY drivers at 1 small store so their second slot stays open for bulk
+          drv = available
+            .filter(d => d.restriction === 'Columbus ONLY' && ds[d.id].loadCount < d.maxLoads && ds[d.id].colOfs < 1)
+            .sort((a,b) => ds[a.id].loadCount - ds[b.id].loadCount || ds[a.id].hours - ds[b.id].hours)[0] || null;
+        } else {
+          drv = findExclusive('Columbus ONLY');
+        }
+        if (!drv) drv = findColumbusAssist(hrs, phase.dest);
+      }
       else if (phase.dest === 'DOT') { drv = findExclusive('Dothan ONLY');   if (!drv) drv = findGeneral(hrs, phase.dest); }
       else if (phase.dest === 'AUB') { drv = findExclusive('Auburn ONLY');   if (!drv) drv = findGeneral(hrs, phase.dest); }
       else if (phase.dest === 'EVG') { drv = findExclusive('Evergreen ONLY'); if (!drv) drv = findGeneral(hrs, phase.dest); }
@@ -1174,6 +1185,7 @@ function runOptimizer(loadCounts) {
         ds[drv.id].hours += hrs;
         ds[drv.id].loadCount++;
         if (phase.dest === 'COL' && drv.restriction === 'Any + Columbus') ds[drv.id].colCount++;
+        if (phase.dest === 'COL' && drv.restriction === 'Columbus ONLY' && phase.label.includes('Small Store')) ds[drv.id].colOfs++;
       }
       assignments.push({
         loadNum: globalNum, phase: phase.label, dest: phase.dest, hrs,
