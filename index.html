@@ -867,14 +867,21 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
       <div class="field-group"><label>Arrival Time at Montgomery DC (leave blank if domicile driver)</label><input type="time" class="plain" id="drv-arrival"></div>
       <div class="field-group"><label>Deadhead Miles (one-way home-to-DC; 0 for Montgomery-based drivers)</label><input type="number" class="plain" id="drv-deadhead" value="0" min="0" placeholder="0"></div>
       <div class="field-group">
-        <label>Home Destination (domicile drivers only — optimizer will assign this as last load when possible)</label>
-        <select id="drv-domiciledest">
+        <label>Home Destination (domicile drivers only)</label>
+        <select id="drv-domiciledest" onchange="updateHomefirstVisibility()">
           <option value="">— None (Montgomery-based) —</option>
           <option value="DOT">Dothan, AL</option>
           <option value="EVG">Evergreen, AL</option>
           <option value="AUB">Auburn, AL</option>
           <option value="PAN">Panama City, FL</option>
           <option value="COL">Columbus, GA</option>
+        </select>
+      </div>
+      <div class="field-group" id="drv-homefirst-group" style="display:none">
+        <label>Home Run Order</label>
+        <select id="drv-homefirst">
+          <option value="false">Last — home load assigned as final run (default)</option>
+          <option value="true">First — home load first, then other runs after</option>
         </select>
       </div>
       <div class="field-group"><label>Max Loads Per Day</label><input type="number" class="plain" id="drv-maxloads" value="3" min="1" max="5"></div>
@@ -1041,18 +1048,19 @@ function runOptimizer(loadCounts) {
       .filter(d => {
         if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus') return false;
         if (ds[d.id].loadCount >= d.maxLoads) return false;
-        const isHome = !!(d.domicileDest && destCode === d.domicileDest);
+        // homeFirst drivers already did their home run — treat all loads the same
+        const isHome = !!(d.domicileDest && destCode === d.domicileDest && !d.homeFirst);
         const checkHrs = isHome ? hrs / 2 : hrs;
         const reserve  = isHome ? 0 : ds[d.id].eveningDH;
         return (ds[d.id].hours + checkHrs + reserve) <= dotMax;
       })
       .sort((a,b) => {
-        const aIsHome = !!(a.domicileDest && destCode === a.domicileDest);
-        const bIsHome = !!(b.domicileDest && destCode === b.domicileDest);
+        const aIsHome = !!(a.domicileDest && destCode === a.domicileDest && !a.homeFirst);
+        const bIsHome = !!(b.domicileDest && destCode === b.domicileDest && !b.homeFirst);
         if (aIsHome !== bIsHome) return aIsHome ? -1 : 1;
-        // Domicile drivers on non-home loads go after Montgomery drivers
-        const aIsDomicileNonHome = !!(a.deadheadMiles && !aIsHome);
-        const bIsDomicileNonHome = !!(b.deadheadMiles && !bIsHome);
+        // homeFirst drivers already ran home — no longer deprioritized for other loads
+        const aIsDomicileNonHome = !!(a.deadheadMiles && !aIsHome && !a.homeFirst);
+        const bIsDomicileNonHome = !!(b.deadheadMiles && !bIsHome && !b.homeFirst);
         if (aIsDomicileNonHome !== bIsDomicileNonHome) return aIsDomicileNonHome ? 1 : -1;
         if (ds[a.id].hours !== ds[b.id].hours) return ds[a.id].hours - ds[b.id].hours;
         if (toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)) return toMinutes(a.arrivalTime) - toMinutes(b.arrivalTime);
@@ -1081,9 +1089,30 @@ function runOptimizer(loadCounts) {
 
   const assignments = [];
   let globalNum = 0;
+  const counts = loadCounts.map(x => x || 0);
+
+  // Pre-assign homeFirst domicile drivers their home load as run 1.
+  // Charged at full round-trip hours (driver returns to DC to pick up more loads).
+  available.forEach(d => {
+    if (!d.homeFirst || !d.domicileDest) return;
+    const pi = state.phases.findIndex(p => p.dest === d.domicileDest);
+    if (pi === -1 || counts[pi] <= 0) return;
+    const hrs = getHrsForDest(d.domicileDest);
+    if ((ds[d.id].hours + hrs + ds[d.id].eveningDH) > dotMax) return;
+    counts[pi]--;
+    ds[d.id].hours += hrs;
+    ds[d.id].loadCount++;
+    globalNum++;
+    assignments.push({
+      loadNum: globalNum, phase: state.phases[pi].label, dest: d.domicileDest, hrs,
+      dispatchTime: state.phases[pi].dispatchTime,
+      autoDriver: d.name, driverLoadNum: ds[d.id].loadCount,
+      override: '', status: 'Pending', notes: '', internal: true,
+    });
+  });
 
   state.phases.forEach((phase, pi) => {
-    const count = loadCounts[pi] || 0;
+    const count = counts[pi];
     const hrs   = getHrsForDest(phase.dest);
 
     for (let i = 0; i < count; i++) {
@@ -1754,6 +1783,8 @@ function openAddDriver() {
   document.getElementById('drv-arrival').value      = '';
   document.getElementById('drv-deadhead').value     = '0';
   document.getElementById('drv-domiciledest').value = '';
+  document.getElementById('drv-homefirst').value    = 'false';
+  document.getElementById('drv-homefirst-group').style.display = 'none';
   document.getElementById('drv-maxloads').value     = '3';
   document.getElementById('drv-vacation').value     = 'false';
   document.getElementById('drv-notes').value        = '';
@@ -1772,6 +1803,8 @@ function openEditDriver(id) {
   document.getElementById('drv-arrival').value      = d.arrivalTime || '';
   document.getElementById('drv-deadhead').value     = d.deadheadMiles || 0;
   document.getElementById('drv-domiciledest').value = d.domicileDest || '';
+  document.getElementById('drv-homefirst').value    = d.homeFirst ? 'true' : 'false';
+  document.getElementById('drv-homefirst-group').style.display = d.domicileDest ? '' : 'none';
   document.getElementById('drv-maxloads').value     = d.maxLoads;
   document.getElementById('drv-vacation').value     = d.onVacation ? 'true' : 'false';
   document.getElementById('drv-notes').value        = d.notes || '';
@@ -1793,6 +1826,7 @@ function saveDriver() {
     arrivalTime: document.getElementById('drv-arrival').value,
     deadheadMiles: parseInt(document.getElementById('drv-deadhead').value) || 0,
     domicileDest: document.getElementById('drv-domiciledest').value,
+    homeFirst: document.getElementById('drv-homefirst').value === 'true',
     maxLoads: parseInt(document.getElementById('drv-maxloads').value)||3,
     onVacation: document.getElementById('drv-vacation').value==='true',
     notes: document.getElementById('drv-notes').value.trim(),
@@ -1815,6 +1849,10 @@ function confirmDeleteDriver(id) {
   }
 }
 
+function updateHomefirstVisibility() {
+  const dest = document.getElementById('drv-domiciledest').value;
+  document.getElementById('drv-homefirst-group').style.display = dest ? '' : 'none';
+}
 function closeModal() { document.getElementById('driver-modal').classList.remove('open'); }
 document.getElementById('driver-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
 
