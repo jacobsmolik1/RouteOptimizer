@@ -1041,10 +1041,9 @@ function runOptimizer(loadCounts) {
       .filter(d => {
         if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus') return false;
         if (ds[d.id].loadCount >= d.maxLoads) return false;
-        const isHome = !!(d.domicileDest && destCode === d.domicileDest);
-        const checkHrs = isHome ? hrs / 2 : hrs;
-        const reserve  = isHome ? 0 : ds[d.id].eveningDH;
-        return (ds[d.id].hours + checkHrs + reserve) <= dotMax;
+        // Home-destination loads are reserved for pass 2 so they're always last
+        if (d.domicileDest && destCode === d.domicileDest) return false;
+        return (ds[d.id].hours + hrs + ds[d.id].eveningDH) <= dotMax;
       })
       .sort((a,b) => {
         const aIsHome = !!(a.domicileDest && destCode === a.domicileDest);
@@ -1109,25 +1108,42 @@ function runOptimizer(loadCounts) {
     }
   });
 
-  // Post-process evening deadhead for domicile drivers.
-  // If last load goes home: save the return leg of that load (tracked as round-trip but is one-way).
-  //   No evening DH added — driver is already home.
-  // If last load doesn't go home: add evening DH (driver must commute back after all deliveries).
+  // Pass 2: assign one home-destination load to each domicile driver as their LAST load.
+  // Pulls from SHORELINE assignments only — guarantees no empty return to DC.
   available.forEach(d => {
     if (!d.deadheadMiles || !d.domicileDest) return;
-    const drvLoads = assignments.filter(a => a.autoDriver === d.name);
-    if (!drvLoads.length) {
-      ds[d.id].hours += ds[d.id].eveningDH; // no loads today, still commutes home
-      return;
+    if (ds[d.id].loadCount >= d.maxLoads) return;
+    // DOT check: can they fit a one-way home run?
+    const homeHrs = getHrsForDest(d.domicileDest);
+    if ((ds[d.id].hours + homeHrs / 2) > dotMax) return;
+    // Find the last SHORELINE assignment going to this driver's home destination
+    let bestIdx = -1;
+    for (let i = 0; i < assignments.length; i++) {
+      if (assignments[i].autoDriver === 'SHORELINE' && assignments[i].dest === d.domicileDest)
+        bestIdx = i;
     }
-    const last = drvLoads[drvLoads.length - 1];
-    if (last.dest === d.domicileDest) {
-      last.homeReturn = true;
-      // Last load was tracked as round-trip but is actually one-way — save the return leg.
-      // Evening DH is not added since driver ends at home.
-      ds[d.id].hours -= ds[d.id].eveningDH;
+    if (bestIdx === -1) return;
+    const a = assignments[bestIdx];
+    a.autoDriver = d.name;
+    a.internal = true;
+    a.homeReturn = true;
+    ds[d.id].hours += a.hrs;
+    ds[d.id].loadCount++;
+    a.driverLoadNum = ds[d.id].loadCount;
+  });
+
+  // Post-process: settle evening deadhead.
+  // homeReturn flag set in pass 2 — saves return leg of home load + no evening commute.
+  available.forEach(d => {
+    if (!d.deadheadMiles || !d.domicileDest) return;
+    const hasHome = assignments.some(a => a.autoDriver === d.name && a.homeReturn);
+    const hasLoads = assignments.some(a => a.autoDriver === d.name);
+    if (hasHome) {
+      ds[d.id].hours -= ds[d.id].eveningDH; // save return leg + no evening commute
+    } else if (hasLoads) {
+      ds[d.id].hours += ds[d.id].eveningDH; // must drive home from DC after last run
     } else {
-      ds[d.id].hours += ds[d.id].eveningDH; // must drive back to Evergreen/Dothan/Auburn after last run
+      ds[d.id].hours += ds[d.id].eveningDH; // no loads, still commutes home
     }
   });
 
@@ -1581,7 +1597,12 @@ function renderDriverCards(result) {
   }
 
   let cardsHTML = internalDriversWithLoads.map(d => {
-    const runs = byDriver[d.name] || [];
+    // Sort so the home-return run always appears last on the card
+    const runs = (byDriver[d.name] || []).sort((a,b) => {
+      if (a.homeReturn && !b.homeReturn) return 1;
+      if (!a.homeReturn && b.homeReturn) return -1;
+      return 0;
+    });
     const workloadEntry = result.workload.find(w => w.id === d.id);
     const totalHrs = workloadEntry ? workloadEntry.hours : runs.reduce((s,r) => s + r.hrs, 0);
     const deadheadHrs = d.deadheadMiles ? (d.deadheadMiles * 2) / state.settings.avgSpeed : 0;
