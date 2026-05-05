@@ -1016,9 +1016,10 @@ function runOptimizer(loadCounts) {
   const dotMax    = state.settings.dotMaxHours;
   const ds = {};
   available.forEach(d => {
-    // deadheadMiles * 2 = round-trip home ↔ DC counts toward DOT clock from day start
-    const dh = d.deadheadMiles ? (d.deadheadMiles * 2) / state.settings.avgSpeed : 0;
-    ds[d.id] = {hours: dh, deadheadHrs: dh, loadCount: 0, colCount: 0};
+    // Only charge morning deadhead upfront. Evening deadhead is reserved in the capacity
+    // check and settled in post-processing (saved if last load is home destination).
+    const mDH = d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0;
+    ds[d.id] = {hours: mDH, morningDH: mDH, eveningDH: mDH, loadCount: 0, colCount: 0};
   });
 
   // Exclusive-route drivers (JR/Marcus/Robert): domiciled at endpoint, gated only by maxLoads.
@@ -1030,12 +1031,18 @@ function runOptimizer(loadCounts) {
         : ds[a.id].hours - ds[b.id].hours)[0] || null;
   }
 
-  // General drivers (Any or Any+Columbus): least hours → earliest arrival → roster order.
-  function findGeneral(hrs) {
+  // General drivers: least hours → earliest arrival → roster order.
+  // For home-destination loads, use one-way hours + no evening DH reserve (driver stays home).
+  function findGeneral(hrs, destCode) {
     return available
-      .filter(d => (d.restriction === 'Any' || d.restriction === 'Any + Columbus')
-               && ds[d.id].loadCount < d.maxLoads
-               && (ds[d.id].hours + hrs) <= dotMax)
+      .filter(d => {
+        if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus') return false;
+        if (ds[d.id].loadCount >= d.maxLoads) return false;
+        const isHome = !!(d.domicileDest && destCode === d.domicileDest);
+        const checkHrs = isHome ? ds[d.id].eveningDH : hrs; // one-way ≈ deadheadMiles/speed
+        const reserve  = isHome ? 0 : ds[d.id].eveningDH;
+        return (ds[d.id].hours + checkHrs + reserve) <= dotMax;
+      })
       .sort((a,b) => ds[a.id].hours !== ds[b.id].hours
         ? ds[a.id].hours - ds[b.id].hours
         : toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)
@@ -1045,12 +1052,16 @@ function runOptimizer(loadCounts) {
 
   // Columbus assist drivers: overflow after Columbus ONLY drivers are full.
   // Capped at 1 Columbus load per assist driver regardless of their maxLoads.
-  function findColumbusAssist(hrs) {
+  function findColumbusAssist(hrs, destCode) {
     return available
-      .filter(d => d.restriction === 'Any + Columbus'
-               && ds[d.id].colCount < 1
-               && ds[d.id].loadCount < d.maxLoads
-               && (ds[d.id].hours + hrs) <= dotMax)
+      .filter(d => {
+        if (d.restriction !== 'Any + Columbus') return false;
+        if (ds[d.id].colCount >= 1 || ds[d.id].loadCount >= d.maxLoads) return false;
+        const isHome = !!(d.domicileDest && destCode === d.domicileDest);
+        const checkHrs = isHome ? ds[d.id].eveningDH : hrs;
+        const reserve  = isHome ? 0 : ds[d.id].eveningDH;
+        return (ds[d.id].hours + checkHrs + reserve) <= dotMax;
+      })
       .sort((a,b) => ds[a.id].hours !== ds[b.id].hours
         ? ds[a.id].hours - ds[b.id].hours
         : toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)
@@ -1069,8 +1080,8 @@ function runOptimizer(loadCounts) {
       globalNum++;
       let drv = null;
       if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY');
-      else if (phase.dest === 'COL') { drv = findExclusive('Columbus ONLY'); if (!drv) drv = findColumbusAssist(hrs); }
-      else                            drv = findGeneral(hrs);
+      else if (phase.dest === 'COL') { drv = findExclusive('Columbus ONLY'); if (!drv) drv = findColumbusAssist(hrs, phase.dest); }
+      else                            drv = findGeneral(hrs, phase.dest);
 
       if (drv) {
         ds[drv.id].hours += hrs;
@@ -1088,25 +1099,32 @@ function runOptimizer(loadCounts) {
     }
   });
 
-  // Post-process: if a domicile driver's last assigned load goes to their home destination,
-  // they drive straight home instead of returning to DC — save the return deadhead AND
-  // the load's return leg (both = deadheadMiles/avgSpeed each → deadheadMiles*2/avgSpeed total).
+  // Post-process evening deadhead for domicile drivers.
+  // If last load goes home: save the return leg of that load (tracked as round-trip but is one-way).
+  //   No evening DH added — driver is already home.
+  // If last load doesn't go home: add evening DH (driver must commute back after all deliveries).
   available.forEach(d => {
     if (!d.deadheadMiles || !d.domicileDest) return;
     const drvLoads = assignments.filter(a => a.autoDriver === d.name);
-    if (!drvLoads.length) return;
+    if (!drvLoads.length) {
+      ds[d.id].hours += ds[d.id].eveningDH; // no loads today, still commutes home
+      return;
+    }
     const last = drvLoads[drvLoads.length - 1];
     if (last.dest === d.domicileDest) {
       last.homeReturn = true;
-      const savings = (d.deadheadMiles * 2) / state.settings.avgSpeed;
-      ds[d.id].hours -= savings;
+      // Last load was tracked as round-trip but is actually one-way — save the return leg.
+      // Evening DH is not added since driver ends at home.
+      ds[d.id].hours -= ds[d.id].eveningDH;
+    } else {
+      ds[d.id].hours += ds[d.id].eveningDH; // must drive back to Evergreen/Dothan/Auburn after last run
     }
   });
 
   const workload = available.map(d => ({
     id: d.id, name: d.name,
     hours: ds[d.id]?.hours || 0,
-    deadheadHrs: ds[d.id]?.deadheadHrs || 0,
+    deadheadHrs: ds[d.id]?.morningDH || 0,
     loads: ds[d.id]?.loadCount || 0,
     dotMax,
     status: (ds[d.id]?.hours || 0) > dotMax ? 'over'
@@ -1530,10 +1548,11 @@ function renderDriverCards(result) {
       }
     }).join('');
 
+    const oneDH = deadheadHrs / 2; // one-way deadhead hrs
     const deadheadNote = deadheadHrs > 0 && !hasHomeReturn
-      ? `<span style="font-size:10px;color:var(--amber);font-weight:600;">+${deadheadHrs.toFixed(1)}h deadhead</span>`
+      ? `<span style="font-size:10px;color:var(--amber);font-weight:600;">+${deadheadHrs.toFixed(1)}h deadhead (AM+PM)</span>`
       : deadheadHrs > 0 && hasHomeReturn
-      ? `<span style="font-size:10px;color:var(--green);font-weight:600;">Deadhead waived (home return)</span>`
+      ? `<span style="font-size:10px;color:var(--green);font-weight:600;">+${oneDH.toFixed(1)}h deadhead (AM only — home return)</span>`
       : '';
 
     const initial = driverName.charAt(0).toUpperCase();
