@@ -1069,7 +1069,7 @@ function runOptimizer(loadCounts) {
     // Only charge morning deadhead upfront. Evening deadhead is reserved in the capacity
     // check and settled in post-processing (saved if last load is home destination).
     const mDH = d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0;
-    ds[d.id] = {hours: mDH, morningDH: mDH, eveningDH: mDH, loadCount: 0, colCount: 0, colOfs: 0, hasHomeLoad: false};
+    ds[d.id] = {hours: mDH, morningDH: mDH, eveningDH: mDH, loadCount: 0, colCount: 0, colOfs: 0};
   });
 
   // Exclusive-route drivers (JR/Marcus/Robert): domiciled at endpoint, gated only by maxLoads.
@@ -1091,9 +1091,6 @@ function runOptimizer(loadCounts) {
       .filter(d => {
         if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus' && d.restriction !== 'Auburn First') return false;
         if (ds[d.id].loadCount >= d.maxLoads) return false;
-        // Once a domicile driver has secured their home-return load, block all non-home loads.
-        // homeFirst drivers go home first and come back — their home load is never "the last one."
-        if (d.domicileDest && !d.homeFirst && ds[d.id].hasHomeLoad && destCode !== d.domicileDest) return false;
         const isHome = !!(d.domicileDest && destCode === d.domicileDest && !d.homeFirst);
         const checkHrs = isHome ? hrs / 2 : hrs;
         const reserve  = isHome ? 0 : ds[d.id].eveningDH;
@@ -1129,7 +1126,6 @@ function runOptimizer(loadCounts) {
       .filter(d => {
         if (d.restriction === 'Panama City ONLY' || d.restriction === 'Columbus ONLY') return false;
         if (ds[d.id].loadCount >= d.maxLoads) return false;
-        if (d.domicileDest && !d.homeFirst && ds[d.id].hasHomeLoad && destCode !== d.domicileDest) return false;
         const isHome = !!(d.domicileDest && destCode === d.domicileDest && !d.homeFirst);
         const checkHrs = isHome ? hrs / 2 : hrs;
         const reserve  = isHome ? 0 : ds[d.id].eveningDH;
@@ -1215,9 +1211,6 @@ function runOptimizer(loadCounts) {
       else                            drv = findGeneral(hrs, phase.dest);
 
       if (drv) {
-        // Mark home-return load so this driver is blocked from further non-home loads.
-        // homeFirst drivers are excluded — they go home first and return to DC for more runs.
-        if (drv.domicileDest && phase.dest === drv.domicileDest && !drv.homeFirst) ds[drv.id].hasHomeLoad = true;
         ds[drv.id].hours += hrs;
         ds[drv.id].loadCount++;
         if (phase.dest === 'COL' && drv.restriction === 'Any + Columbus') ds[drv.id].colCount++;
@@ -1234,15 +1227,32 @@ function runOptimizer(loadCounts) {
     }
   });
 
+  // Reorder: give the home-dest load the highest driverLoadNum for every non-homeFirst
+  // domicile driver. This enforces home-last without shrinking the available pool during
+  // phase assignment (drivers compete freely; sequence is corrected after the fact).
+  available.forEach(d => {
+    if (!d.domicileDest || d.homeFirst) return;
+    const drvLoads = assignments.filter(a => a.autoDriver === d.name && a.driverLoadNum !== null);
+    if (drvLoads.length < 2) return;
+    const homeLoad = drvLoads.find(a => a.dest === d.domicileDest);
+    if (!homeLoad) return;
+    const maxNum = Math.max(...drvLoads.map(a => a.driverLoadNum));
+    if (homeLoad.driverLoadNum === maxNum) return;
+    const homeNum = homeLoad.driverLoadNum;
+    drvLoads.forEach(a => { if (a.driverLoadNum > homeNum) a.driverLoadNum--; });
+    homeLoad.driverLoadNum = maxNum;
+  });
+
   // Post-process: settle evening deadhead and mark home-return loads.
+  // Uses max(driverLoadNum) as "last" so the reorder above is respected.
   available.forEach(d => {
     if (!d.deadheadMiles || !d.domicileDest) return;
-    const drvLoads = assignments.filter(a => a.autoDriver === d.name);
+    const drvLoads = assignments.filter(a => a.autoDriver === d.name && a.driverLoadNum !== null);
     if (!drvLoads.length) {
       ds[d.id].hours += ds[d.id].eveningDH;
       return;
     }
-    const last = drvLoads[drvLoads.length - 1];
+    const last = drvLoads.reduce((m, a) => (a.driverLoadNum > m.driverLoadNum ? a : m));
     if (last.dest === d.domicileDest) {
       last.homeReturn = true;
       ds[d.id].hours -= ds[d.id].eveningDH;
