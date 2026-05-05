@@ -857,6 +857,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
         <select id="drv-restriction">
           <option value="Any">Any Route (Montgomery Team)</option>
           <option value="Any + Columbus">Any Route + Columbus Assist</option>
+          <option value="Auburn First">Auburn First, Then Any</option>
           <option value="Panama City ONLY">Panama City ONLY</option>
           <option value="Columbus ONLY">Columbus ONLY</option>
           <option value="Dothan ONLY">Dothan ONLY</option>
@@ -1046,7 +1047,7 @@ function runOptimizer(loadCounts) {
   function findGeneral(hrs, destCode) {
     return available
       .filter(d => {
-        if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus') return false;
+        if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus' && d.restriction !== 'Auburn First') return false;
         if (ds[d.id].loadCount >= d.maxLoads) return false;
         // homeFirst drivers already did their home run — treat all loads the same
         const isHome = !!(d.domicileDest && destCode === d.domicileDest && !d.homeFirst);
@@ -1091,20 +1092,24 @@ function runOptimizer(loadCounts) {
   let globalNum = 0;
   const counts = loadCounts.map(x => x || 0);
 
-  // Pre-assign homeFirst domicile drivers their home load as run 1.
-  // Charged at full round-trip hours (driver returns to DC to pick up more loads).
+  // Pre-assign first-run loads before the main phase loop.
+  // homeFirst domicile drivers get their home-dest load; Auburn First drivers get an AUB load.
+  // Charged at full round-trip hours (driver returns to DC for more loads after).
   available.forEach(d => {
-    if (!d.homeFirst || !d.domicileDest) return;
-    const pi = state.phases.findIndex(p => p.dest === d.domicileDest);
+    const targetDest = (d.homeFirst && d.domicileDest) ? d.domicileDest
+                     : d.restriction === 'Auburn First' ? 'AUB'
+                     : null;
+    if (!targetDest) return;
+    const pi = state.phases.findIndex(p => p.dest === targetDest);
     if (pi === -1 || counts[pi] <= 0) return;
-    const hrs = getHrsForDest(d.domicileDest);
+    const hrs = getHrsForDest(targetDest);
     if ((ds[d.id].hours + hrs + ds[d.id].eveningDH) > dotMax) return;
     counts[pi]--;
     ds[d.id].hours += hrs;
     ds[d.id].loadCount++;
     globalNum++;
     assignments.push({
-      loadNum: globalNum, phase: state.phases[pi].label, dest: d.domicileDest, hrs,
+      loadNum: globalNum, phase: state.phases[pi].label, dest: targetDest, hrs,
       dispatchTime: state.phases[pi].dispatchTime,
       autoDriver: d.name, driverLoadNum: ds[d.id].loadCount,
       override: '', status: 'Pending', notes: '', internal: true,
