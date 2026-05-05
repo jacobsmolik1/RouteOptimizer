@@ -722,6 +722,8 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
                 <th>Hrs</th>
                 <th>Auto-Assigned</th>
                 <th>Load #</th>
+                <th>Trailer #</th>
+                <th>Carrier</th>
                 <th class="no-print">Override</th>
                 <th class="no-print">Status</th>
                 <th>Final Driver</th>
@@ -1153,7 +1155,7 @@ function runOptimizer(loadCounts) {
       loadNum: globalNum, phase: state.phases[pi].label, dest: targetDest, hrs,
       dispatchTime: state.phases[pi].dispatchTime,
       autoDriver: d.name, driverLoadNum: ds[d.id].loadCount,
-      override: '', status: 'Pending', notes: '', internal: true,
+      override: '', status: 'Pending', notes: '', trailerNum: '', carrierDriver: '', internal: true,
     });
   });
 
@@ -1193,7 +1195,7 @@ function runOptimizer(loadCounts) {
         dispatchTime: phase.dispatchTime,
         autoDriver: drv ? drv.name : 'SHORELINE',
         driverLoadNum: drv ? ds[drv.id].loadCount : null,
-        override: '', status: 'Pending', notes: '',
+        override: '', status: 'Pending', notes: '', trailerNum: '', carrierDriver: '',
         internal: !!drv,
       });
     }
@@ -1276,6 +1278,11 @@ function fmtReturnTime(dispatchTime, hrs) {
   const ampm   = rh >= 12 ? 'PM' : 'AM';
   const dh     = rh > 12 ? rh - 12 : (rh === 0 ? 12 : rh);
   return `${dh}:${String(rm).padStart(2,'0')} ${ampm}`;
+}
+function minutesToHHMM(mins) {
+  const h = Math.floor(mins / 60) % 24;
+  const m = mins % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
 }
 
 function getRollingHours(driverId) {
@@ -1611,7 +1618,7 @@ function renderDriverCards(result) {
     .filter(d => byDriver[d.name] && byDriver[d.name].length > 0);
   const shoreLoads = byDriver['SHORELINE'] || [];
 
-  function runCard(driverName, runs, homeBase, totalHrs, dotMax, deadheadHrs) {
+  function runCard(driverName, runs, homeBase, totalHrs, dotMax, deadheadHrs, arrivalTime) {
     const status = totalHrs > dotMax ? 'over' : totalHrs > dotMax * 0.9 ? 'warn' : 'ok';
     const statusHTML = status==='over'
       ? `<span class="card-dot-status card-dot-over">⚠️ OVER DOT LIMIT</span>`
@@ -1622,10 +1629,15 @@ function renderDriverCards(result) {
     const hasHomeReturn = runs.some(r => r && r.homeReturn);
     const runLabels = ['RUN 1','RUN 2','RUN 3'];
     const runColors = ['','run2','run3'];
+    let prevReturnMins = arrivalTime ? toMinutes(arrivalTime) : null;
     const runRows   = [0,1,2].map(i => {
       const r = runs[i];
       if (r) {
-        const retTime = r.homeReturn ? null : fmtReturnTime(r.dispatchTime, r.hrs);
+        const dispMins = toMinutes(r.dispatchTime);
+        const actualStartMins = prevReturnMins !== null ? Math.max(dispMins, prevReturnMins) : dispMins;
+        prevReturnMins = actualStartMins + Math.round(r.hrs * 60);
+        const actualStartStr = minutesToHHMM(actualStartMins);
+        const retTime = r.homeReturn ? null : fmtReturnTime(actualStartStr, r.hrs);
         const homeTag = r.homeReturn
           ? `<span style="display:inline-block;margin-left:4px;font-size:9px;font-weight:700;color:var(--green);background:var(--green-bg);border-radius:3px;padding:1px 4px;">← Home</span>`
           : '';
@@ -1675,7 +1687,7 @@ function renderDriverCards(result) {
     const workloadEntry = result.workload.find(w => w.id === d.id);
     const totalHrs = workloadEntry ? workloadEntry.hours : runs.reduce((s,r) => s + r.hrs, 0);
     const deadheadHrs = d.deadheadMiles ? (d.deadheadMiles * 2) / state.settings.avgSpeed : 0;
-    return runCard(d.name, runs, d.homeBase, totalHrs, state.settings.dotMaxHours, deadheadHrs);
+    return runCard(d.name, runs, d.homeBase, totalHrs, state.settings.dotMaxHours, deadheadHrs, d.arrivalTime);
   }).join('');
 
   if (shoreLoads.length > 0) {
@@ -1746,6 +1758,8 @@ function renderAssignmentsTable(result) {
       <td class="text-center">${a.hrs.toFixed(2)}</td>
       <td>${a.autoDriver==='SHORELINE'?'<span class="badge badge-shore">SHORELINE</span>':a.autoDriver}</td>
       <td class="text-center">${a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—'}</td>
+      <td><input type="text" value="${a.trailerNum||''}" onchange="setTrailerNum(${idx},this.value)" style="width:60px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—"></td>
+      <td>${a.autoDriver==='SHORELINE'?`<input type="text" value="${a.carrierDriver||''}" onchange="setCarrierDriver(${idx},this.value)" style="width:90px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="Driver name">`:'—'}</td>
       <td class="no-print">${overrideSel}</td>
       <td class="no-print">${statusSel}</td>
       <td>${driverCell}</td>
@@ -1762,7 +1776,7 @@ function setOverride(idx,val) {
   if (rows[idx]) {
     const a = state.lastResult.assignments[idx];
     const final = val || a.autoDriver;
-    rows[idx].querySelectorAll('td')[9].innerHTML =
+    rows[idx].querySelectorAll('td')[12].innerHTML =
       a.internal||val ? `<strong>${final}</strong>` : `<span class="badge badge-shore">🚛 ${final}</span>`;
   }
   renderDriverCards(state.lastResult);
@@ -1770,6 +1784,14 @@ function setOverride(idx,val) {
 
 function setStatus(idx,val) {
   if (state.lastResult) { state.lastResult.assignments[idx].status=val; saveResult(); }
+}
+
+function setTrailerNum(idx,val) {
+  if (state.lastResult) { state.lastResult.assignments[idx].trailerNum=val; saveResult(); }
+}
+
+function setCarrierDriver(idx,val) {
+  if (state.lastResult) { state.lastResult.assignments[idx].carrierDriver=val; saveResult(); }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2095,11 +2117,12 @@ function renderDriverRules() {
 // ════════════════════════════════════════════════════════════════════════════
 function exportCSV() {
   if (!state.lastResult) return;
-  const rows = [['Load#','Phase','Destination','Miles RT','Hours','Auto-Assigned','Load #','Final Driver','Status','Notes']];
+  const rows = [['Load#','Phase','Destination','Miles RT','Hours','Auto-Assigned','Load #','Trailer #','Carrier Driver','Final Driver','Status','Notes']];
   state.lastResult.assignments.forEach(a => {
     const dest = state.destinations.find(d=>d.code===a.dest);
     rows.push([a.loadNum,a.phase,dest?dest.name:a.dest,dest?dest.miles1Way*2:'',a.hrs.toFixed(2),
                a.autoDriver,a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—',
+               a.trailerNum||'',a.carrierDriver||'',
                a.override||a.autoDriver,a.status,a.notes]);
   });
   const csv  = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
