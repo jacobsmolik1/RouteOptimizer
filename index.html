@@ -602,7 +602,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
 
 <!-- ═══ TAB: DASHBOARD ══════════════════════════════════════════════════ -->
 <div id="tab-dashboard" class="tab-content active">
-  <div style="max-width: 1100px; margin: 0 auto;">
+  <div style="max-width: 1350px; margin: 0 auto;">
     <div class="stack">
 
       <!-- Phase Inputs -->
@@ -667,7 +667,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
 
   <!-- Driver Cards (post-generate) -->
   <div id="driver-cards-section" style="display:none; margin-top:20px;">
-    <div style="max-width:1100px; margin:0 auto;">
+    <div style="max-width:1350px; margin:0 auto;">
       <div class="card">
         <div class="card-header">
           <span>Driver Assignments — Pass-Out Sheet</span>
@@ -707,7 +707,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
 
   <!-- Full Assignments Table (post-generate) -->
   <div id="assignments-section" style="display:none; margin-top:16px;">
-    <div style="max-width:1100px; margin:0 auto;">
+    <div style="max-width:1350px; margin:0 auto;">
       <div class="card">
         <div class="card-header">Full Load Assignments — Detailed View</div>
         <div class="tbl-wrap">
@@ -741,7 +741,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
 
 <!-- ═══ TAB: FLEET ══════════════════════════════════════════════════════ -->
 <div id="tab-fleet" class="tab-content">
-  <div style="max-width:1100px; margin:0 auto;">
+  <div style="max-width:1350px; margin:0 auto;">
     <div class="flex-between" style="margin-bottom:16px;">
       <div>
         <div style="font-size:16px;font-weight:700;">Driver Roster</div>
@@ -1759,7 +1759,7 @@ function renderAssignmentsTable(result) {
       <td>${a.autoDriver==='SHORELINE'?'<span class="badge badge-shore">SHORELINE</span>':a.autoDriver}</td>
       <td class="text-center">${a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—'}</td>
       <td><input type="text" value="${a.trailerNum||''}" onchange="setTrailerNum(${idx},this.value)" style="width:60px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—"></td>
-      <td>${a.autoDriver==='SHORELINE'?`<input type="text" value="${a.carrierDriver||''}" onchange="setCarrierDriver(${idx},this.value)" style="width:90px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="Driver name">`:'—'}</td>
+      <td>${a.autoDriver==='SHORELINE'?`<input type="text" value="${a.carrierDriver||''}" onchange="setCarrierDriver(${idx},this.value)" style="width:90px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="Driver name">`:`<span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span>`}</td>
       <td class="no-print">${overrideSel}</td>
       <td class="no-print">${statusSel}</td>
       <td>${driverCell}</td>
@@ -2122,7 +2122,7 @@ function exportCSV() {
     const dest = state.destinations.find(d=>d.code===a.dest);
     rows.push([a.loadNum,a.phase,dest?dest.name:a.dest,dest?dest.miles1Way*2:'',a.hrs.toFixed(2),
                a.autoDriver,a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—',
-               a.trailerNum||'',a.carrierDriver||'',
+               a.trailerNum||'',a.autoDriver==='SHORELINE'?a.carrierDriver||'':'Coca-Cola United',
                a.override||a.autoDriver,a.status,a.notes]);
   });
   const csv  = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
