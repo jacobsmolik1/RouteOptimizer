@@ -361,6 +361,7 @@ tr.row-dot   { background: #F0FBF2; }
 tr.row-aub   { background: #FAF0FF; }
 tr.row-evg   { background: #F0FFFB; }
 tr.row-shore { background: var(--purple-bg); }
+tr.row-unassigned { background: #FFEBEE; }
 
 /* ── BADGES / TAGS ───────────────────────────────────────────────────── */
 .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
@@ -1112,6 +1113,23 @@ function runOptimizer(loadCounts) {
       })[0] || null;
   }
 
+  // Last-resort fallback for inland routes (DOT/AUB/EVG) — never let these go to SHORELINE.
+  // Ignores route restriction but still respects maxLoads and DOT hours.
+  // Excludes PAN/COL dedicated drivers who should never run inland routes.
+  function findAnyAvailable(hrs) {
+    return available
+      .filter(d => {
+        if (d.restriction === 'Panama City ONLY' || d.restriction === 'Columbus ONLY') return false;
+        if (ds[d.id].loadCount >= d.maxLoads) return false;
+        return (ds[d.id].hours + hrs + ds[d.id].eveningDH) <= dotMax;
+      })
+      .sort((a,b) => {
+        if (ds[a.id].loadCount !== ds[b.id].loadCount) return ds[a.id].loadCount - ds[b.id].loadCount;
+        if (toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)) return toMinutes(a.arrivalTime) - toMinutes(b.arrivalTime);
+        return ds[a.id].hours - ds[b.id].hours;
+      })[0] || null;
+  }
+
   // Columbus assist drivers: overflow after Columbus ONLY drivers are full.
   // Capped at 1 Columbus load per assist driver regardless of their maxLoads.
   function findColumbusAssist(hrs, destCode) {
@@ -1179,9 +1197,9 @@ function runOptimizer(loadCounts) {
         }
         if (!drv) drv = findColumbusAssist(hrs, phase.dest);
       }
-      else if (phase.dest === 'DOT') { drv = findExclusive('Dothan ONLY');   if (!drv) drv = findGeneral(hrs, phase.dest); }
-      else if (phase.dest === 'AUB') { drv = findExclusive('Auburn ONLY');   if (!drv) drv = findGeneral(hrs, phase.dest); }
-      else if (phase.dest === 'EVG') { drv = findExclusive('Evergreen ONLY'); if (!drv) drv = findGeneral(hrs, phase.dest); }
+      else if (phase.dest === 'DOT') { drv = findExclusive('Dothan ONLY');    if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs); }
+      else if (phase.dest === 'AUB') { drv = findExclusive('Auburn ONLY');    if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs); }
+      else if (phase.dest === 'EVG') { drv = findExclusive('Evergreen ONLY'); if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs); }
       else                            drv = findGeneral(hrs, phase.dest);
 
       if (drv) {
@@ -1193,7 +1211,7 @@ function runOptimizer(loadCounts) {
       assignments.push({
         loadNum: globalNum, phase: phase.label, dest: phase.dest, hrs,
         dispatchTime: phase.dispatchTime,
-        autoDriver: drv ? drv.name : 'SHORELINE',
+        autoDriver: drv ? drv.name : (phase.dest === 'PAN' || phase.dest === 'COL' ? 'SHORELINE' : 'UNASSIGNED'),
         driverLoadNum: drv ? ds[drv.id].loadCount : null,
         override: '', status: 'Pending', notes: '', trailerNum: '', carrierDriver: '',
         internal: !!drv,
@@ -1734,9 +1752,12 @@ function renderAssignmentsTable(result) {
   tbody.innerHTML = result.assignments.map((a,idx) => {
     const finalDriver = a.override || a.autoDriver;
     const dest = state.destinations.find(d=>d.code===a.dest);
-    const rowClass = a.internal ? `row-${DEST_COLORS[a.dest]}` : 'row-shore';
+    const isUnassigned = a.autoDriver === 'UNASSIGNED' && !a.override;
+    const rowClass = a.internal ? `row-${DEST_COLORS[a.dest]}` : isUnassigned ? 'row-unassigned' : 'row-shore';
     const driverCell = a.internal
       ? `<strong>${finalDriver}</strong>`
+      : isUnassigned
+      ? `<span style="font-weight:700;color:#B71C1C;background:#FFEBEE;border-radius:3px;padding:2px 6px;font-size:11px;">⚠ UNASSIGNED</span>`
       : `<span class="badge badge-shore">🚛 ${finalDriver}</span>`;
     const overrideSel = `<select class="override-sel" onchange="setOverride(${idx},this.value)">
       <option value="">— Auto —</option>
@@ -1756,7 +1777,7 @@ function renderAssignmentsTable(result) {
       <td class="text-center" style="font-size:11px;color:var(--gray-600);">${a.dispatchTime||'—'}</td>
       <td class="text-center">${dest?dest.miles1Way*2:'—'}</td>
       <td class="text-center">${a.hrs.toFixed(2)}</td>
-      <td>${a.autoDriver==='SHORELINE'?'<span class="badge badge-shore">SHORELINE</span>':a.autoDriver}</td>
+      <td>${a.autoDriver==='SHORELINE'?'<span class="badge badge-shore">SHORELINE</span>':a.autoDriver==='UNASSIGNED'?'<span style="color:#B71C1C;font-weight:700;font-size:11px;">UNASSIGNED</span>':a.autoDriver}</td>
       <td class="text-center">${a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—'}</td>
       <td><input type="text" value="${a.trailerNum||''}" onchange="setTrailerNum(${idx},this.value)" style="width:60px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—"></td>
       <td>${a.autoDriver==='SHORELINE'?`<input type="text" value="${a.carrierDriver||''}" onchange="setCarrierDriver(${idx},this.value)" style="width:90px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="Driver name">`:`<span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span>`}</td>
