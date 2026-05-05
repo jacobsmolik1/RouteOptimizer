@@ -1032,14 +1032,14 @@ function runOptimizer(loadCounts) {
   }
 
   // General drivers: least hours → earliest arrival → roster order.
-  // For home-destination loads, use one-way hours + no evening DH reserve (driver stays home).
+  // For home-destination loads, use actual one-way hours + no evening DH reserve (driver stays home).
   function findGeneral(hrs, destCode) {
     return available
       .filter(d => {
         if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus') return false;
         if (ds[d.id].loadCount >= d.maxLoads) return false;
         const isHome = !!(d.domicileDest && destCode === d.domicileDest);
-        const checkHrs = isHome ? ds[d.id].eveningDH : hrs; // one-way ≈ deadheadMiles/speed
+        const checkHrs = isHome ? hrs / 2 : hrs; // one-way = half of round-trip
         const reserve  = isHome ? 0 : ds[d.id].eveningDH;
         return (ds[d.id].hours + checkHrs + reserve) <= dotMax;
       })
@@ -1058,7 +1058,7 @@ function runOptimizer(loadCounts) {
         if (d.restriction !== 'Any + Columbus') return false;
         if (ds[d.id].colCount >= 1 || ds[d.id].loadCount >= d.maxLoads) return false;
         const isHome = !!(d.domicileDest && destCode === d.domicileDest);
-        const checkHrs = isHome ? ds[d.id].eveningDH : hrs;
+        const checkHrs = isHome ? hrs / 2 : hrs;
         const reserve  = isHome ? 0 : ds[d.id].eveningDH;
         return (ds[d.id].hours + checkHrs + reserve) <= dotMax;
       })
