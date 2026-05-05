@@ -1041,9 +1041,10 @@ function runOptimizer(loadCounts) {
       .filter(d => {
         if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus') return false;
         if (ds[d.id].loadCount >= d.maxLoads) return false;
-        // Home-destination loads are reserved for pass 2 so they're always last
-        if (d.domicileDest && destCode === d.domicileDest) return false;
-        return (ds[d.id].hours + hrs + ds[d.id].eveningDH) <= dotMax;
+        const isHome = !!(d.domicileDest && destCode === d.domicileDest);
+        const checkHrs = isHome ? hrs / 2 : hrs;
+        const reserve  = isHome ? 0 : ds[d.id].eveningDH;
+        return (ds[d.id].hours + checkHrs + reserve) <= dotMax;
       })
       .sort((a,b) => {
         const aIsHome = !!(a.domicileDest && destCode === a.domicileDest);
@@ -1108,42 +1109,20 @@ function runOptimizer(loadCounts) {
     }
   });
 
-  // Pass 2: assign one home-destination load to each domicile driver as their LAST load.
-  // Pulls from SHORELINE assignments only — guarantees no empty return to DC.
+  // Post-process: settle evening deadhead and mark home-return loads.
   available.forEach(d => {
     if (!d.deadheadMiles || !d.domicileDest) return;
-    if (ds[d.id].loadCount >= d.maxLoads) return;
-    // DOT check: can they fit a one-way home run?
-    const homeHrs = getHrsForDest(d.domicileDest);
-    if ((ds[d.id].hours + homeHrs / 2) > dotMax) return;
-    // Find the last SHORELINE assignment going to this driver's home destination
-    let bestIdx = -1;
-    for (let i = 0; i < assignments.length; i++) {
-      if (assignments[i].autoDriver === 'SHORELINE' && assignments[i].dest === d.domicileDest)
-        bestIdx = i;
+    const drvLoads = assignments.filter(a => a.autoDriver === d.name);
+    if (!drvLoads.length) {
+      ds[d.id].hours += ds[d.id].eveningDH;
+      return;
     }
-    if (bestIdx === -1) return;
-    const a = assignments[bestIdx];
-    a.autoDriver = d.name;
-    a.internal = true;
-    a.homeReturn = true;
-    ds[d.id].hours += a.hrs;
-    ds[d.id].loadCount++;
-    a.driverLoadNum = ds[d.id].loadCount;
-  });
-
-  // Post-process: settle evening deadhead.
-  // homeReturn flag set in pass 2 — saves return leg of home load + no evening commute.
-  available.forEach(d => {
-    if (!d.deadheadMiles || !d.domicileDest) return;
-    const hasHome = assignments.some(a => a.autoDriver === d.name && a.homeReturn);
-    const hasLoads = assignments.some(a => a.autoDriver === d.name);
-    if (hasHome) {
-      ds[d.id].hours -= ds[d.id].eveningDH; // save return leg + no evening commute
-    } else if (hasLoads) {
-      ds[d.id].hours += ds[d.id].eveningDH; // must drive home from DC after last run
+    const last = drvLoads[drvLoads.length - 1];
+    if (last.dest === d.domicileDest) {
+      last.homeReturn = true;
+      ds[d.id].hours -= ds[d.id].eveningDH;
     } else {
-      ds[d.id].hours += ds[d.id].eveningDH; // no loads, still commutes home
+      ds[d.id].hours += ds[d.id].eveningDH;
     }
   });
 
