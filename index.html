@@ -1091,6 +1091,8 @@ function runOptimizer(loadCounts) {
       .filter(d => {
         if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus' && d.restriction !== 'Auburn First') return false;
         if (ds[d.id].loadCount >= d.maxLoads) return false;
+        // Auburn First: must get an AUB load before taking anything else
+        if (d.restriction === 'Auburn First' && ds[d.id].loadCount === 0 && destCode !== 'AUB') return false;
         const isHome = !!(d.domicileDest && destCode === d.domicileDest && !d.homeFirst);
         const checkHrs = isHome ? hrs / 2 : hrs;
         const reserve  = isHome ? 0 : ds[d.id].eveningDH;
@@ -1126,6 +1128,7 @@ function runOptimizer(loadCounts) {
       .filter(d => {
         if (d.restriction === 'Panama City ONLY' || d.restriction === 'Columbus ONLY') return false;
         if (ds[d.id].loadCount >= d.maxLoads) return false;
+        if (d.restriction === 'Auburn First' && ds[d.id].loadCount === 0 && destCode !== 'AUB') return false;
         const isHome = !!(d.domicileDest && destCode === d.domicileDest && !d.homeFirst);
         const checkHrs = isHome ? hrs / 2 : hrs;
         const reserve  = isHome ? 0 : ds[d.id].eveningDH;
@@ -1165,9 +1168,7 @@ function runOptimizer(loadCounts) {
   // homeFirst domicile drivers get their home-dest load; Auburn First drivers get an AUB load.
   // Charged at full round-trip hours (driver returns to DC for more loads after).
   available.forEach(d => {
-    const targetDest = (d.homeFirst && d.domicileDest) ? d.domicileDest
-                     : d.restriction === 'Auburn First' ? 'AUB'
-                     : null;
+    const targetDest = (d.homeFirst && d.domicileDest) ? d.domicileDest : null;
     if (!targetDest) return;
     const pi = state.phases.findIndex((p, i) => p.dest === targetDest && counts[i] > 0);
     if (pi === -1 || counts[pi] <= 0) return;
