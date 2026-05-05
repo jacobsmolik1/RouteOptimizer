@@ -1164,6 +1164,9 @@ function runOptimizer(loadCounts) {
       let drv = null;
       if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY');
       else if (phase.dest === 'COL') { drv = findExclusive('Columbus ONLY'); if (!drv) drv = findColumbusAssist(hrs, phase.dest); }
+      else if (phase.dest === 'DOT') { drv = findExclusive('Dothan ONLY');   if (!drv) drv = findGeneral(hrs, phase.dest); }
+      else if (phase.dest === 'AUB') { drv = findExclusive('Auburn ONLY');   if (!drv) drv = findGeneral(hrs, phase.dest); }
+      else if (phase.dest === 'EVG') { drv = findExclusive('Evergreen ONLY'); if (!drv) drv = findGeneral(hrs, phase.dest); }
       else                            drv = findGeneral(hrs, phase.dest);
 
       if (drv) {
