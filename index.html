@@ -747,6 +747,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
               <th>Driver Name</th>
               <th>Home Base</th>
               <th>Restriction</th>
+              <th class="text-center">Arrives</th>
               <th class="text-center">Max Loads/Day</th>
               <th class="text-center">Vacation</th>
               <th class="text-center">Status</th>
@@ -863,6 +864,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
           <option value="Evergreen ONLY">Evergreen ONLY</option>
         </select>
       </div>
+      <div class="field-group"><label>Arrival Time (leave blank for domicile drivers)</label><input type="time" class="plain" id="drv-arrival"></div>
       <div class="field-group"><label>Max Loads Per Day</label><input type="number" class="plain" id="drv-maxloads" value="3" min="1" max="5"></div>
       <div class="field-group">
         <label>On Vacation?</label>
@@ -892,24 +894,24 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
 //  DATA DEFAULTS
 // ════════════════════════════════════════════════════════════════════════════
 const DEFAULT_DRIVERS = [
-  {id:'D001',name:'JR Mesi',            homeBase:'Panama City, FL',  maxLoads:1, restriction:'Panama City ONLY', onVacation:false, notes:'Panama City ONLY · 1 load/day'},
-  {id:'D002',name:'Marcus Hood',        homeBase:'Columbus, GA',     maxLoads:2, restriction:'Columbus ONLY',    onVacation:false, notes:'Columbus ONLY · 2 loads/day'},
-  {id:'D018',name:'Robert Pride',       homeBase:'Columbus, GA',     maxLoads:2, restriction:'Columbus ONLY',    onVacation:false, notes:'Columbus ONLY · 2 loads/day'},
-  {id:'D003',name:'Aaron Smith',        homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D004',name:'Braxton Parker',     homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D005',name:'Charles Carmack',    homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D006',name:'Chauma Bowman',      homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D007',name:'Cleveland Gamble',   homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D008',name:'David Gadsden',      homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D009',name:'Elkanie Moorer',     homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D010',name:'Frederick Young',    homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D011',name:'James Gilmore',      homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D012',name:'Javoris Williams',   homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D013',name:'Mcarthure Newman II',homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D014',name:'Michael Cook',       homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D015',name:'Quad Whatley',       homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D016',name:'Sean Tellis',        homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
-  {id:'D017',name:'Wilmer Mixon',       homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, notes:''},
+  {id:'D001',name:'JR Mesi',            homeBase:'Panama City, FL',  maxLoads:1, restriction:'Panama City ONLY', onVacation:false, arrivalTime:'',    notes:'Panama City ONLY · 1 load/day'},
+  {id:'D002',name:'Marcus Hood',        homeBase:'Columbus, GA',     maxLoads:2, restriction:'Columbus ONLY',    onVacation:false, arrivalTime:'',    notes:'Columbus ONLY · 2 loads/day'},
+  {id:'D018',name:'Robert Pride',       homeBase:'Columbus, GA',     maxLoads:2, restriction:'Columbus ONLY',    onVacation:false, arrivalTime:'',    notes:'Columbus ONLY · 2 loads/day'},
+  {id:'D013',name:'Mcarthure Newman II',homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'10:30', notes:'Dothan location'},
+  {id:'D017',name:'Wilmer Mixon',       homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'11:00', notes:'Evergreen location'},
+  {id:'D005',name:'Charles Carmack',    homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'11:30', notes:''},
+  {id:'D012',name:'Javoris Williams',   homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'12:00', notes:''},
+  {id:'D014',name:'Michael Cook',       homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'12:00', notes:''},
+  {id:'D009',name:'Elkanie Moorer',     homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'12:30', notes:'(Bug)'},
+  {id:'D016',name:'Sean Tellis',        homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'12:30', notes:''},
+  {id:'D011',name:'James Gilmore',      homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'12:30', notes:'Auburn driver'},
+  {id:'D003',name:'Aaron Smith',        homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'13:00', notes:''},
+  {id:'D006',name:'Chauma Bowman',      homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'13:30', notes:''},
+  {id:'D015',name:'Quad Whatley',       homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'13:30', notes:''},
+  {id:'D008',name:'David Gadsden',      homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'14:00', notes:''},
+  {id:'D007',name:'Cleveland Gamble',   homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'14:00', notes:''},
+  {id:'D010',name:'Frederick Young',    homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'14:00', notes:''},
+  {id:'D004',name:'Braxton Parker',     homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'17:00', notes:'Backup · last dispatch'},
 ];
 
 const DEFAULT_DESTINATIONS = [
@@ -985,6 +987,17 @@ function nextId() {
 // ════════════════════════════════════════════════════════════════════════════
 //  OPTIMIZER
 // ════════════════════════════════════════════════════════════════════════════
+function toMinutes(t) {
+  if (!t) return 0;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+function fmt12h(t) {
+  if (!t) return '—';
+  const [h, m] = t.split(':').map(Number);
+  return `${h % 12 || 12}:${String(m||0).padStart(2,'0')} ${h >= 12 ? 'pm' : 'am'}`;
+}
+
 function runOptimizer(loadCounts) {
   const available = getAvailableDrivers();
   const dotMax    = state.settings.dotMaxHours;
@@ -1000,7 +1013,7 @@ function runOptimizer(loadCounts) {
         : ds[a.id].hours - ds[b.id].hours)[0] || null;
   }
 
-  // General drivers (Any or Any+Columbus): always pick least-hours driver within DOT limit.
+  // General drivers (Any or Any+Columbus): least hours → earliest arrival → roster order.
   function findGeneral(hrs) {
     return available
       .filter(d => (d.restriction === 'Any' || d.restriction === 'Any + Columbus')
@@ -1008,7 +1021,9 @@ function runOptimizer(loadCounts) {
                && (ds[d.id].hours + hrs) <= dotMax)
       .sort((a,b) => ds[a.id].hours !== ds[b.id].hours
         ? ds[a.id].hours - ds[b.id].hours
-        : state.drivers.indexOf(a) - state.drivers.indexOf(b))[0] || null;
+        : toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)
+          ? toMinutes(a.arrivalTime) - toMinutes(b.arrivalTime)
+          : state.drivers.indexOf(a) - state.drivers.indexOf(b))[0] || null;
   }
 
   // Columbus assist drivers: overflow after Columbus ONLY drivers are full.
@@ -1021,7 +1036,9 @@ function runOptimizer(loadCounts) {
                && (ds[d.id].hours + hrs) <= dotMax)
       .sort((a,b) => ds[a.id].hours !== ds[b.id].hours
         ? ds[a.id].hours - ds[b.id].hours
-        : state.drivers.indexOf(a) - state.drivers.indexOf(b))[0] || null;
+        : toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)
+          ? toMinutes(a.arrivalTime) - toMinutes(b.arrivalTime)
+          : state.drivers.indexOf(a) - state.drivers.indexOf(b))[0] || null;
   }
 
   const assignments = [];
@@ -1622,6 +1639,7 @@ function renderFleetTable() {
       <td><strong>${d.name}</strong>${d.notes?`<div style="font-size:10px;color:var(--gray-400);">${d.notes}</div>`:''}</td>
       <td style="font-size:12px;color:var(--gray-600);">${d.homeBase}</td>
       <td>${resBadge}</td>
+      <td class="text-center" style="font-size:12px;font-weight:600;color:var(--gray-700);">${fmt12h(d.arrivalTime)}</td>
       <td class="text-center">${d.maxLoads}</td>
       <td class="text-center">
         <div class="toggle-wrap" style="justify-content:center;">
@@ -1658,6 +1676,7 @@ function openAddDriver() {
   document.getElementById('drv-name').value         = '';
   document.getElementById('drv-home').value         = 'Montgomery, AL';
   document.getElementById('drv-restriction').value  = 'Any';
+  document.getElementById('drv-arrival').value      = '';
   document.getElementById('drv-maxloads').value     = '3';
   document.getElementById('drv-vacation').value     = 'false';
   document.getElementById('drv-notes').value        = '';
@@ -1673,6 +1692,7 @@ function openEditDriver(id) {
   document.getElementById('drv-name').value         = d.name;
   document.getElementById('drv-home').value         = d.homeBase;
   document.getElementById('drv-restriction').value  = d.restriction;
+  document.getElementById('drv-arrival').value      = d.arrivalTime || '';
   document.getElementById('drv-maxloads').value     = d.maxLoads;
   document.getElementById('drv-vacation').value     = d.onVacation ? 'true' : 'false';
   document.getElementById('drv-notes').value        = d.notes || '';
@@ -1691,6 +1711,7 @@ function saveDriver() {
   const data = {
     name, homeBase: document.getElementById('drv-home').value,
     restriction: document.getElementById('drv-restriction').value,
+    arrivalTime: document.getElementById('drv-arrival').value,
     maxLoads: parseInt(document.getElementById('drv-maxloads').value)||3,
     onVacation: document.getElementById('drv-vacation').value==='true',
     notes: document.getElementById('drv-notes').value.trim(),
