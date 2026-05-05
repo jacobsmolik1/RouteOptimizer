@@ -818,13 +818,13 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
       <div class="divider"></div>
       <div class="settings-section-title">Danger Zone</div>
       <div id="reset-confirm-box" class="confirm-box">
-        ⚠️ This will erase all driver changes. Are you sure?
+        ⚠️ This will clear all local data and reload the latest version of the app. Driver roster, history, and settings will reset to defaults. Are you sure?
         <div class="btn-group mt-8">
-          <button class="btn btn-danger btn-sm" onclick="hardReset()">Yes, Reset Everything</button>
+          <button class="btn btn-danger btn-sm" onclick="hardReset()">Yes, Reset &amp; Update</button>
           <button class="btn btn-ghost btn-sm" onclick="hideResetConfirm()">Cancel</button>
         </div>
       </div>
-      <button class="btn btn-danger btn-sm" onclick="showResetConfirm()" id="reset-btn">↺ Reset to Defaults</button>
+      <button class="btn btn-danger btn-sm" onclick="showResetConfirm()" id="reset-btn">↺ Reset &amp; Update App</button>
 
     </div>
   </div>
@@ -1913,7 +1913,13 @@ function showResetConfirm()  { document.getElementById('reset-confirm-box').clas
 function hideResetConfirm()  { document.getElementById('reset-confirm-box').classList.remove('show'); document.getElementById('reset-btn').style.display=''; }
 function hardReset() {
   ['ccu_drivers','ccu_dests','ccu_settings','ccu_phases','ccu_loads','ccu_lastresult','ccu_returned','ccu_templates','ccu_history'].forEach(k=>localStorage.removeItem(k));
-  state = loadState(); init(); hideResetConfirm(); closeSettings(); alert('✅ Reset to defaults.');
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      Promise.all(regs.map(r => r.unregister())).then(() => location.reload(true));
+    });
+  } else {
+    location.reload(true);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
