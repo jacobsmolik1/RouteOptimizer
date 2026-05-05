@@ -978,8 +978,11 @@ const DEFAULT_PHASES = [
   {label:'Panama City (Bulk)',        dest:'PAN', dispatchTime:'07:30'},
   {label:'Columbus (Bulk)',           dest:'COL', dispatchTime:'07:30'},
   {label:'Dothan (OFS)',              dest:'DOT', dispatchTime:'08:00'},
+  {label:'Dothan (Bulk)',             dest:'DOT', dispatchTime:'08:00'},
+  {label:'Auburn (OFS)',              dest:'AUB', dispatchTime:'08:30'},
   {label:'Auburn (Bulk)',             dest:'AUB', dispatchTime:'08:30'},
-  {label:'Evergreen',                 dest:'EVG', dispatchTime:'09:00'},
+  {label:'Evergreen (OFS)',           dest:'EVG', dispatchTime:'09:00'},
+  {label:'Evergreen (Bulk)',          dest:'EVG', dispatchTime:'09:00'},
 ];
 
 const DEST_COLORS = {PAN:'pan',COL:'col',DOT:'dot',EVG:'evg',AUB:'aub'};
@@ -990,16 +993,25 @@ const DEST_TAGS   = {PAN:'tag-panama',COL:'tag-columbus',DOT:'tag-dothan',AUB:'t
 // ════════════════════════════════════════════════════════════════════════════
 function loadState() {
   try {
-    const phases = JSON.parse(localStorage.getItem('ccu_phases')) || deepCopy(DEFAULT_PHASES);
+    const savedPhases = JSON.parse(localStorage.getItem('ccu_phases'));
+    const phaseCountOk = savedPhases && savedPhases.length === DEFAULT_PHASES.length;
+    const phases = phaseCountOk ? savedPhases : deepCopy(DEFAULT_PHASES);
+
+    const savedLoads = JSON.parse(localStorage.getItem('ccu_loads'));
+    const loads = (savedLoads && savedLoads.length === DEFAULT_PHASES.length) ? savedLoads : Array(DEFAULT_PHASES.length).fill(0);
+
+    // Templates are indexed to phases — clear them if phase count changed to prevent slot corruption
+    const savedTemplates = JSON.parse(localStorage.getItem('ccu_templates')) || {};
+    const templates = phaseCountOk ? savedTemplates : {};
+    if (!phaseCountOk) localStorage.removeItem('ccu_templates');
+
     return {
-      drivers:     JSON.parse(localStorage.getItem('ccu_drivers'))    || deepCopy(DEFAULT_DRIVERS),
-      destinations:JSON.parse(localStorage.getItem('ccu_dests'))      || deepCopy(DEFAULT_DESTINATIONS),
-      settings:    JSON.parse(localStorage.getItem('ccu_settings'))   || deepCopy(DEFAULT_SETTINGS),
-      phases,
-      loads:       JSON.parse(localStorage.getItem('ccu_loads'))      || Array(phases.length).fill(0),
+      drivers:      JSON.parse(localStorage.getItem('ccu_drivers'))    || deepCopy(DEFAULT_DRIVERS),
+      destinations: JSON.parse(localStorage.getItem('ccu_dests'))      || deepCopy(DEFAULT_DESTINATIONS),
+      settings:     JSON.parse(localStorage.getItem('ccu_settings'))   || deepCopy(DEFAULT_SETTINGS),
+      phases, loads, templates,
       lastResult:  JSON.parse(localStorage.getItem('ccu_lastresult')) || null,
       returned:    JSON.parse(localStorage.getItem('ccu_returned'))   || {},
-      templates:   JSON.parse(localStorage.getItem('ccu_templates'))  || {},
       history:     JSON.parse(localStorage.getItem('ccu_history'))    || [],
     };
   } catch(e) {
@@ -1127,7 +1139,7 @@ function runOptimizer(loadCounts) {
                      : d.restriction === 'Auburn First' ? 'AUB'
                      : null;
     if (!targetDest) return;
-    const pi = state.phases.findIndex(p => p.dest === targetDest);
+    const pi = state.phases.findIndex((p, i) => p.dest === targetDest && counts[i] > 0);
     if (pi === -1 || counts[pi] <= 0) return;
     const hrs = getHrsForDest(targetDest);
     if ((ds[d.id].hours + hrs + ds[d.id].eveningDH) > dotMax) return;
@@ -2119,10 +2131,10 @@ function handleImportFile(evt) {
       state.drivers      = data.drivers;
       state.destinations = data.destinations || deepCopy(DEFAULT_DESTINATIONS);
       state.settings     = data.settings;
-      state.phases       = data.phases   || deepCopy(DEFAULT_PHASES);
-      state.loads        = data.loads    || Array(state.phases.length).fill(0);
-      state.returned     = data.returned   || {};
-      state.templates    = data.templates  || {};
+      state.phases    = (data.phases && data.phases.length === DEFAULT_PHASES.length) ? data.phases : deepCopy(DEFAULT_PHASES);
+      state.loads     = (data.loads  && data.loads.length  === state.phases.length)  ? data.loads  : Array(state.phases.length).fill(0);
+      state.returned  = data.returned  || {};
+      state.templates = (data.templates && Object.values(data.templates).every(t => t.length === state.phases.length)) ? data.templates : {};
       state.history      = data.history    || [];
       state.lastResult   = data.lastResult || null;
       saveDrivers(); saveDests(); saveSettings_(); savePhases(); saveLoads(); saveReturned(); saveTemplates(); saveHistory(); saveResult();
