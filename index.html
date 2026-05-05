@@ -1103,8 +1103,8 @@ function runOptimizer(loadCounts) {
         const bIsDomicileNonHome = !!(b.deadheadMiles && !bIsHome && !b.homeFirst);
         if (aIsDomicileNonHome !== bIsDomicileNonHome) return aIsDomicileNonHome ? 1 : -1;
         if (ds[a.id].loadCount !== ds[b.id].loadCount) return ds[a.id].loadCount - ds[b.id].loadCount;
-        if (ds[a.id].hours !== ds[b.id].hours) return ds[a.id].hours - ds[b.id].hours;
         if (toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)) return toMinutes(a.arrivalTime) - toMinutes(b.arrivalTime);
+        if (ds[a.id].hours !== ds[b.id].hours) return ds[a.id].hours - ds[b.id].hours;
         return state.drivers.indexOf(a) - state.drivers.indexOf(b);
       })[0] || null;
   }
