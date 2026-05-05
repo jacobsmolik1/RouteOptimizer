@@ -471,6 +471,18 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
 .modal-body { padding: 20px 18px; }
 .modal-footer { padding: 14px 18px; border-top: 1px solid var(--gray-100); display: flex; gap: 8px; justify-content: flex-end; }
 
+/* ── REASSIGN MODAL ──────────────────────────────────────────────────── */
+.reassign-modal { width: 560px; }
+.reassign-driver-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius); cursor: pointer; border: 1.5px solid var(--gray-200); margin-bottom: 6px; transition: background 0.1s; }
+.reassign-driver-row:hover:not(.over-limit) { background: var(--gray-50); }
+.reassign-driver-row.can-fit  { border-color: var(--green); }
+.reassign-driver-row.too-tight { border-color: var(--amber); }
+.reassign-driver-row.over-limit { border-color: var(--gray-200); opacity: 0.5; cursor: not-allowed; }
+.reassign-drv-name { flex: 1; font-weight: 600; font-size: 13px; }
+.reassign-bar { height: 6px; border-radius: 3px; background: var(--gray-100); width: 80px; overflow: hidden; }
+.reassign-bar-fill { height: 100%; border-radius: 3px; transition: width 0.2s; }
+.reassign-cap-text { font-size: 11px; color: var(--gray-600); min-width: 80px; text-align: right; }
+
 /* ── SHORELINE (inline) ──────────────────────────────────────────────── */
 .shoreline-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--gray-100); }
 .shoreline-row:last-child { border-bottom: none; font-weight: 700; }
@@ -826,6 +838,21 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
       </div>
       <button class="btn btn-danger btn-sm" onclick="showResetConfirm()" id="reset-btn">↺ Reset &amp; Update App</button>
 
+    </div>
+  </div>
+</div>
+
+<!-- ═══ REASSIGN LOAD MODAL ══════════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="reassign-modal">
+  <div class="modal reassign-modal">
+    <div class="modal-header">
+      <span id="reassign-title">Reassign Load</span>
+      <button class="modal-close" onclick="closeReassignModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="reassign-load-info" style="background:var(--gray-50);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:12px;line-height:1.6;"></div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:8px;">Drivers — Remaining DOT Capacity</div>
+      <div id="reassign-driver-list"></div>
     </div>
   </div>
 </div>
@@ -1674,9 +1701,13 @@ function renderAssignmentsTable(result) {
       <option value="">— Auto —</option>
       ${allDriverOptions.replace(`value="${a.override}"`,`value="${a.override}" selected`)}
     </select>`;
-    const statusSel = `<select class="status-sel" onchange="setStatus(${idx},this.value)">
-      ${statusOptions.replace(`value="${a.status}"`,`value="${a.status}" selected`)}
-    </select>`;
+    const done = a.status === 'Complete' || a.status === 'Delivered';
+    const statusSel = `<div style="display:flex;flex-direction:column;gap:4px;">
+      <select class="status-sel" onchange="setStatus(${idx},this.value)">
+        ${statusOptions.replace(`value="${a.status}"`,`value="${a.status}" selected`)}
+      </select>
+      ${done ? '' : `<button onclick="openReassignModal(${idx})" style="font-size:10px;padding:2px 6px;background:var(--blue-bg);color:var(--blue);border:1px solid #BBDEFB;border-radius:3px;cursor:pointer;">↔ Reassign</button>`}
+    </div>`;
     return `<tr class="${rowClass}">
       <td class="tbl-num">${a.loadNum}</td>
       <td><span class="tag ${DEST_TAGS[a.dest]}">${a.dest}</span> ${a.phase}</td>
@@ -1854,12 +1885,100 @@ function confirmDeleteDriver(id) {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+//  REASSIGN LOAD
+// ════════════════════════════════════════════════════════════════════════════
+function openReassignModal(idx) {
+  const a    = state.lastResult.assignments[idx];
+  const dest = state.destinations.find(d => d.code === a.dest);
+  const dotMax = state.settings.dotMaxHours;
+  const currentDriver = a.override || a.autoDriver;
+
+  document.getElementById('reassign-title').textContent = `Reassign Load #${a.loadNum}`;
+  document.getElementById('reassign-load-info').innerHTML =
+    `<strong>${a.phase}</strong> &nbsp;·&nbsp; ${dest ? dest.name : a.dest} &nbsp;·&nbsp; <strong>${a.hrs.toFixed(2)}h</strong> &nbsp;·&nbsp; Dispatch ${a.dispatchTime || '—'}<br>` +
+    `<span style="color:var(--gray-400);">Currently: <strong>${currentDriver}</strong></span>`;
+
+  const drivers = state.drivers.filter(d => !d.onVacation);
+  const rows = drivers.map(d => {
+    const w = state.lastResult.workload.find(x => x.id === d.id);
+    const usedHrs  = w ? w.hours : (d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0);
+    const loadsDone = w ? w.loads : 0;
+    const remaining = dotMax - usedHrs;
+    const loadsFull = loadsDone >= d.maxLoads;
+    const fits      = remaining >= a.hrs && !loadsFull;
+    const tight     = fits && (remaining - a.hrs) < 1.5;
+    const over      = !fits;
+    const isCurrent = d.name === currentDriver;
+
+    const usedPct  = Math.min(100, (usedHrs / dotMax) * 100);
+    const afterPct = Math.min(100, ((usedHrs + a.hrs) / dotMax) * 100);
+    const barColor = over ? 'var(--danger)' : tight ? 'var(--amber)' : 'var(--green)';
+    const cls      = over ? 'over-limit' : tight ? 'too-tight' : 'can-fit';
+    const label    = over ? (loadsFull ? 'max loads' : `${remaining.toFixed(1)}h left`) : `${remaining.toFixed(1)}h left`;
+
+    return {
+      remaining, over, isCurrent,
+      html: `<div class="reassign-driver-row ${cls}" onclick="${over ? '' : `doReassign(${idx},'${escQ(d.name)}')`}">
+        <div class="reassign-drv-name">${d.name}${isCurrent ? ' <span style="font-size:10px;font-weight:400;color:var(--gray-400);">(current)</span>' : ''}</div>
+        <div class="reassign-bar"><div class="reassign-bar-fill" style="width:${afterPct}%;background:${barColor};"></div></div>
+        <div class="reassign-cap-text">${label}</div>
+      </div>`,
+    };
+  }).sort((a, b) => b.remaining - a.remaining);
+
+  document.getElementById('reassign-driver-list').innerHTML = rows.map(r => r.html).join('');
+  document.getElementById('reassign-modal').classList.add('open');
+}
+
+function escQ(s) { return s.replace(/'/g, "\\'"); }
+
+function doReassign(idx, newName) {
+  const a       = state.lastResult.assignments[idx];
+  const oldName = a.override || a.autoDriver;
+  const dotMax  = state.settings.dotMaxHours;
+
+  const oldW = state.lastResult.workload.find(w => w.name === oldName);
+  const newW = state.lastResult.workload.find(w => w.name === newName);
+
+  if (oldW) {
+    oldW.hours  = Math.max(0, oldW.hours - a.hrs);
+    oldW.loads  = Math.max(0, oldW.loads - 1);
+    oldW.status = oldW.hours > dotMax ? 'over' : oldW.hours > dotMax * 0.9 ? 'warn' : 'ok';
+  }
+  if (newW) {
+    newW.hours += a.hrs;
+    newW.loads++;
+    newW.status = newW.hours > dotMax ? 'over' : newW.hours > dotMax * 0.9 ? 'warn' : 'ok';
+  } else {
+    const d = state.drivers.find(d => d.name === newName);
+    state.lastResult.workload.push({
+      id: d ? d.id : newName, name: newName,
+      hours: a.hrs, loads: 1, dotMax, deadheadHrs: 0,
+      status: a.hrs > dotMax ? 'over' : a.hrs > dotMax * 0.9 ? 'warn' : 'ok',
+    });
+  }
+
+  a.override = newName;
+  a.internal = true;
+  saveResult();
+  closeReassignModal();
+  renderAssignmentsTable(state.lastResult);
+  renderDriverCards(state.lastResult);
+  renderWorkload(state.lastResult);
+}
+
+function closeReassignModal() {
+  document.getElementById('reassign-modal').classList.remove('open');
+}
+
 function updateHomefirstVisibility() {
   const dest = document.getElementById('drv-domiciledest').value;
   document.getElementById('drv-homefirst-group').style.display = dest ? '' : 'none';
 }
 function closeModal() { document.getElementById('driver-modal').classList.remove('open'); }
 document.getElementById('driver-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+document.getElementById('reassign-modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeReassignModal(); });
 
 // ════════════════════════════════════════════════════════════════════════════
 //  SETTINGS PANEL
