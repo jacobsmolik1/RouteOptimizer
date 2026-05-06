@@ -719,7 +719,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
                 <th>Build Phase</th>
                 <th>Destination</th>
                 <th>Dispatch</th>
-                <th>Miles RT</th>
+                <th>Miles</th>
                 <th>Hrs</th>
                 <th>Auto-Assigned</th>
                 <th>Load #</th>
@@ -1697,7 +1697,7 @@ function renderDriverCards(result) {
         return `<div class="run-row">
           <span class="run-label ${runColors[i]}">${runLabels[i]}</span>
           <span class="run-phase">${r.phase}${homeTag}${retTime ? `<span style="display:block;font-size:9px;color:var(--gray-400);font-weight:400;">Back ~${retTime}</span>` : ''}</span>
-          <span class="run-hrs">${r.hrs.toFixed(2)}h</span>
+          <span class="run-hrs">${(r.homeReturn ? r.hrs/2 : r.hrs).toFixed(2)}h</span>
         </div>`;
       } else {
         return `<div class="run-row">
@@ -1810,8 +1810,8 @@ function renderAssignmentsTable(result) {
       <td><span class="tag ${DEST_TAGS[a.dest]}">${a.dest}</span> ${a.phase}</td>
       <td style="font-size:11px;color:var(--gray-600);">${dest?dest.name:a.dest}</td>
       <td class="text-center" style="font-size:11px;color:var(--gray-600);">${a.dispatchTime||'—'}</td>
-      <td class="text-center">${dest?dest.miles1Way*2:'—'}</td>
-      <td class="text-center">${a.hrs.toFixed(2)}</td>
+      <td class="text-center">${dest ? (a.homeReturn ? dest.miles1Way : dest.miles1Way*2) : '—'}</td>
+      <td class="text-center">${(a.homeReturn ? a.hrs/2 : a.hrs).toFixed(2)}</td>
       <td>${a.autoDriver==='SHORELINE'?'<span class="badge badge-shore">SHORELINE</span>':a.autoDriver==='UNASSIGNED'?'<span style="color:#B71C1C;font-weight:700;font-size:11px;">UNASSIGNED</span>':a.autoDriver}</td>
       <td class="text-center">${a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—'}</td>
       <td><input type="text" value="${a.trailerNum||''}" onchange="setTrailerNum(${idx},this.value)" style="width:60px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—"></td>
@@ -2173,10 +2173,10 @@ function renderDriverRules() {
 // ════════════════════════════════════════════════════════════════════════════
 function exportCSV() {
   if (!state.lastResult) return;
-  const rows = [['Load#','Phase','Destination','Miles RT','Hours','Auto-Assigned','Load #','Trailer #','Carrier Driver','Final Driver','Status','Notes']];
+  const rows = [['Load#','Phase','Destination','Miles','Hours','Auto-Assigned','Load #','Trailer #','Carrier Driver','Final Driver','Status','Notes']];
   state.lastResult.assignments.forEach(a => {
     const dest = state.destinations.find(d=>d.code===a.dest);
-    rows.push([a.loadNum,a.phase,dest?dest.name:a.dest,dest?dest.miles1Way*2:'',a.hrs.toFixed(2),
+    rows.push([a.loadNum,a.phase,dest?dest.name:a.dest,dest?(a.homeReturn?dest.miles1Way:dest.miles1Way*2):'',(a.homeReturn?a.hrs/2:a.hrs).toFixed(2),
                a.autoDriver,a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—',
                a.trailerNum||'',a.autoDriver==='SHORELINE'?a.carrierDriver||'':'Coca-Cola United',
                a.override||a.autoDriver,a.status,a.notes]);
