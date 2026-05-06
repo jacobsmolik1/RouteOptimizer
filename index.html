@@ -541,6 +541,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
     padding-top: 6px;
   }
   #assignments-section { page-break-before: always; display: block !important; }
+  .hide-details .col-detail { display: table-cell !important; }
   .card { box-shadow: none; border: 1px solid #ccc; }
   table { font-size: 9px; }
   thead th { background: #1A1A1A !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -548,6 +549,46 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
   .summary-bar, .btn-generate, .stack > .card:first-child { display: none; }
 }
 .print-header, .print-summary-bar, .print-dot-note { display: none; }
+
+/* ── INPUT CARD COLLAPSE ─────────────────────────────────────────────── */
+.input-toggle-btn {
+  background: none; border: 1.5px solid rgba(255,255,255,0.4); color: rgba(255,255,255,0.85);
+  border-radius: 4px; font-size: 11px; font-weight: 600; padding: 3px 10px;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.input-toggle-btn:hover { border-color: white; color: white; }
+.input-card-collapsed #phase-inputs,
+.input-card-collapsed .totals-bar { display: none; }
+.input-card-collapsed .collapsed-summary { display: flex !important; }
+.collapsed-summary {
+  display: none; padding: 10px 16px; align-items: center; gap: 10px;
+  flex-wrap: wrap; background: var(--gray-50); border-top: 1px solid var(--gray-100);
+}
+.cs-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: white; border: 1px solid var(--gray-200);
+  border-radius: 20px; padding: 3px 10px; font-size: 11px;
+}
+.cs-chip .cs-num { font-weight: 800; color: var(--black); }
+.cs-total { font-size: 12px; font-weight: 700; color: var(--gray-600); white-space: nowrap; }
+
+/* ── PHASE GROUP HEADER ROW ──────────────────────────────────────────── */
+tr.phase-group-hdr td {
+  background: var(--black) !important;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 5px 10px;
+  border-bottom: none;
+}
+
+/* ── DETAIL COLUMN TOGGLE ────────────────────────────────────────────── */
+.hide-details .col-detail { display: none; }
+
+/* ── SUMMARY TILE SUB-LABEL ──────────────────────────────────────────── */
+.summary-tile .s-sub { font-size: 9px; color: var(--gray-400); margin-top: 2px; letter-spacing: 0.3px; }
 </style>
 </head>
 <body>
@@ -608,8 +649,12 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
 
       <!-- Phase Inputs -->
       <div class="card" style="overflow:hidden;">
-        <div class="card-header">Daily Load Input — 7-Phase Build Order</div>
+        <div class="card-header" style="background:var(--black);color:white;">
+          Daily Load Input — 7-Phase Build Order
+          <button class="input-toggle-btn" id="input-toggle-btn" onclick="toggleInputCard()">▲ Collapse</button>
+        </div>
         <div id="phase-inputs"></div>
+        <div class="collapsed-summary" id="collapsed-summary"></div>
         <div class="totals-bar">
           <div>
             <div class="t-label">Total Loads</div>
@@ -643,18 +688,22 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
           <div class="summary-tile">
             <div class="s-val red" id="m-total">—</div>
             <div class="s-lbl">Total Loads</div>
+            <div class="s-sub" id="m-drivers-used"></div>
           </div>
           <div class="summary-tile">
             <div class="s-val" id="m-internal">—</div>
             <div class="s-lbl">Internal</div>
+            <div class="s-sub" id="m-internal-pct"></div>
           </div>
           <div class="summary-tile">
             <div class="s-val" id="m-shore">—</div>
-            <div class="s-lbl">Shoreline</div>
+            <div class="s-lbl">Shoreline Overflow</div>
+            <div class="s-sub" id="m-shore-pct"></div>
           </div>
           <div class="summary-tile">
             <div class="s-val green" id="m-dot-ok">—</div>
             <div class="s-lbl">DOT Status</div>
+            <div class="s-sub" id="m-dot-sub"></div>
           </div>
         </div>
       </div>
@@ -710,9 +759,12 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
   <div id="assignments-section" style="display:none; margin-top:16px;">
     <div style="max-width:1350px; margin:0 auto;">
       <div class="card">
-        <div class="card-header">Full Load Assignments — Detailed View</div>
+        <div class="card-header">
+          Full Load Assignments — Detailed View
+          <button class="btn btn-ghost btn-sm no-print" id="detail-toggle-btn" onclick="toggleDetailCols()">📋 Show Trailer / Carrier</button>
+        </div>
         <div class="tbl-wrap">
-          <table id="assignments-table">
+          <table id="assignments-table" class="hide-details">
             <thead>
               <tr>
                 <th class="tbl-num">#</th>
@@ -721,14 +773,12 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
                 <th>Dispatch</th>
                 <th>Miles</th>
                 <th>Hrs</th>
-                <th>Auto-Assigned</th>
-                <th>Load #</th>
-                <th>Trailer #</th>
-                <th>Carrier</th>
+                <th>Driver</th>
+                <th>Run</th>
+                <th class="col-detail">Trailer #</th>
+                <th class="col-detail">Carrier</th>
                 <th class="no-print">Override</th>
                 <th class="no-print">Status</th>
-                <th>Final Driver</th>
-                <th>Notes</th>
               </tr>
             </thead>
             <tbody id="assignments-tbody"></tbody>
@@ -1459,6 +1509,10 @@ function resetLoads() {
   renderMetrics(null);
   renderWorkload(null);
   renderShoreline(null);
+  const inputCard = document.querySelector('#tab-dashboard .card');
+  inputCard.classList.remove('input-card-collapsed');
+  const btn = document.getElementById('input-toggle-btn');
+  if (btn) btn.textContent = '▲ Collapse';
 }
 
 function movePhase(idx, dir) {
@@ -1508,11 +1562,16 @@ function renderMetrics(result) {
   const dotOver  = result.workload.filter(w => w.status === 'over').length;
   const dotOk    = result.workload.length - dotOver;
 
-  document.getElementById('m-total').textContent    = total;
-  document.getElementById('m-internal').textContent = internal;
-  document.getElementById('m-shore').textContent    = shore;
-  document.getElementById('m-dot-ok').textContent   = dotOver > 0 ? `⚠️ ${dotOver} Over` : `✓ ${dotOk} OK`;
-  document.getElementById('m-dot-ok').style.color   = dotOver > 0 ? 'var(--danger)' : 'var(--green)';
+  const driversUsed = result.workload.filter(w=>w.loads>0).length;
+  document.getElementById('m-total').textContent       = total;
+  document.getElementById('m-internal').textContent    = internal;
+  document.getElementById('m-shore').textContent       = shore;
+  document.getElementById('m-dot-ok').textContent      = dotOver > 0 ? `⚠ ${dotOver} Over` : `✓ ${dotOk} OK`;
+  document.getElementById('m-dot-ok').style.color      = dotOver > 0 ? 'var(--danger)' : 'var(--green)';
+  document.getElementById('m-drivers-used').textContent = `${driversUsed} driver${driversUsed!==1?'s':''}`;
+  document.getElementById('m-internal-pct').textContent = total > 0 ? `${Math.round(internal/total*100)}% of loads` : '';
+  document.getElementById('m-shore-pct').textContent    = total > 0 ? `${Math.round(shore/total*100)}% overflow` : '';
+  document.getElementById('m-dot-sub').textContent      = dotOver > 0 ? `${dotOver} over limit` : `0 over limit`;
   document.getElementById('metrics-grid').style.display = 'block';
 
   document.getElementById('psb-total').textContent    = total;
@@ -1546,8 +1605,8 @@ function renderWorkload(result) {
   el.innerHTML = banner + result.workload.sort((a,b) => b.hours-a.hours).map(w => {
     const drv = state.drivers.find(d => d.id === w.id);
     const pct = Math.min(100,(w.hours/w.dotMax)*100);
-    const lbl = w.status==='over' ? `<span class="dot-over">⚠️ OVER</span>`
-              : w.status==='warn' ? `<span style="color:var(--amber);font-weight:700;">⚡</span>`
+    const lbl = w.status==='over' ? `<span class="dot-over">⚠ OVER DOT</span>`
+              : w.status==='warn' ? `<span style="color:var(--amber);font-weight:700;">⚡ Near</span>`
               : `<span class="dot-ok">✓</span>`;
     const isReturned = !!state.returned[w.id];
     const retBtn = w.loads > 0
@@ -1556,7 +1615,7 @@ function renderWorkload(result) {
     return `<div class="workload-row">
       <div class="workload-name" title="${w.name}">${w.name}</div>
       <div class="workload-bar-wrap"><div class="workload-bar ${w.status}" style="width:${pct}%"></div></div>
-      <div class="workload-hrs">${w.hours.toFixed(1)}h <span class="wk-hrs">${getRollingHours(w.id).toFixed(1)}wk</span> ${lbl}</div>
+      <div class="workload-hrs" title="${getRollingHours(w.id).toFixed(1)}h this week">${w.hours.toFixed(1)}<span class="wk-hrs"> / ${w.dotMax}h</span> ${lbl}</div>
       ${retBtn}
     </div>`;
   }).join('');
@@ -1784,12 +1843,13 @@ function renderAssignmentsTable(result) {
   const statusOptions = ['Pending','Assigned','In Transit','Delivered','Complete']
     .map(s=>`<option value="${s}">${s}</option>`).join('');
 
+  let lastPhase = null;
   tbody.innerHTML = result.assignments.map((a,idx) => {
     const finalDriver = a.override || a.autoDriver;
     const dest = state.destinations.find(d=>d.code===a.dest);
     const isUnassigned = a.autoDriver === 'UNASSIGNED' && !a.override;
     const rowClass = a.internal ? `row-${DEST_COLORS[a.dest]}` : isUnassigned ? 'row-unassigned' : 'row-shore';
-    const driverCell = a.internal
+    const driverCell = (a.internal || a.override)
       ? `<strong>${finalDriver}</strong>`
       : isUnassigned
       ? `<span style="font-weight:700;color:#B71C1C;background:#FFEBEE;border-radius:3px;padding:2px 6px;font-size:11px;">⚠ UNASSIGNED</span>`
@@ -1805,21 +1865,26 @@ function renderAssignmentsTable(result) {
       </select>
       ${done ? '' : `<button onclick="openReassignModal(${idx})" style="font-size:10px;padding:2px 6px;background:var(--blue-bg);color:var(--blue);border:1px solid #BBDEFB;border-radius:3px;cursor:pointer;">↔ Reassign</button>`}
     </div>`;
-    return `<tr class="${rowClass}">
+
+    let separator = '';
+    if (a.phase !== lastPhase) {
+      separator = `<tr class="phase-group-hdr"><td colspan="12"><span class="tag ${DEST_TAGS[a.dest]}" style="margin-right:6px;">${a.dest}</span>${a.phase}</td></tr>`;
+      lastPhase = a.phase;
+    }
+
+    return separator + `<tr class="${rowClass}" data-load-idx="${idx}">
       <td class="tbl-num">${a.loadNum}</td>
       <td><span class="tag ${DEST_TAGS[a.dest]}">${a.dest}</span> ${a.phase}</td>
       <td style="font-size:11px;color:var(--gray-600);">${dest?dest.name:a.dest}</td>
       <td class="text-center" style="font-size:11px;color:var(--gray-600);">${a.dispatchTime||'—'}</td>
       <td class="text-center">${dest ? (a.homeReturn ? dest.miles1Way : dest.miles1Way*2) : '—'}</td>
       <td class="text-center">${(a.homeReturn ? a.hrs/2 : a.hrs).toFixed(2)}</td>
-      <td>${a.autoDriver==='SHORELINE'?'<span class="badge badge-shore">SHORELINE</span>':a.autoDriver==='UNASSIGNED'?'<span style="color:#B71C1C;font-weight:700;font-size:11px;">UNASSIGNED</span>':a.autoDriver}</td>
-      <td class="text-center">${a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—'}</td>
-      <td><input type="text" value="${a.trailerNum||''}" onchange="setTrailerNum(${idx},this.value)" style="width:60px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—"></td>
-      <td>${a.autoDriver==='SHORELINE'?`<input type="text" value="${a.carrierDriver||''}" onchange="setCarrierDriver(${idx},this.value)" style="width:90px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="Driver name">`:`<span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span>`}</td>
+      <td>${driverCell}</td>
+      <td class="text-center">${a.driverLoadNum!==null?`<span style="font-size:11px;font-weight:700;color:var(--gray-400);">#${a.driverLoadNum}</span>`:'—'}</td>
+      <td class="col-detail"><input type="text" value="${a.trailerNum||''}" onchange="setTrailerNum(${idx},this.value)" style="width:60px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—"></td>
+      <td class="col-detail">${a.autoDriver==='SHORELINE'?`<input type="text" value="${a.carrierDriver||''}" onchange="setCarrierDriver(${idx},this.value)" style="width:90px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="Driver name">`:`<span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span>`}</td>
       <td class="no-print">${overrideSel}</td>
       <td class="no-print">${statusSel}</td>
-      <td>${driverCell}</td>
-      <td style="font-size:11px;color:var(--gray-400);">${a.notes}</td>
     </tr>`;
   }).join('');
   document.getElementById('assignments-section').style.display='block';
@@ -1828,12 +1893,12 @@ function renderAssignmentsTable(result) {
 function setOverride(idx,val) {
   state.lastResult.assignments[idx].override = val;
   saveResult();
-  const rows = document.querySelectorAll('#assignments-tbody tr');
-  if (rows[idx]) {
+  const row = document.querySelector(`#assignments-tbody tr[data-load-idx="${idx}"]`);
+  if (row) {
     const a = state.lastResult.assignments[idx];
     const final = val || a.autoDriver;
-    rows[idx].querySelectorAll('td')[12].innerHTML =
-      a.internal||val ? `<strong>${final}</strong>` : `<span class="badge badge-shore">🚛 ${final}</span>`;
+    row.querySelectorAll('td')[6].innerHTML =
+      (a.internal || val) ? `<strong>${final}</strong>` : `<span class="badge badge-shore">🚛 ${final}</span>`;
   }
   renderDriverCards(state.lastResult);
 }
@@ -1866,7 +1931,13 @@ function generateAssignments() {
   renderShoreline(result);
   renderDriverCards(result);
   renderAssignmentsTable(result);
-  document.getElementById('driver-cards-section').scrollIntoView({behavior:'smooth',block:'start'});
+  // Collapse input card and show summary chips
+  const inputCard = document.querySelector('#tab-dashboard .card');
+  inputCard.classList.add('input-card-collapsed');
+  const btn = document.getElementById('input-toggle-btn');
+  if (btn) btn.textContent = '▼ Expand';
+  buildCollapsedSummary();
+  document.getElementById('metrics-grid').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2271,6 +2342,37 @@ function hardReset() {
   } else {
     location.reload(true);
   }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+function toggleInputCard() {
+  const card = document.querySelector('#tab-dashboard .card');
+  const isCollapsed = card.classList.toggle('input-card-collapsed');
+  const btn = document.getElementById('input-toggle-btn');
+  if (btn) btn.textContent = isCollapsed ? '▼ Expand' : '▲ Collapse';
+  if (isCollapsed) buildCollapsedSummary();
+}
+
+function toggleDetailCols() {
+  const tbl = document.getElementById('assignments-table');
+  const btn = document.getElementById('detail-toggle-btn');
+  const willHide = !tbl.classList.contains('hide-details');
+  tbl.classList.toggle('hide-details');
+  if (btn) btn.textContent = willHide ? '📋 Show Trailer / Carrier' : '📋 Hide Trailer / Carrier';
+}
+
+function buildCollapsedSummary() {
+  const el = document.getElementById('collapsed-summary');
+  if (!el) return;
+  const total = state.loads.reduce((a,b)=>a+b,0);
+  const byDest = {};
+  state.phases.forEach((p,i) => { byDest[p.dest] = (byDest[p.dest]||0) + (state.loads[i]||0); });
+  const chips = Object.entries(byDest).filter(([,n])=>n>0).map(([code,n]) =>
+    `<span class="cs-chip"><span class="tag ${DEST_TAGS[code]}">${code}</span><span class="cs-num">${n}</span></span>`
+  ).join('');
+  el.innerHTML = `<span class="cs-total">${total} loads —</span>${chips}`;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
