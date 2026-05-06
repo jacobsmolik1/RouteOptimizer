@@ -589,6 +589,25 @@ tr.phase-group-hdr td {
 
 /* ── SUMMARY TILE SUB-LABEL ──────────────────────────────────────────── */
 .summary-tile .s-sub { font-size: 9px; color: var(--gray-400); margin-top: 2px; letter-spacing: 0.3px; }
+
+/* ── DRAG & DROP ─────────────────────────────────────────────────────── */
+.run-row[draggable="true"] { cursor: grab; user-select: none; }
+.run-row[draggable="true"]:active { cursor: grabbing; }
+.run-row.dragging { opacity: 0.35; background: var(--gray-100) !important; }
+.run-row.drag-over { box-shadow: inset 0 -2px 0 var(--red); background: #fff5f5 !important; }
+.driver-card.drag-target { box-shadow: 0 0 0 2px var(--red), var(--shadow-md); }
+.drag-handle { color: var(--gray-300); font-size: 13px; cursor: grab; flex-shrink: 0; line-height: 1; padding: 0 3px 0 0; }
+
+/* ── OUT TIMESTAMP ───────────────────────────────────────────────────── */
+.out-btn {
+  font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+  border: 1px solid var(--gray-200); background: white; color: var(--gray-400);
+  cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s;
+  margin-left: auto;
+}
+.out-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+.out-btn.stamped { background: var(--green-bg); border-color: var(--green); color: var(--green); font-size: 8px; }
+.run-eta-actual { font-size: 9px; color: var(--green); font-weight: 600; display: block; margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -1742,24 +1761,39 @@ function renderDriverCards(result) {
     const runLabels = ['RUN 1','RUN 2','RUN 3'];
     const runColors = ['','run2','run3'];
     let prevReturnMins = arrivalTime ? toMinutes(arrivalTime) : null;
-    const runRows   = [0,1,2].map(i => {
+    const runRows = [0,1,2].map(i => {
       const r = runs[i];
       if (r) {
+        const loadIdx = result.assignments.indexOf(r);
         const dispMins = toMinutes(r.dispatchTime);
         const actualStartMins = prevReturnMins !== null ? Math.max(dispMins, prevReturnMins) : dispMins;
         prevReturnMins = actualStartMins + Math.round(r.hrs * 60);
         const actualStartStr = minutesToHHMM(actualStartMins);
-        const retTime = r.homeReturn ? null : fmtReturnTime(actualStartStr, r.hrs);
+        const driveHrs = r.homeReturn ? r.hrs / 2 : r.hrs;
         const homeTag = r.homeReturn
           ? `<span style="display:inline-block;margin-left:4px;font-size:9px;font-weight:700;color:var(--green);background:var(--green-bg);border-radius:3px;padding:1px 4px;">← Home</span>`
           : '';
-        return `<div class="run-row">
+        const isStamped = !!r.actualOutTime;
+        const schedBack = r.homeReturn ? null : fmtReturnTime(actualStartStr, r.hrs);
+        const timeInfo = isStamped
+          ? `<span class="run-eta-actual">⏱ Out ${fmtActualTime(r.actualOutTime)} · ETA ${calcActualEta(r.actualOutTime, driveHrs)}</span>`
+          : (schedBack ? `<span style="display:block;font-size:9px;color:var(--gray-400);font-weight:400;">Back ~${schedBack}</span>` : '');
+        const outBtn = `<button class="out-btn ${isStamped?'stamped':''}" onclick="event.stopPropagation();stampOut(${loadIdx})" title="${isStamped?'Click to clear timestamp':'Record actual departure time'}">${isStamped ? '✓ Out' : '⏱ Out'}</button>`;
+        return `<div class="run-row" draggable="true"
+          ondragstart="handleDragStart(event,${loadIdx})"
+          ondragend="handleDragEnd(event)"
+          ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="handleRunDrop(event,${loadIdx})">
+          <span class="drag-handle">⠿</span>
           <span class="run-label ${runColors[i]}">${runLabels[i]}</span>
-          <span class="run-phase">${r.phase}${homeTag}${retTime ? `<span style="display:block;font-size:9px;color:var(--gray-400);font-weight:400;">Back ~${retTime}</span>` : ''}</span>
-          <span class="run-hrs">${(r.homeReturn ? r.hrs/2 : r.hrs).toFixed(2)}h</span>
+          <span class="run-phase">${r.phase}${homeTag}<span style="display:block;">${timeInfo}</span></span>
+          <span class="run-hrs">${driveHrs.toFixed(2)}h</span>
+          ${outBtn}
         </div>`;
       } else {
         return `<div class="run-row">
+          <span class="drag-handle" style="visibility:hidden;">⠿</span>
           <span class="run-label empty">${runLabels[i]}</span>
           <span class="run-phase empty">—</span>
           <span class="run-hrs empty">—</span>
@@ -1767,7 +1801,7 @@ function renderDriverCards(result) {
       }
     }).join('');
 
-    const oneDH = deadheadHrs / 2; // one-way deadhead hrs
+    const oneDH = deadheadHrs / 2;
     const deadheadNote = deadheadHrs > 0 && !hasHomeReturn
       ? `<span style="font-size:10px;color:var(--amber);font-weight:600;">+${deadheadHrs.toFixed(1)}h deadhead (AM+PM)</span>`
       : deadheadHrs > 0 && hasHomeReturn
@@ -1775,7 +1809,11 @@ function renderDriverCards(result) {
       : '';
 
     const initial = driverName.charAt(0).toUpperCase();
-    return `<div class="driver-card">
+    const safeName = driverName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="driver-card"
+      ondragover="handleCardDragOver(event,this)"
+      ondragleave="this.classList.remove('drag-target')"
+      ondrop="handleCardDrop(event,'${safeName}')">
       <div class="driver-card-header">
         <div class="drv-initial">${initial}</div>
         <div><div class="drv-name">${driverName}</div><div class="drv-base">${homeBase}</div></div>
@@ -1790,11 +1828,10 @@ function renderDriverCards(result) {
   }
 
   let cardsHTML = internalDriversWithLoads.map(d => {
-    // Sort so the home-return run always appears last on the card
     const runs = (byDriver[d.name] || []).sort((a,b) => {
       if (a.homeReturn && !b.homeReturn) return 1;
       if (!a.homeReturn && b.homeReturn) return -1;
-      return 0;
+      return (a.driverLoadNum||0) - (b.driverLoadNum||0);
     });
     const workloadEntry = result.workload.find(w => w.id === d.id);
     const totalHrs = workloadEntry ? workloadEntry.hours : runs.reduce((s,r) => s + r.hrs, 0);
@@ -1859,11 +1896,15 @@ function renderAssignmentsTable(result) {
       ${allDriverOptions.replace(`value="${a.override}"`,`value="${a.override}" selected`)}
     </select>`;
     const done = a.status === 'Complete' || a.status === 'Delivered';
+    const outStamp = a.actualOutTime
+      ? `<div style="font-size:9px;color:var(--green);font-weight:600;">⏱ Out ${fmtActualTime(a.actualOutTime)} · ETA ${calcActualEta(a.actualOutTime, a.homeReturn?a.hrs/2:a.hrs)}</div>`
+      : '';
     const statusSel = `<div style="display:flex;flex-direction:column;gap:4px;">
       <select class="status-sel" onchange="setStatus(${idx},this.value)">
         ${statusOptions.replace(`value="${a.status}"`,`value="${a.status}" selected`)}
       </select>
       ${done ? '' : `<button onclick="openReassignModal(${idx})" style="font-size:10px;padding:2px 6px;background:var(--blue-bg);color:var(--blue);border:1px solid #BBDEFB;border-radius:3px;cursor:pointer;">↔ Reassign</button>`}
+      ${outStamp}
     </div>`;
 
     let separator = '';
@@ -2244,13 +2285,22 @@ function renderDriverRules() {
 // ════════════════════════════════════════════════════════════════════════════
 function exportCSV() {
   if (!state.lastResult) return;
-  const rows = [['Load#','Phase','Destination','Miles','Hours','Auto-Assigned','Load #','Trailer #','Carrier Driver','Final Driver','Status','Notes']];
+  const rows = [['Load#','Phase','Destination','Miles','Hours','Driver','Run','Trailer #','Carrier Driver','Status','Actual Out','Actual ETA']];
   state.lastResult.assignments.forEach(a => {
     const dest = state.destinations.find(d=>d.code===a.dest);
-    rows.push([a.loadNum,a.phase,dest?dest.name:a.dest,dest?(a.homeReturn?dest.miles1Way:dest.miles1Way*2):'',(a.homeReturn?a.hrs/2:a.hrs).toFixed(2),
-               a.autoDriver,a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—',
-               a.trailerNum||'',a.autoDriver==='SHORELINE'?a.carrierDriver||'':'Coca-Cola United',
-               a.override||a.autoDriver,a.status,a.notes]);
+    const driveHrs = a.homeReturn ? a.hrs/2 : a.hrs;
+    const actualOut = a.actualOutTime ? fmtActualTime(a.actualOutTime) : '';
+    const actualEta = a.actualOutTime ? calcActualEta(a.actualOutTime, driveHrs) : '';
+    rows.push([
+      a.loadNum, a.phase, dest?dest.name:a.dest,
+      dest?(a.homeReturn?dest.miles1Way:dest.miles1Way*2):'',
+      driveHrs.toFixed(2),
+      a.override||a.autoDriver,
+      a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—',
+      a.trailerNum||'',
+      a.autoDriver==='SHORELINE'?a.carrierDriver||'':'Coca-Cola United',
+      a.status, actualOut, actualEta,
+    ]);
   });
   const csv  = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const blob = new Blob([csv],{type:'text/csv'});
@@ -2361,6 +2411,116 @@ function toggleDetailCols() {
   const willHide = !tbl.classList.contains('hide-details');
   tbl.classList.toggle('hide-details');
   if (btn) btn.textContent = willHide ? '📋 Show Trailer / Carrier' : '📋 Hide Trailer / Carrier';
+}
+
+// ── DRAG & DROP ────────────────────────────────────────────────────────
+function handleDragStart(e, loadIdx) {
+  e.dataTransfer.setData('text/plain', String(loadIdx));
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('dragging');
+}
+
+function handleDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  document.querySelectorAll('.drag-target').forEach(el => el.classList.remove('drag-target'));
+}
+
+function handleRunDrop(e, targetLoadIdx) {
+  e.preventDefault();
+  e.stopPropagation();
+  document.querySelectorAll('.drag-over, .drag-target').forEach(el => el.classList.remove('drag-over','drag-target'));
+  const sourceIdx = parseInt(e.dataTransfer.getData('text/plain'));
+  if (isNaN(sourceIdx) || sourceIdx === targetLoadIdx) return;
+  const src = state.lastResult.assignments[sourceIdx];
+  const tgt = state.lastResult.assignments[targetLoadIdx];
+  if (!src || !tgt) return;
+  const srcDriver = src.override || src.autoDriver;
+  const tgtDriver = tgt.override || tgt.autoDriver;
+  if (srcDriver === tgtDriver) {
+    [src.driverLoadNum, tgt.driverLoadNum] = [tgt.driverLoadNum, src.driverLoadNum];
+    saveResult();
+    renderDriverCards(state.lastResult);
+    renderAssignmentsTable(state.lastResult);
+  } else {
+    reassignLoadTo(sourceIdx, tgtDriver);
+  }
+}
+
+function handleCardDragOver(e, card) {
+  e.preventDefault();
+  document.querySelectorAll('.drag-target').forEach(el => el.classList.remove('drag-target'));
+  card.classList.add('drag-target');
+}
+
+function handleCardDrop(e, driverName) {
+  e.preventDefault();
+  document.querySelectorAll('.drag-over, .drag-target').forEach(el => el.classList.remove('drag-over','drag-target'));
+  const sourceIdx = parseInt(e.dataTransfer.getData('text/plain'));
+  if (isNaN(sourceIdx)) return;
+  const src = state.lastResult.assignments[sourceIdx];
+  if (!src) return;
+  if ((src.override || src.autoDriver) === driverName) return;
+  reassignLoadTo(sourceIdx, driverName);
+}
+
+function reassignLoadTo(loadIdx, newName) {
+  const a   = state.lastResult.assignments[loadIdx];
+  const old = a.override || a.autoDriver;
+  const dotMax = state.settings.dotMaxHours;
+  const oldW = state.lastResult.workload.find(w => w.name === old);
+  if (oldW) {
+    oldW.hours = Math.max(0, oldW.hours - a.hrs);
+    oldW.loads = Math.max(0, oldW.loads - 1);
+    oldW.status = oldW.hours > dotMax ? 'over' : oldW.hours > dotMax * 0.9 ? 'warn' : 'ok';
+  }
+  state.lastResult.assignments.forEach((x, i) => {
+    if (i !== loadIdx && (x.override || x.autoDriver) === old && x.driverLoadNum > a.driverLoadNum)
+      x.driverLoadNum--;
+  });
+  let newW = state.lastResult.workload.find(w => w.name === newName);
+  if (newW) {
+    newW.hours += a.hrs;
+    newW.loads++;
+    newW.status = newW.hours > dotMax ? 'over' : newW.hours > dotMax * 0.9 ? 'warn' : 'ok';
+  } else {
+    const d = state.drivers.find(d => d.name === newName);
+    state.lastResult.workload.push({ id: d?d.id:newName, name: newName, hours: a.hrs, loads: 1, dotMax, status: a.hrs > dotMax ? 'over' : 'ok' });
+  }
+  const newLoads = state.lastResult.assignments.filter((x,i) => i !== loadIdx && (x.override||x.autoDriver) === newName);
+  const maxNum   = newLoads.length ? Math.max(...newLoads.map(x => x.driverLoadNum||0)) : 0;
+  a.override = newName; a.internal = true; a.driverLoadNum = maxNum + 1;
+  saveResult();
+  renderDriverCards(state.lastResult);
+  renderAssignmentsTable(state.lastResult);
+  renderWorkload(state.lastResult);
+  renderMetrics(state.lastResult);
+}
+
+// ── OUT TIMESTAMP ──────────────────────────────────────────────────────
+function stampOut(loadIdx) {
+  const a = state.lastResult && state.lastResult.assignments[loadIdx];
+  if (!a) return;
+  a.actualOutTime = a.actualOutTime ? null : new Date().toISOString();
+  saveResult();
+  renderDriverCards(state.lastResult);
+  renderAssignmentsTable(state.lastResult);
+}
+
+function fmtActualTime(isoStr) {
+  const d = new Date(isoStr);
+  const h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const dh = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+  return `${dh}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function calcActualEta(isoStr, hrs) {
+  const eta = new Date(new Date(isoStr).getTime() + hrs * 3600000);
+  const h = eta.getHours(), m = eta.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const dh = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+  return `${dh}:${String(m).padStart(2,'0')} ${ampm}`;
 }
 
 function buildCollapsedSummary() {
