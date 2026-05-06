@@ -1194,11 +1194,9 @@ function runOptimizer(loadCounts) {
         if (aReallyTrapped !== bReallyTrapped) return aReallyTrapped ? -1 : 1;
         // Even distribution: nobody gets load N+1 while anyone has N
         if (ds[a.id].loadCount !== ds[b.id].loadCount) return ds[a.id].loadCount - ds[b.id].loadCount;
-        // Within the same load count: home-dest priority, then domicile penalty, then arrival
+        // Within the same load count: home-dest priority, then arrival time.
+        // No domicile penalty — the filter above already reserves capacity for the home run.
         if (aIsHome !== bIsHome) return aIsHome ? -1 : 1;
-        const aIsDomicileNonHome = !!(a.deadheadMiles && !aIsHome && !a.homeFirst);
-        const bIsDomicileNonHome = !!(b.deadheadMiles && !bIsHome && !b.homeFirst);
-        if (aIsDomicileNonHome !== bIsDomicileNonHome) return aIsDomicileNonHome ? 1 : -1;
         if (toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)) return toMinutes(a.arrivalTime) - toMinutes(b.arrivalTime);
         if (ds[a.id].hours !== ds[b.id].hours) return ds[a.id].hours - ds[b.id].hours;
         return state.drivers.indexOf(a) - state.drivers.indexOf(b);
