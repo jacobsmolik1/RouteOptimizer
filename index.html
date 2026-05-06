@@ -2587,6 +2587,12 @@ if ('serviceWorker' in navigator) {
   let pendingUpdate = null;
 
   navigator.serviceWorker.register('sw.js').then(reg => {
+    // SW already waiting (e.g. user refreshed after update deployed)
+    if (reg.waiting && navigator.serviceWorker.controller) {
+      pendingUpdate = reg.waiting;
+      showUpdateBanner();
+    }
+
     reg.addEventListener('updatefound', () => {
       const sw = reg.installing;
       sw.addEventListener('statechange', () => {
@@ -2596,6 +2602,9 @@ if ('serviceWorker' in navigator) {
         }
       });
     });
+
+    // Poll for updates hourly (browser only checks on navigation by default)
+    setInterval(() => reg.update(), 60 * 60 * 1000);
   });
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
