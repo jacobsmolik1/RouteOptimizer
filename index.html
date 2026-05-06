@@ -1013,9 +1013,9 @@ tr.phase-group-hdr td {
 //  DATA DEFAULTS
 // ════════════════════════════════════════════════════════════════════════════
 const DEFAULT_DRIVERS = [
-  {id:'D001',name:'JR Mesi',            homeBase:'Panama City, FL',  maxLoads:1, restriction:'Panama City ONLY', onVacation:false, arrivalTime:'',    deadheadMiles:0, domicileDest:'', notes:'Panama City ONLY · 1 load/day'},
-  {id:'D002',name:'Marcus Hood',        homeBase:'Columbus, GA',     maxLoads:2, restriction:'Columbus ONLY',    onVacation:false, arrivalTime:'',    deadheadMiles:0, domicileDest:'', notes:'Columbus ONLY · 2 loads/day'},
-  {id:'D018',name:'Robert Pride',       homeBase:'Columbus, GA',     maxLoads:2, restriction:'Columbus ONLY',    onVacation:false, arrivalTime:'',    deadheadMiles:0, domicileDest:'', notes:'Columbus ONLY · 2 loads/day'},
+  {id:'D001',name:'JR Mesi',            homeBase:'Panama City, FL',  maxLoads:1, restriction:'Panama City ONLY', onVacation:false, arrivalTime:'',    deadheadMiles:188, domicileDest:'PAN', notes:'Panama City ONLY · 1 load/day · 188mi deadhead'},
+  {id:'D002',name:'Marcus Hood',        homeBase:'Columbus, GA',     maxLoads:2, restriction:'Columbus ONLY',    onVacation:false, arrivalTime:'',    deadheadMiles:105, domicileDest:'COL', notes:'Columbus ONLY · 2 loads/day · 105mi deadhead'},
+  {id:'D018',name:'Robert Pride',       homeBase:'Columbus, GA',     maxLoads:2, restriction:'Columbus ONLY',    onVacation:false, arrivalTime:'',    deadheadMiles:105, domicileDest:'COL', notes:'Columbus ONLY · 2 loads/day · 105mi deadhead'},
   {id:'D013',name:'Mcarthure Newman II',homeBase:'Dothan, AL',      maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'10:30', deadheadMiles:104, domicileDest:'DOT', notes:'Domicile: Dothan · 104mi deadhead'},
   {id:'D017',name:'Wilmer Mixon',       homeBase:'Evergreen, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'11:00', deadheadMiles:78,  domicileDest:'EVG', notes:'Domicile: Evergreen · 78mi deadhead'},
   {id:'D005',name:'Charles Carmack',    homeBase:'Montgomery, AL',   maxLoads:3, restriction:'Any', onVacation:false, arrivalTime:'11:30', deadheadMiles:0,   domicileDest:'',    notes:''},
@@ -1101,6 +1101,20 @@ const saveTemplates = () => localStorage.setItem('ccu_templates',  JSON.stringif
 const saveHistory   = () => localStorage.setItem('ccu_history',    JSON.stringify(state.history));
 const deepCopy      = x  => JSON.parse(JSON.stringify(x));
 let state = loadState();
+
+// One-time migration: exclusive domicile drivers were missing deadhead/home-dest
+(function migrateExclusiveDomicile() {
+  const patches = {
+    D001: { deadheadMiles: 188, domicileDest: 'PAN' },
+    D002: { deadheadMiles: 105, domicileDest: 'COL' },
+    D018: { deadheadMiles: 105, domicileDest: 'COL' },
+  };
+  let changed = false;
+  state.drivers.forEach(d => {
+    if (patches[d.id] && !d.domicileDest) { Object.assign(d, patches[d.id]); changed = true; }
+  });
+  if (changed) saveDrivers();
+})();
 
 // ════════════════════════════════════════════════════════════════════════════
 //  UTILS
