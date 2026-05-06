@@ -1136,6 +1136,11 @@ function runOptimizer(loadCounts) {
       })
       .sort((a,b) => {
         if (ds[a.id].loadCount !== ds[b.id].loadCount) return ds[a.id].loadCount - ds[b.id].loadCount;
+        const aIsHome = !!(a.domicileDest && destCode === a.domicileDest && !a.homeFirst);
+        const bIsHome = !!(b.domicileDest && destCode === b.domicileDest && !b.homeFirst);
+        const aIsDomicileNonHome = !!(a.deadheadMiles && !aIsHome && !a.homeFirst);
+        const bIsDomicileNonHome = !!(b.deadheadMiles && !bIsHome && !b.homeFirst);
+        if (aIsDomicileNonHome !== bIsDomicileNonHome) return aIsDomicileNonHome ? 1 : -1;
         if (toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)) return toMinutes(a.arrivalTime) - toMinutes(b.arrivalTime);
         return ds[a.id].hours - ds[b.id].hours;
       })[0] || null;
@@ -1165,10 +1170,12 @@ function runOptimizer(loadCounts) {
   const counts = loadCounts.map(x => x || 0);
 
   // Pre-assign first-run loads before the main phase loop.
-  // homeFirst domicile drivers get their home-dest load; Auburn First drivers get an AUB load.
+  // Auburn First drivers get their required AUB load; homeFirst domicile drivers get their home-dest load.
   // Charged at full round-trip hours (driver returns to DC for more loads after).
   available.forEach(d => {
-    const targetDest = (d.homeFirst && d.domicileDest) ? d.domicileDest : null;
+    const targetDest = (d.restriction === 'Auburn First') ? 'AUB'
+                     : (d.homeFirst && d.domicileDest) ? d.domicileDest
+                     : null;
     if (!targetDest) return;
     const pi = state.phases.findIndex((p, i) => p.dest === targetDest && counts[i] > 0);
     if (pi === -1 || counts[pi] <= 0) return;
@@ -2299,7 +2306,36 @@ init();
 </script>
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
+  let pendingUpdate = null;
+
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    reg.addEventListener('updatefound', () => {
+      const sw = reg.installing;
+      sw.addEventListener('statechange', () => {
+        if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+          pendingUpdate = sw;
+          showUpdateBanner();
+        }
+      });
+    });
+  });
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+
+  function showUpdateBanner() {
+    if (document.getElementById('sw-update-banner')) return;
+    const el = document.createElement('div');
+    el.id = 'sw-update-banner';
+    el.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#1a1a1a;color:#fff;padding:12px 16px;border-radius:8px;z-index:9999;font-size:13px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,0.35);';
+    el.innerHTML = '🔄 App update ready &nbsp;<button id="sw-update-btn" style="background:#cc0000;color:#fff;border:none;padding:5px 14px;border-radius:5px;cursor:pointer;font-size:13px;font-weight:600;">Reload</button>';
+    document.body.appendChild(el);
+    document.getElementById('sw-update-btn').addEventListener('click', () => {
+      if (pendingUpdate) pendingUpdate.postMessage({type: 'SKIP_WAITING'});
+      else window.location.reload();
+    });
+  }
 }
 </script>
 </body>
