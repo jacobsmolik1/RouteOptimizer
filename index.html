@@ -1069,7 +1069,7 @@ function runOptimizer(loadCounts) {
     // Only charge morning deadhead upfront. Evening deadhead is reserved in the capacity
     // check and settled in post-processing (saved if last load is home destination).
     const mDH = d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0;
-    ds[d.id] = {hours: mDH, morningDH: mDH, eveningDH: mDH, loadCount: 0, colCount: 0, colOfs: 0};
+    ds[d.id] = {hours: mDH, morningDH: mDH, eveningDH: mDH, loadCount: 0, colCount: 0, colOfs: 0, homeLoads: 0};
   });
 
   // Exclusive-route drivers (JR/Marcus/Robert): domiciled at endpoint, gated only by maxLoads.
@@ -1093,14 +1093,15 @@ function runOptimizer(loadCounts) {
         if (ds[d.id].loadCount >= d.maxLoads) return false;
         // Auburn First: must get an AUB load before taking anything else
         if (d.restriction === 'Auburn First' && ds[d.id].loadCount === 0 && destCode !== 'AUB') return false;
-        const isHome = !!(d.domicileDest && destCode === d.domicileDest && !d.homeFirst);
+        // isHome only applies to the first home-dest load; subsequent runs to domicile are full-price
+        const isHome = !!(d.domicileDest && destCode === d.domicileDest && !d.homeFirst && ds[d.id].homeLoads === 0);
         const checkHrs = isHome ? hrs / 2 : hrs;
         const reserve  = isHome ? 0 : ds[d.id].eveningDH;
         return (ds[d.id].hours + checkHrs + reserve) <= dotMax;
       })
       .sort((a,b) => {
-        const aIsHome = !!(a.domicileDest && destCode === a.domicileDest && !a.homeFirst);
-        const bIsHome = !!(b.domicileDest && destCode === b.domicileDest && !b.homeFirst);
+        const aIsHome = !!(a.domicileDest && destCode === a.domicileDest && !a.homeFirst && ds[a.id].homeLoads === 0);
+        const bIsHome = !!(b.domicileDest && destCode === b.domicileDest && !b.homeFirst && ds[b.id].homeLoads === 0);
         // "Trapped" driver: this is their home route AND their deadhead reserve makes it impossible
         // to take any non-home load. They MUST secure a home load or they'll end the day
         // under-loaded while Montgomery drivers crowd them out at loadCount=0.
@@ -1129,15 +1130,15 @@ function runOptimizer(loadCounts) {
         if (d.restriction === 'Panama City ONLY' || d.restriction === 'Columbus ONLY') return false;
         if (ds[d.id].loadCount >= d.maxLoads) return false;
         if (d.restriction === 'Auburn First' && ds[d.id].loadCount === 0 && destCode !== 'AUB') return false;
-        const isHome = !!(d.domicileDest && destCode === d.domicileDest && !d.homeFirst);
+        const isHome = !!(d.domicileDest && destCode === d.domicileDest && !d.homeFirst && ds[d.id].homeLoads === 0);
         const checkHrs = isHome ? hrs / 2 : hrs;
         const reserve  = isHome ? 0 : ds[d.id].eveningDH;
         return (ds[d.id].hours + checkHrs + reserve) <= dotMax;
       })
       .sort((a,b) => {
         if (ds[a.id].loadCount !== ds[b.id].loadCount) return ds[a.id].loadCount - ds[b.id].loadCount;
-        const aIsHome = !!(a.domicileDest && destCode === a.domicileDest && !a.homeFirst);
-        const bIsHome = !!(b.domicileDest && destCode === b.domicileDest && !b.homeFirst);
+        const aIsHome = !!(a.domicileDest && destCode === a.domicileDest && !a.homeFirst && ds[a.id].homeLoads === 0);
+        const bIsHome = !!(b.domicileDest && destCode === b.domicileDest && !b.homeFirst && ds[b.id].homeLoads === 0);
         const aIsDomicileNonHome = !!(a.deadheadMiles && !aIsHome && !a.homeFirst);
         const bIsDomicileNonHome = !!(b.deadheadMiles && !bIsHome && !b.homeFirst);
         if (aIsDomicileNonHome !== bIsDomicileNonHome) return aIsDomicileNonHome ? 1 : -1;
@@ -1153,7 +1154,7 @@ function runOptimizer(loadCounts) {
       .filter(d => {
         if (d.restriction !== 'Any + Columbus') return false;
         if (ds[d.id].colCount >= 1 || ds[d.id].loadCount >= d.maxLoads) return false;
-        const isHome = !!(d.domicileDest && destCode === d.domicileDest);
+        const isHome = !!(d.domicileDest && destCode === d.domicileDest && ds[d.id].homeLoads === 0);
         const checkHrs = isHome ? hrs / 2 : hrs;
         const reserve  = isHome ? 0 : ds[d.id].eveningDH;
         return (ds[d.id].hours + checkHrs + reserve) <= dotMax;
@@ -1223,6 +1224,7 @@ function runOptimizer(loadCounts) {
         ds[drv.id].loadCount++;
         if (phase.dest === 'COL' && drv.restriction === 'Any + Columbus') ds[drv.id].colCount++;
         if (phase.dest === 'COL' && drv.restriction === 'Columbus ONLY' && phase.label.includes('Small Store')) ds[drv.id].colOfs++;
+        if (drv.domicileDest && phase.dest === drv.domicileDest && !drv.homeFirst) ds[drv.id].homeLoads++;
       }
       assignments.push({
         loadNum: globalNum, phase: phase.label, dest: phase.dest, hrs,
