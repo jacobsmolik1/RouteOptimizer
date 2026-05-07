@@ -1902,7 +1902,7 @@ function renderDriverCards(result) {
     const safeName = driverName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const wi = driverId ? ((state.whatIf||{})[driverId]||{}) : {};
     const isModified = !!(wi.restriction || wi.inactive);
-    const restrictionOpts = ['Any','Any + Columbus','Columbus ONLY','Dothan ONLY','Auburn ONLY','Evergreen ONLY'];
+    const restrictionOpts = ['Any','Any + Columbus','Panama City ONLY','Columbus ONLY','Dothan ONLY','Auburn ONLY','Evergreen ONLY','Auburn First'];
     const wiPanel = driverId ? `
       <div class="what-if-panel" id="wi-panel-${driverId}">
         <div class="wi-row">
@@ -1951,7 +1951,7 @@ function renderDriverCards(result) {
   // Cards for what-if inactive drivers (no loads — shown so user can revert)
   cardsHTML += whatIfInactiveDrivers.map(d => {
     const wi = (state.whatIf||{})[d.id] || {};
-    const restrictionOpts = ['Any','Any + Columbus','Columbus ONLY','Dothan ONLY','Auburn ONLY','Evergreen ONLY'];
+    const restrictionOpts = ['Any','Any + Columbus','Panama City ONLY','Columbus ONLY','Dothan ONLY','Auburn ONLY','Evergreen ONLY','Auburn First'];
     return `<div class="driver-card is-modified is-inactive-wi" id="drv-card-${d.id}">
       <div class="driver-card-header">
         <div class="drv-initial">${d.name.charAt(0).toUpperCase()}</div>
