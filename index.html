@@ -345,6 +345,21 @@ header {
 .card-dot-over { color: var(--danger); }
 .driver-card.is-shore { border-color: #C5B3E0; }
 .driver-card.is-shore .driver-card-header { background: var(--purple); }
+.driver-card.is-modified { border-color: var(--amber) !important; border-width: 2px !important; }
+.driver-card.is-inactive-wi { opacity: 0.8; border-style: dashed !important; }
+.wi-toggle-btn { margin-left:auto; font-size:9px; padding:2px 7px; background:rgba(255,255,255,0.15); border:none; border-radius:3px; color:rgba(255,255,255,0.8); cursor:pointer; white-space:nowrap; flex-shrink:0; }
+.wi-toggle-btn:hover { background:rgba(255,255,255,0.28); color:white; }
+.wi-badge { display:inline-block; font-size:8px; font-weight:700; background:var(--amber); color:white; border-radius:3px; padding:1px 5px; margin-left:5px; vertical-align:middle; }
+.what-if-panel { display:none; border-top:2px solid var(--amber); background:var(--amber-bg); padding:8px 10px; }
+.what-if-panel.open { display:block; }
+.wi-row { display:flex; align-items:center; gap:8px; }
+.wi-row + .wi-row { margin-top:6px; }
+.wi-label { font-size:10px; font-weight:700; color:var(--gray-600); min-width:70px; }
+.what-if-panel select { flex:1; font-size:11px; padding:3px 6px; border:1.5px solid var(--gray-200); border-radius:var(--radius); background:white; }
+.what-if-panel label { font-size:11px; color:var(--gray-600); display:flex; align-items:center; gap:4px; cursor:pointer; flex:1; }
+.wi-revert-btn { font-size:10px; padding:2px 8px; background:none; border:1.5px solid var(--amber); color:var(--amber); border-radius:var(--radius); cursor:pointer; white-space:nowrap; }
+.wi-revert-btn:hover { background:var(--amber); color:white; }
+.wi-inactive-label { text-align:center; padding:10px 10px 6px; font-size:11px; color:var(--gray-400); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--gray-100); }
 
 /* ── TABLES ──────────────────────────────────────────────────────────── */
 .tbl-wrap { overflow-x: auto; }
@@ -764,6 +779,12 @@ tr.phase-group-hdr td {
           </div>
 
           <div class="divider"></div>
+          <div id="what-if-banner" class="no-print" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--amber-bg);border:2px solid var(--amber);border-radius:var(--radius);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:12px;font-weight:700;color:var(--amber);">⚡ What-if overrides active</span>
+            <span style="font-size:11px;color:var(--gray-600);flex:1;">Changes apply on next re-run — drag results are still live.</span>
+            <button class="btn btn-sm" style="background:var(--amber);color:white;border:none;padding:5px 12px;" onclick="generateAssignments()">Re-run with overrides</button>
+            <button class="btn btn-outline btn-sm" onclick="clearAllWhatIf()">Clear all</button>
+          </div>
           <div class="driver-cards-grid" id="driver-cards-grid"></div>
         </div>
         <div class="print-dot-note">
@@ -1085,9 +1106,10 @@ function loadState() {
       lastResult:  JSON.parse(localStorage.getItem('ccu_lastresult')) || null,
       returned:    JSON.parse(localStorage.getItem('ccu_returned'))   || {},
       history:     JSON.parse(localStorage.getItem('ccu_history'))    || [],
+      whatIf:      JSON.parse(localStorage.getItem('ccu_whatif'))     || {},
     };
   } catch(e) {
-    return {drivers:deepCopy(DEFAULT_DRIVERS),destinations:deepCopy(DEFAULT_DESTINATIONS),settings:deepCopy(DEFAULT_SETTINGS),phases:deepCopy(DEFAULT_PHASES),loads:Array(DEFAULT_PHASES.length).fill(0),lastResult:null,returned:{},templates:{},history:[]};
+    return {drivers:deepCopy(DEFAULT_DRIVERS),destinations:deepCopy(DEFAULT_DESTINATIONS),settings:deepCopy(DEFAULT_SETTINGS),phases:deepCopy(DEFAULT_PHASES),loads:Array(DEFAULT_PHASES.length).fill(0),lastResult:null,returned:{},templates:{},history:[],whatIf:{}};
   }
 }
 const saveDrivers   = () => localStorage.setItem('ccu_drivers',    JSON.stringify(state.drivers));
@@ -1099,6 +1121,7 @@ const saveResult    = () => localStorage.setItem('ccu_lastresult', JSON.stringif
 const saveReturned  = () => localStorage.setItem('ccu_returned',   JSON.stringify(state.returned));
 const saveTemplates = () => localStorage.setItem('ccu_templates',  JSON.stringify(state.templates));
 const saveHistory   = () => localStorage.setItem('ccu_history',    JSON.stringify(state.history));
+const saveWhatIf    = () => localStorage.setItem('ccu_whatif',     JSON.stringify(state.whatIf));
 const deepCopy      = x  => JSON.parse(JSON.stringify(x));
 let state = loadState();
 
@@ -1124,7 +1147,15 @@ function getHrsForDest(code) {
   return d ? (d.miles1Way * 2) / state.settings.avgSpeed : 0;
 }
 function fmtHrs(h) { return h.toFixed(2) + ' hrs'; }
-function getAvailableDrivers() { return state.drivers.filter(d => !d.onVacation); }
+function getAvailableDrivers() {
+  const wi = state.whatIf || {};
+  return state.drivers
+    .filter(d => !d.onVacation && !wi[d.id]?.inactive)
+    .map(d => {
+      const o = wi[d.id];
+      return (o?.restriction) ? {...d, restriction: o.restriction} : d;
+    });
+}
 function nextId() {
   const nums = state.drivers.map(d => parseInt(d.id.replace('D','')) || 0);
   return 'D' + String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3,'0');
@@ -1727,6 +1758,66 @@ function renderShoreline(result) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+//  WHAT-IF OVERRIDES
+// ════════════════════════════════════════════════════════════════════════════
+function toggleWhatIfPanel(driverId) {
+  const panel = document.getElementById('wi-panel-' + driverId);
+  if (panel) panel.classList.toggle('open');
+}
+
+function setWhatIfRestriction(driverId, value) {
+  if (!state.whatIf[driverId]) state.whatIf[driverId] = {};
+  if (value) state.whatIf[driverId].restriction = value;
+  else delete state.whatIf[driverId].restriction;
+  _cleanWhatIfEntry(driverId);
+  _syncWhatIfCard(driverId);
+  saveWhatIf();
+}
+
+function setWhatIfInactive(driverId, inactive) {
+  if (!state.whatIf[driverId]) state.whatIf[driverId] = {};
+  if (inactive) state.whatIf[driverId].inactive = true;
+  else delete state.whatIf[driverId].inactive;
+  _cleanWhatIfEntry(driverId);
+  _syncWhatIfCard(driverId);
+  saveWhatIf();
+}
+
+function revertWhatIf(driverId) {
+  delete state.whatIf[driverId];
+  saveWhatIf();
+  renderDriverCards(state.lastResult);
+}
+
+function clearAllWhatIf() {
+  state.whatIf = {};
+  saveWhatIf();
+  renderDriverCards(state.lastResult);
+}
+
+function _cleanWhatIfEntry(driverId) {
+  const o = state.whatIf[driverId];
+  if (o && !o.restriction && !o.inactive) delete state.whatIf[driverId];
+}
+
+function _syncWhatIfCard(driverId) {
+  const isModified = !!(state.whatIf[driverId]?.restriction || state.whatIf[driverId]?.inactive);
+  const card = document.getElementById('drv-card-' + driverId);
+  if (card) card.classList.toggle('is-modified', isModified);
+  const badge = card?.querySelector('.wi-badge');
+  if (badge) badge.style.display = isModified ? '' : 'none';
+  const revertBtn = document.getElementById('wi-revert-' + driverId);
+  if (revertBtn) revertBtn.style.display = isModified ? '' : 'none';
+  updateWhatIfBanner();
+}
+
+function updateWhatIfBanner() {
+  const banner = document.getElementById('what-if-banner');
+  if (!banner) return;
+  banner.style.display = Object.keys(state.whatIf||{}).length > 0 ? 'flex' : 'none';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  RENDER: DRIVER ASSIGNMENT CARDS
 // ════════════════════════════════════════════════════════════════════════════
 function renderDriverCards(result) {
@@ -1741,11 +1832,14 @@ function renderDriverCards(result) {
     byDriver[finalDrv].push(a);
   });
 
-  const internalDriversWithLoads = getAvailableDrivers()
+  const allNonVacation = state.drivers.filter(d => !d.onVacation);
+  const internalDriversWithLoads = allNonVacation
     .filter(d => byDriver[d.name] && byDriver[d.name].length > 0);
+  const whatIfInactiveDrivers = allNonVacation
+    .filter(d => (state.whatIf||{})[d.id]?.inactive && !byDriver[d.name]?.length);
   const shoreLoads = byDriver['SHORELINE'] || [];
 
-  function runCard(driverName, runs, homeBase, totalHrs, dotMax, deadheadHrs, arrivalTime) {
+  function runCard(driverName, runs, homeBase, totalHrs, dotMax, deadheadHrs, arrivalTime, driverId) {
     const status = totalHrs > dotMax ? 'over' : totalHrs > dotMax * 0.9 ? 'warn' : 'ok';
     const statusHTML = status==='over'
       ? `<span class="card-dot-status card-dot-over">⚠️ OVER DOT LIMIT</span>`
@@ -1806,15 +1900,34 @@ function renderDriverCards(result) {
 
     const initial = driverName.charAt(0).toUpperCase();
     const safeName = driverName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    return `<div class="driver-card"
+    const wi = driverId ? ((state.whatIf||{})[driverId]||{}) : {};
+    const isModified = !!(wi.restriction || wi.inactive);
+    const restrictionOpts = ['Any','Any + Columbus','Columbus ONLY','Dothan ONLY','Auburn ONLY','Evergreen ONLY'];
+    const wiPanel = driverId ? `
+      <div class="what-if-panel" id="wi-panel-${driverId}">
+        <div class="wi-row">
+          <span class="wi-label">Restriction</span>
+          <select onchange="setWhatIfRestriction('${driverId}',this.value)">
+            <option value="">— No override —</option>
+            ${restrictionOpts.map(r=>`<option value="${r}"${wi.restriction===r?' selected':''}>${r}</option>`).join('')}
+          </select>
+        </div>
+        <div class="wi-row">
+          <label><input type="checkbox"${wi.inactive?' checked':''} onchange="setWhatIfInactive('${driverId}',this.checked)"> Mark inactive for next run</label>
+          <button class="wi-revert-btn" style="${isModified?'':'display:none'}" id="wi-revert-${driverId}" onclick="revertWhatIf('${driverId}')">Revert</button>
+        </div>
+      </div>` : '';
+    return `<div class="driver-card${isModified?' is-modified':''}" id="drv-card-${driverId||''}"
       ondragover="handleCardDragOver(event,this)"
       ondragleave="this.classList.remove('drag-target')"
       ondrop="handleCardDrop(event,'${safeName}')">
       <div class="driver-card-header">
         <div class="drv-initial">${initial}</div>
-        <div><div class="drv-name">${driverName}</div><div class="drv-base">${homeBase}</div></div>
+        <div><div class="drv-name">${driverName}${isModified?'<span class="wi-badge">~</span>':''}</div><div class="drv-base">${homeBase}</div></div>
+        ${driverId?`<button class="wi-toggle-btn no-print" onclick="toggleWhatIfPanel('${driverId}')" id="wi-toggle-${driverId}">⚙ What-if</button>`:''}
       </div>
       <div class="driver-card-runs">${runRows}</div>
+      ${wiPanel}
       <div class="driver-card-footer">
         <span class="card-total-hrs">${totalHrs.toFixed(2)} hrs</span>
         ${deadheadNote || statusHTML}
@@ -1832,7 +1945,38 @@ function renderDriverCards(result) {
     const workloadEntry = result.workload.find(w => w.id === d.id);
     const totalHrs = workloadEntry ? workloadEntry.hours : runs.reduce((s,r) => s + r.hrs, 0);
     const deadheadHrs = d.deadheadMiles ? (d.deadheadMiles * 2) / state.settings.avgSpeed : 0;
-    return runCard(d.name, runs, d.homeBase, totalHrs, state.settings.dotMaxHours, deadheadHrs, d.arrivalTime);
+    return runCard(d.name, runs, d.homeBase, totalHrs, state.settings.dotMaxHours, deadheadHrs, d.arrivalTime, d.id);
+  }).join('');
+
+  // Cards for what-if inactive drivers (no loads — shown so user can revert)
+  cardsHTML += whatIfInactiveDrivers.map(d => {
+    const wi = (state.whatIf||{})[d.id] || {};
+    const restrictionOpts = ['Any','Any + Columbus','Columbus ONLY','Dothan ONLY','Auburn ONLY','Evergreen ONLY'];
+    return `<div class="driver-card is-modified is-inactive-wi" id="drv-card-${d.id}">
+      <div class="driver-card-header">
+        <div class="drv-initial">${d.name.charAt(0).toUpperCase()}</div>
+        <div><div class="drv-name">${d.name} <span class="wi-badge">inactive</span></div><div class="drv-base">${d.homeBase}</div></div>
+        <button class="wi-toggle-btn no-print" onclick="toggleWhatIfPanel('${d.id}')" id="wi-toggle-${d.id}">⚙ What-if</button>
+      </div>
+      <div class="wi-inactive-label">— Excluded from this run —</div>
+      <div class="what-if-panel open" id="wi-panel-${d.id}">
+        <div class="wi-row">
+          <span class="wi-label">Restriction</span>
+          <select onchange="setWhatIfRestriction('${d.id}',this.value)">
+            <option value="">— No override —</option>
+            ${restrictionOpts.map(r=>`<option value="${r}"${wi.restriction===r?' selected':''}>${r}</option>`).join('')}
+          </select>
+        </div>
+        <div class="wi-row">
+          <label><input type="checkbox" checked onchange="setWhatIfInactive('${d.id}',this.checked)"> Mark inactive for next run</label>
+          <button class="wi-revert-btn" id="wi-revert-${d.id}" onclick="revertWhatIf('${d.id}')">Revert</button>
+        </div>
+      </div>
+      <div class="driver-card-footer">
+        <span class="card-total-hrs">0.00 hrs</span>
+        <span class="card-dot-status card-dot-ok">✓ Sitting out</span>
+      </div>
+    </div>`;
   }).join('');
 
   if (shoreLoads.length > 0) {
@@ -1860,6 +2004,7 @@ function renderDriverCards(result) {
 
   grid.innerHTML = cardsHTML;
   section.style.display = 'block';
+  updateWhatIfBanner();
 
   const now = new Date();
   document.getElementById('print-gen-time').textContent =
