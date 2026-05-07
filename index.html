@@ -1188,9 +1188,11 @@ function runOptimizer(loadCounts) {
   });
 
   // Exclusive-route drivers (JR/Marcus/Robert): domiciled at endpoint, gated only by maxLoads.
-  function findExclusive(restriction) {
+  function findExclusive(restriction, hrs) {
     return available
-      .filter(d => d.restriction === restriction && ds[d.id].loadCount < d.maxLoads)
+      .filter(d => d.restriction === restriction
+        && ds[d.id].loadCount < d.maxLoads
+        && (ds[d.id].hours + hrs + ds[d.id].homeHrs) <= dotMax)
       .sort((a,b) => ds[a.id].loadCount !== ds[b.id].loadCount
         ? ds[a.id].loadCount - ds[b.id].loadCount
         : ds[a.id].hours - ds[b.id].hours)[0] || null;
@@ -1298,22 +1300,23 @@ function runOptimizer(loadCounts) {
     for (let i = 0; i < count; i++) {
       globalNum++;
       let drv = null;
-      if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY');
+      if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY', hrs);
       else if (phase.dest === 'COL') {
         const isOfs = phase.label.includes('Small Store');
         if (isOfs) {
           // Cap Columbus ONLY drivers at 1 small store so their second slot stays open for bulk
           drv = available
-            .filter(d => d.restriction === 'Columbus ONLY' && ds[d.id].loadCount < d.maxLoads && ds[d.id].colOfs < 1)
+            .filter(d => d.restriction === 'Columbus ONLY' && ds[d.id].loadCount < d.maxLoads && ds[d.id].colOfs < 1
+              && (ds[d.id].hours + hrs + ds[d.id].homeHrs) <= dotMax)
             .sort((a,b) => ds[a.id].loadCount - ds[b.id].loadCount || ds[a.id].hours - ds[b.id].hours)[0] || null;
         } else {
-          drv = findExclusive('Columbus ONLY');
+          drv = findExclusive('Columbus ONLY', hrs);
         }
         if (!drv) drv = findColumbusAssist(hrs, phase.dest);
       }
-      else if (phase.dest === 'DOT') { drv = findExclusive('Dothan ONLY');    if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
-      else if (phase.dest === 'AUB') { drv = findExclusive('Auburn ONLY');    if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
-      else if (phase.dest === 'EVG') { drv = findExclusive('Evergreen ONLY'); if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
+      else if (phase.dest === 'DOT') { drv = findExclusive('Dothan ONLY', hrs);    if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
+      else if (phase.dest === 'AUB') { drv = findExclusive('Auburn ONLY', hrs);    if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
+      else if (phase.dest === 'EVG') { drv = findExclusive('Evergreen ONLY', hrs); if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
       else                            drv = findGeneral(hrs, phase.dest);
 
       if (drv) {
