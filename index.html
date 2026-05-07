@@ -1188,11 +1188,15 @@ function runOptimizer(loadCounts) {
   });
 
   // Exclusive-route drivers (JR/Marcus/Robert): domiciled at endpoint, gated only by maxLoads.
-  function findExclusive(restriction, hrs) {
+  function findExclusive(restriction, hrs, destCode) {
     return available
-      .filter(d => d.restriction === restriction
-        && ds[d.id].loadCount < d.maxLoads
-        && (ds[d.id].hours + hrs + ds[d.id].homeHrs) <= dotMax)
+      .filter(d => {
+        if (d.restriction !== restriction) return false;
+        if (ds[d.id].loadCount >= d.maxLoads) return false;
+        // Drivers going home on this load only drive one way — use half hours for the capacity check.
+        const checkHrs = d.domicileDest === destCode ? hrs / 2 : hrs;
+        return (ds[d.id].hours + checkHrs) <= dotMax;
+      })
       .sort((a,b) => ds[a.id].loadCount !== ds[b.id].loadCount
         ? ds[a.id].loadCount - ds[b.id].loadCount
         : ds[a.id].hours - ds[b.id].hours)[0] || null;
@@ -1300,23 +1304,27 @@ function runOptimizer(loadCounts) {
     for (let i = 0; i < count; i++) {
       globalNum++;
       let drv = null;
-      if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY', hrs);
+      if      (phase.dest === 'PAN') drv = findExclusive('Panama City ONLY', hrs, 'PAN');
       else if (phase.dest === 'COL') {
         const isOfs = phase.label.includes('Small Store');
         if (isOfs) {
           // Cap Columbus ONLY drivers at 1 small store so their second slot stays open for bulk
           drv = available
-            .filter(d => d.restriction === 'Columbus ONLY' && ds[d.id].loadCount < d.maxLoads && ds[d.id].colOfs < 1
-              && (ds[d.id].hours + hrs + ds[d.id].homeHrs) <= dotMax)
+            .filter(d => {
+              if (d.restriction !== 'Columbus ONLY') return false;
+              if (ds[d.id].loadCount >= d.maxLoads || ds[d.id].colOfs >= 1) return false;
+              const checkHrs = d.domicileDest === 'COL' ? hrs / 2 : hrs;
+              return (ds[d.id].hours + checkHrs) <= dotMax;
+            })
             .sort((a,b) => ds[a.id].loadCount - ds[b.id].loadCount || ds[a.id].hours - ds[b.id].hours)[0] || null;
         } else {
-          drv = findExclusive('Columbus ONLY', hrs);
+          drv = findExclusive('Columbus ONLY', hrs, 'COL');
         }
         if (!drv) drv = findColumbusAssist(hrs, phase.dest);
       }
-      else if (phase.dest === 'DOT') { drv = findExclusive('Dothan ONLY', hrs);    if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
-      else if (phase.dest === 'AUB') { drv = findExclusive('Auburn ONLY', hrs);    if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
-      else if (phase.dest === 'EVG') { drv = findExclusive('Evergreen ONLY', hrs); if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
+      else if (phase.dest === 'DOT') { drv = findExclusive('Dothan ONLY', hrs, 'DOT');    if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
+      else if (phase.dest === 'AUB') { drv = findExclusive('Auburn ONLY', hrs, 'AUB');    if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
+      else if (phase.dest === 'EVG') { drv = findExclusive('Evergreen ONLY', hrs, 'EVG'); if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
       else                            drv = findGeneral(hrs, phase.dest);
 
       if (drv) {
@@ -1343,7 +1351,7 @@ function runOptimizer(loadCounts) {
     const oneWay = hrs / 2;
     if ((ds[d.id].hours + oneWay) > dotMax) return;
     globalNum++;
-    ds[d.id].hours += oneWay;
+    ds[d.id].hours += hrs; // full round-trip so post-process eveningDH subtraction nets to one-way
     ds[d.id].loadCount++;
     assignments.push({
       loadNum: globalNum, phase: phase.label, dest: d.domicileDest, hrs,
