@@ -12,47 +12,50 @@
 <meta name="apple-mobile-web-app-title" content="Route Optimizer">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
   --red:       #E31837;
-  --red-dark:  #C41230;
-  --black:     #1A1A1A;
-  --gray-50:   #F7F7F7;
-  --gray-100:  #EEEEEE;
-  --gray-200:  #DDDDDD;
-  --gray-400:  #999999;
-  --gray-600:  #555555;
+  --red-dark:  #B5101F;
+  --red-deep:  #8C0C18;
+  --black:     #111111;
+  --gray-50:   #F6F7F9;
+  --gray-100:  #EDEEF0;
+  --gray-200:  #D8DADD;
+  --gray-400:  #9299A3;
+  --gray-600:  #4F5762;
   --white:     #FFFFFF;
-  --green:     #2E7D32;
-  --green-bg:  #E8F5E9;
-  --amber:     #E65100;
-  --amber-bg:  #FFF3E0;
-  --danger:    #C62828;
-  --danger-bg: #FFEBEE;
+  --green:     #1E7E34;
+  --green-bg:  #E6F4EA;
+  --amber:     #C84B00;
+  --amber-bg:  #FFF2E5;
+  --danger:    #B91C1C;
+  --danger-bg: #FEE2E2;
   --purple:    #4A148C;
   --purple-bg: #F3E5F5;
   --blue:      #1565C0;
   --blue-bg:   #E3F2FD;
   --radius:    6px;
   --radius-lg: 10px;
-  --shadow:    0 1px 4px rgba(0,0,0,0.10);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.13);
+  --shadow:    0 1px 4px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.12);
 }
 
 body {
-  font-family: 'Segoe UI', Arial, sans-serif;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
   font-size: 14px;
   background: var(--gray-50);
   color: var(--black);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ── HEADER ─────────────────────────────────────────────────────────── */
 header {
-  background: var(--red);
+  background: linear-gradient(160deg, var(--red-dark) 0%, var(--red) 55%, #E8162D 100%);
   color: var(--white);
-  height: 56px;
+  height: 60px;
   padding: 0 24px;
   display: flex;
   align-items: center;
@@ -60,56 +63,54 @@ header {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 0 var(--red-deep), 0 4px 16px rgba(179,12,28,0.35);
 }
-.hdr-left { display: flex; align-items: center; gap: 14px; }
+.hdr-left { display: flex; align-items: center; gap: 16px; }
 .hdr-logo {
   display: flex;
-  align-items: center;
-  gap: 0;
+  flex-direction: column;
+  align-items: flex-start;
   flex-shrink: 0;
+  padding-right: 18px;
+  border-right: 1.5px solid rgba(255,255,255,0.28);
+  gap: 1px;
 }
 .hdr-logo-coke {
-  background: rgba(0,0,0,0.25);
   color: white;
   font-weight: 900;
-  font-size: 10px;
-  padding: 5px 8px;
-  border-radius: 4px 0 0 4px;
-  line-height: 1.3;
-  letter-spacing: 0.3px;
-}
-.hdr-logo-coke span { display: block; font-size: 8px; font-weight: 600; opacity: 0.8; letter-spacing: 0.5px; }
-.hdr-logo-united {
-  background: rgba(255,255,255,0.15);
-  color: white;
-  font-weight: 900;
-  font-size: 9px;
-  padding: 5px 8px;
-  border-radius: 0 4px 4px 0;
-  line-height: 1.3;
-  letter-spacing: 0.8px;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 1.8px;
   text-transform: uppercase;
 }
-.hdr-logo-united span { display: block; font-size: 7px; opacity: 0.7; letter-spacing: 0.3px; }
-.hdr-title { font-size: 16px; font-weight: 700; letter-spacing: 0.2px; }
-.hdr-sub { font-size: 10px; opacity: 0.7; margin-top: 1px; }
+.hdr-logo-united {
+  color: rgba(255,255,255,0.78);
+  font-weight: 600;
+  font-size: 8.5px;
+  line-height: 1;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.hdr-logo-united span { display: none; }
+.hdr-logo-coke span { display: none; }
+.hdr-title { font-size: 15px; font-weight: 800; letter-spacing: 0.1px; }
+.hdr-sub { font-size: 10px; opacity: 0.62; margin-top: 2px; letter-spacing: 0.2px; font-weight: 500; }
 .hdr-right { display: flex; align-items: center; gap: 16px; }
-.hdr-date { text-align: right; font-size: 11px; opacity: 0.75; }
+.hdr-date { text-align: right; font-size: 11px; opacity: 0.72; font-weight: 500; }
 .hdr-date strong { display: block; font-size: 13px; opacity: 1; font-weight: 700; }
 .hdr-settings-btn {
-  background: rgba(255,255,255,0.15);
-  border: none;
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.2);
   color: white;
   width: 36px; height: 36px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 17px;
   display: flex; align-items: center; justify-content: center;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
   flex-shrink: 0;
 }
-.hdr-settings-btn:hover { background: rgba(255,255,255,0.25); }
+.hdr-settings-btn:hover { background: rgba(0,0,0,0.32); border-color: rgba(255,255,255,0.4); }
 
 /* ── TABS ────────────────────────────────────────────────────────────── */
 .tab-bar {
@@ -118,6 +119,7 @@ header {
   display: flex;
   padding: 0 24px;
   gap: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 .tab-btn {
   background: none;
@@ -127,13 +129,15 @@ header {
   color: var(--gray-400);
   font-size: 13px;
   font-weight: 600;
-  padding: 14px 20px;
+  padding: 15px 20px;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  font-size: 11.5px;
 }
 .tab-btn:hover { color: var(--black); }
-.tab-btn.active { color: var(--red); border-bottom-color: var(--red); }
+.tab-btn.active { color: var(--red); border-bottom-color: var(--red); font-weight: 700; }
 .tab-content { display: none; padding: 24px; }
 .tab-content.active { display: block; }
 
@@ -148,11 +152,12 @@ header {
 .card-header {
   padding: 12px 16px;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11.5px;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.7px;
   color: var(--gray-600);
   border-bottom: 1px solid var(--gray-100);
+  border-left: 3px solid var(--red);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -271,20 +276,22 @@ header {
 /* ── GENERATE BUTTON ─────────────────────────────────────────────────── */
 .btn-generate {
   width: 100%;
-  padding: 14px;
-  background: var(--red);
+  padding: 15px;
+  background: linear-gradient(135deg, var(--red-dark) 0%, var(--red) 100%);
   color: white;
   border: none;
   border-radius: var(--radius-lg);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 800;
   cursor: pointer;
-  letter-spacing: 0.3px;
-  transition: background 0.15s, transform 0.1s;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  transition: filter 0.15s, transform 0.1s, box-shadow 0.15s;
   margin-top: 12px;
+  box-shadow: 0 3px 10px rgba(140,12,24,0.3);
 }
-.btn-generate:hover { background: var(--red-dark); }
-.btn-generate:active { transform: scale(0.99); }
+.btn-generate:hover { filter: brightness(1.07); box-shadow: 0 4px 16px rgba(140,12,24,0.4); }
+.btn-generate:active { transform: scale(0.99); filter: brightness(0.96); }
 
 /* ── SUMMARY BAR (post-generate) ─────────────────────────────────────── */
 .summary-bar {
@@ -464,7 +471,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
   flex-direction: column;
 }
 .settings-header {
-  background: var(--black);
+  background: linear-gradient(135deg, var(--red-dark) 0%, var(--red) 100%);
   color: white;
   padding: 16px 20px;
   display: flex;
@@ -519,7 +526,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
     margin-bottom: 10px;
   }
   .print-header-brand { display: flex; align-items: center; gap: 10px; }
-  .print-header-badge { background: #E31837; color: white; font-size: 10px; font-weight: 900; padding: 4px 8px; border-radius: 3px; }
+  .print-header-badge { background: #E31837; color: white; font-size: 10px; font-weight: 900; padding: 4px 8px; border-radius: 3px; letter-spacing: 1px; }
   .print-header-title { font-size: 14px; font-weight: 800; color: #1A1A1A; }
   .print-header-sub { font-size: 9px; color: #666; }
   .print-header-right { text-align: right; font-size: 10px; color: #333; }
@@ -652,8 +659,8 @@ tr.phase-group-hdr td {
 <header>
   <div class="hdr-left">
     <div class="hdr-logo">
-      <div class="hdr-logo-coke">COCA‑COLA<span>BOTTLING CO.</span></div>
-      <div class="hdr-logo-united">UNITED<span>since 1902</span></div>
+      <div class="hdr-logo-coke">COCA&#8209;COLA</div>
+      <div class="hdr-logo-united">BOTTLING CO. UNITED</div>
     </div>
     <div>
       <div class="hdr-title">Route Optimizer</div>
@@ -1184,7 +1191,7 @@ function runOptimizer(loadCounts) {
     // check and settled in post-processing (saved if last load is home destination).
     const mDH = d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0;
     const homeHrs = d.domicileDest ? getHrsForDest(d.domicileDest) / 2 : 0;
-    ds[d.id] = {hours: mDH, morningDH: mDH, eveningDH: mDH, loadCount: 0, colCount: 0, colOfs: 0, homeHrs};
+    ds[d.id] = {hours: mDH, morningDH: mDH, eveningDH: mDH, loadCount: 0, colCount: 0, colOfs: 0, homeHrs, reservedSlot: 0};
   });
 
   // Exclusive-route drivers (JR/Marcus/Robert): domiciled at endpoint, gated only by maxLoads.
@@ -1202,21 +1209,24 @@ function runOptimizer(loadCounts) {
         : ds[a.id].hours - ds[b.id].hours)[0] || null;
   }
 
-  // General pool: even distribution by load count, then earliest arrival.
-  // Domicile drivers are excluded from their home destination in the main loop —
-  // they receive that load last via the home pass below.
+  // General pool: even distribution by effective load count (actual + reserved home slot),
+  // then fewest accumulated hours. Domicile drivers are excluded from their home destination
+  // in the main loop — they receive that load last via the home pass below.
   function findGeneral(hrs, destCode) {
     return available
       .filter(d => {
         if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus' && d.restriction !== 'Auburn First') return false;
-        if (ds[d.id].loadCount >= d.maxLoads) return false;
+        // Count the reserved home slot against maxLoads so domicile drivers don't
+        // crowd out others just because their home-dest phase ran without them.
+        if (ds[d.id].loadCount + ds[d.id].reservedSlot >= d.maxLoads) return false;
         if (d.restriction === 'Auburn First' && ds[d.id].loadCount === 0 && destCode !== 'AUB') return false;
         if (reservedForHome.has(d.id) && d.domicileDest === destCode) return false;
         return (ds[d.id].hours + hrs + ds[d.id].homeHrs) <= dotMax;
       })
       .sort((a,b) => {
-        if (ds[a.id].loadCount !== ds[b.id].loadCount) return ds[a.id].loadCount - ds[b.id].loadCount;
-        if (toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)) return toMinutes(a.arrivalTime) - toMinutes(b.arrivalTime);
+        const effA = ds[a.id].loadCount + ds[a.id].reservedSlot;
+        const effB = ds[b.id].loadCount + ds[b.id].reservedSlot;
+        if (effA !== effB) return effA - effB;
         if (ds[a.id].hours !== ds[b.id].hours) return ds[a.id].hours - ds[b.id].hours;
         return state.drivers.indexOf(a) - state.drivers.indexOf(b);
       })[0] || null;
@@ -1227,14 +1237,15 @@ function runOptimizer(loadCounts) {
     return available
       .filter(d => {
         if (d.restriction === 'Panama City ONLY' || d.restriction === 'Columbus ONLY') return false;
-        if (ds[d.id].loadCount >= d.maxLoads) return false;
+        if (ds[d.id].loadCount + ds[d.id].reservedSlot >= d.maxLoads) return false;
         if (d.restriction === 'Auburn First' && ds[d.id].loadCount === 0 && destCode !== 'AUB') return false;
         if (reservedForHome.has(d.id) && d.domicileDest === destCode) return false;
         return (ds[d.id].hours + hrs + ds[d.id].homeHrs) <= dotMax;
       })
       .sort((a,b) => {
-        if (ds[a.id].loadCount !== ds[b.id].loadCount) return ds[a.id].loadCount - ds[b.id].loadCount;
-        if (toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)) return toMinutes(a.arrivalTime) - toMinutes(b.arrivalTime);
+        const effA = ds[a.id].loadCount + ds[a.id].reservedSlot;
+        const effB = ds[b.id].loadCount + ds[b.id].reservedSlot;
+        if (effA !== effB) return effA - effB;
         return ds[a.id].hours - ds[b.id].hours;
       })[0] || null;
   }
@@ -1250,7 +1261,6 @@ function runOptimizer(loadCounts) {
       })
       .sort((a,b) => {
         if (ds[a.id].loadCount !== ds[b.id].loadCount) return ds[a.id].loadCount - ds[b.id].loadCount;
-        if (toMinutes(a.arrivalTime) !== toMinutes(b.arrivalTime)) return toMinutes(a.arrivalTime) - toMinutes(b.arrivalTime);
         return ds[a.id].hours - ds[b.id].hours;
       })[0] || null;
   }
@@ -1271,6 +1281,9 @@ function runOptimizer(loadCounts) {
     counts[pi]--;
     reservedForHome.add(d.id);
     homePassQueue.push({driver: d, phaseIndex: pi});
+    // Flag the reserved home slot so sort/filter treat this driver as if they
+    // already have one load, without inflating loadCount (which drives display).
+    ds[d.id].reservedSlot = 1;
   });
 
   // Pre-assign first-run loads before the main phase loop.

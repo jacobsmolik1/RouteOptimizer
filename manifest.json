@@ -4,8 +4,8 @@
   "description": "Montgomery DC — DOT Compliant 3-Run Load Assignment System",
   "start_url": "https://jacobsmolik1.github.io/RouteOptimizer/",
   "display": "standalone",
-  "background_color": "#001F5B",
-  "theme_color": "#001F5B",
+  "background_color": "#E31837",
+  "theme_color": "#E31837",
   "orientation": "landscape",
   "icons": [
     {
