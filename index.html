@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CCBCU | Route Optimizer — Montgomery DC</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#E31837">
+<meta name="theme-color" content="#E61D2B">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -16,30 +16,30 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --red:       #E31837;
-  --red-dark:  #B5101F;
-  --red-deep:  #8C0C18;
-  --black:     #111111;
-  --gray-50:   #F6F7F9;
-  --gray-100:  #EDEEF0;
-  --gray-200:  #D8DADD;
-  --gray-400:  #9299A3;
-  --gray-600:  #4F5762;
+  --red:       #E61D2B;
+  --red-dark:  #B2001B;
+  --red-deep:  #820013;
+  --black:     #0A0A0A;
+  --gray-50:   #F5F5F5;
+  --gray-100:  #EBEBEB;
+  --gray-200:  #D4D4D4;
+  --gray-400:  #8C8C8C;
+  --gray-600:  #484848;
   --white:     #FFFFFF;
-  --green:     #1E7E34;
-  --green-bg:  #E6F4EA;
-  --amber:     #C84B00;
-  --amber-bg:  #FFF2E5;
-  --danger:    #B91C1C;
-  --danger-bg: #FEE2E2;
+  --green:     #1A7A32;
+  --green-bg:  #E4F5EA;
+  --amber:     #C24400;
+  --amber-bg:  #FFF0E3;
+  --danger:    #C01717;
+  --danger-bg: #FDECEA;
   --purple:    #4A148C;
-  --purple-bg: #F3E5F5;
-  --blue:      #1565C0;
-  --blue-bg:   #E3F2FD;
-  --radius:    6px;
-  --radius-lg: 10px;
-  --shadow:    0 1px 4px rgba(0,0,0,0.08);
-  --shadow-md: 0 4px 20px rgba(0,0,0,0.12);
+  --purple-bg: #F1E5FB;
+  --blue:      #1557B0;
+  --blue-bg:   #E1EEF9;
+  --radius:    8px;
+  --radius-lg: 12px;
+  --shadow:    0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.13);
 }
 
 body {
@@ -53,9 +53,9 @@ body {
 
 /* ── HEADER ─────────────────────────────────────────────────────────── */
 header {
-  background: linear-gradient(160deg, var(--red-dark) 0%, var(--red) 55%, #E8162D 100%);
+  background: linear-gradient(155deg, var(--red-dark) 0%, var(--red) 58%, #F02535 100%);
   color: var(--white);
-  height: 60px;
+  height: 66px;
   padding: 0 24px;
   display: flex;
   align-items: center;
@@ -63,16 +63,32 @@ header {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 0 var(--red-deep), 0 4px 16px rgba(179,12,28,0.35);
+  box-shadow: 0 2px 0 var(--red-deep), 0 6px 20px rgba(182,0,27,0.32);
 }
 .hdr-left { display: flex; align-items: center; gap: 16px; }
 .hdr-logo {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  gap: 12px;
   flex-shrink: 0;
-  padding-right: 18px;
-  border-right: 1.5px solid rgba(255,255,255,0.28);
+  padding-right: 20px;
+  border-right: 1.5px solid rgba(255,255,255,0.22);
+}
+.hdr-logo-badge {
+  background: rgba(255,255,255,0.13);
+  border: 1.5px solid rgba(255,255,255,0.32);
+  color: white;
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: 2px;
+  padding: 5px 9px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.hdr-logo-text {
+  display: flex;
+  flex-direction: column;
   gap: 1px;
 }
 .hdr-logo-coke {
@@ -84,15 +100,13 @@ header {
   text-transform: uppercase;
 }
 .hdr-logo-united {
-  color: rgba(255,255,255,0.78);
+  color: rgba(255,255,255,0.68);
   font-weight: 600;
-  font-size: 8.5px;
+  font-size: 8px;
   line-height: 1;
-  letter-spacing: 2px;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
 }
-.hdr-logo-united span { display: none; }
-.hdr-logo-coke span { display: none; }
 .hdr-title { font-size: 15px; font-weight: 800; letter-spacing: 0.1px; }
 .hdr-sub { font-size: 10px; opacity: 0.62; margin-top: 2px; letter-spacing: 0.2px; font-weight: 500; }
 .hdr-right { display: flex; align-items: center; gap: 16px; }
@@ -245,7 +259,7 @@ header {
 /* ── HISTORY TAB ─────────────────────────────────────────────────────── */
 .hist-entry { border: 1px solid var(--gray-200); border-radius: var(--radius); background: white;
   box-shadow: var(--shadow); overflow: hidden; }
-.hist-date-bar { background: var(--black); color: white; padding: 10px 16px;
+.hist-date-bar { background: linear-gradient(135deg, var(--red-dark) 0%, var(--red) 100%); color: white; padding: 10px 16px;
   display: flex; align-items: center; justify-content: space-between; }
 .hist-date-label { font-size: 13px; font-weight: 700; }
 .hist-date-sub { font-size: 11px; opacity: 0.6; }
@@ -276,22 +290,22 @@ header {
 /* ── GENERATE BUTTON ─────────────────────────────────────────────────── */
 .btn-generate {
   width: 100%;
-  padding: 15px;
-  background: linear-gradient(135deg, var(--red-dark) 0%, var(--red) 100%);
+  padding: 17px;
+  background: linear-gradient(135deg, var(--red-dark) 0%, var(--red) 65%, #F02535 100%);
   color: white;
   border: none;
   border-radius: var(--radius-lg);
-  font-size: 13.5px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 900;
   cursor: pointer;
-  letter-spacing: 0.8px;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
   transition: filter 0.15s, transform 0.1s, box-shadow 0.15s;
   margin-top: 12px;
-  box-shadow: 0 3px 10px rgba(140,12,24,0.3);
+  box-shadow: 0 4px 14px rgba(182,0,27,0.4), 0 2px 4px rgba(0,0,0,0.15);
 }
-.btn-generate:hover { filter: brightness(1.07); box-shadow: 0 4px 16px rgba(140,12,24,0.4); }
-.btn-generate:active { transform: scale(0.99); filter: brightness(0.96); }
+.btn-generate:hover { filter: brightness(1.06); box-shadow: 0 6px 22px rgba(182,0,27,0.5), 0 2px 6px rgba(0,0,0,0.15); }
+.btn-generate:active { transform: scale(0.99); filter: brightness(0.95); }
 
 /* ── SUMMARY BAR (post-generate) ─────────────────────────────────────── */
 .summary-bar {
@@ -329,14 +343,16 @@ header {
 /* ── DRIVER CARDS ────────────────────────────────────────────────────── */
 .driver-cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .driver-card { border: 1.5px solid var(--gray-200); border-radius: var(--radius); overflow: hidden; background: white; box-shadow: var(--shadow); }
-.driver-card-header { background: var(--black); color: white; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
+.driver-card::before { content:''; display:block; height:3px; background:var(--red); }
+.driver-card.is-shore::before { background:var(--purple); }
+.driver-card-header { background: linear-gradient(160deg, #160003 0%, var(--black) 55%); color: white; padding: 10px 12px; display: flex; align-items: center; gap: 10px; }
 .drv-initial { background: var(--red); color: white; font-weight: 900; font-size: 13px; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .drv-name { font-weight: 700; font-size: 12px; line-height: 1.3; }
 .drv-base { font-size: 10px; color: rgba(255,255,255,0.5); }
 .driver-card-runs { padding: 0; }
 .run-row { display: flex; align-items: center; border-bottom: 1px solid var(--gray-100); padding: 6px 10px; gap: 8px; }
 .run-row:last-child { border-bottom: none; }
-.run-label { font-size: 9px; font-weight: 800; letter-spacing: 0.8px; color: white; background: var(--black); padding: 2px 5px; border-radius: 3px; width: 36px; text-align: center; flex-shrink: 0; }
+.run-label { font-size: 9px; font-weight: 800; letter-spacing: 0.8px; color: white; background: var(--red); padding: 2px 5px; border-radius: 3px; width: 36px; text-align: center; flex-shrink: 0; }
 .run-label.run2 { background: var(--gray-600); }
 .run-label.run3 { background: var(--green); }
 .run-label.empty { background: var(--gray-200); color: var(--gray-400); }
@@ -526,7 +542,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
     margin-bottom: 10px;
   }
   .print-header-brand { display: flex; align-items: center; gap: 10px; }
-  .print-header-badge { background: #E31837; color: white; font-size: 10px; font-weight: 900; padding: 4px 8px; border-radius: 3px; letter-spacing: 1px; }
+  .print-header-badge { background: #E61D2B; color: white; font-size: 10px; font-weight: 900; padding: 4px 8px; border-radius: 3px; letter-spacing: 1px; }
   .print-header-title { font-size: 14px; font-weight: 800; color: #1A1A1A; }
   .print-header-sub { font-size: 9px; color: #666; }
   .print-header-right { text-align: right; font-size: 10px; color: #333; }
@@ -596,7 +612,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
 
 /* ── PHASE GROUP HEADER ROW ──────────────────────────────────────────── */
 tr.phase-group-hdr td {
-  background: var(--black) !important;
+  background: var(--red-dark) !important;
   color: white;
   font-size: 10px;
   font-weight: 700;
@@ -659,8 +675,11 @@ tr.phase-group-hdr td {
 <header>
   <div class="hdr-left">
     <div class="hdr-logo">
-      <div class="hdr-logo-coke">COCA&#8209;COLA</div>
-      <div class="hdr-logo-united">BOTTLING CO. UNITED</div>
+      <div class="hdr-logo-badge">CCBU</div>
+      <div class="hdr-logo-text">
+        <div class="hdr-logo-coke">COCA&#8209;COLA</div>
+        <div class="hdr-logo-united">BOTTLING CO. UNITED</div>
+      </div>
     </div>
     <div>
       <div class="hdr-title">Route Optimizer</div>
@@ -718,6 +737,18 @@ tr.phase-group-hdr td {
           <span style="font-size:11px;color:var(--gray-400);">Load template:</span>
           <div id="template-days" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
         </div>
+      </div>
+
+      <!-- Minimize Shoreline Toggle -->
+      <div class="no-print" style="display:flex;align-items:center;gap:12px;padding:6px 2px;">
+        <div class="toggle-wrap">
+          <label class="toggle" title="General pool drivers will cover PAN/COL loads before falling back to outside carrier">
+            <input type="checkbox" id="minimize-shore-toggle" onchange="toggleMinimizeShoreline(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Minimize Shoreline</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);">General pool drivers cover PAN/COL before falling back to outside carrier</span>
       </div>
 
       <!-- Generate Button -->
@@ -1070,7 +1101,7 @@ const DEFAULT_DESTINATIONS = [
   {code:'AUB',name:'Auburn, AL',       address:'511 W Veterans Blvd, Auburn, AL 36832',        miles1Way:55,  carrier:'Internal Only'},
 ];
 
-const DEFAULT_SETTINGS = { avgSpeed:45, dotMaxHours:10, defaultMaxLoads:3 };
+const DEFAULT_SETTINGS = { avgSpeed:45, dotMaxHours:10, defaultMaxLoads:3, minimizeShoreline:false };
 
 const DEFAULT_PHASES = [
   {label:'Panama City (Small Store)', dest:'PAN', dispatchTime:'06:00'},
@@ -1182,7 +1213,12 @@ function fmt12h(t) {
   return `${h % 12 || 12}:${String(m||0).padStart(2,'0')} ${h >= 12 ? 'pm' : 'am'}`;
 }
 
-function runOptimizer(loadCounts) {
+function toggleMinimizeShoreline(checked) {
+  state.settings.minimizeShoreline = checked;
+  saveSettings_();
+}
+
+function runOptimizer(loadCounts, minimizeShoreline) {
   const available = getAvailableDrivers();
   const dotMax    = state.settings.dotMaxHours;
   const ds = {};
@@ -1339,6 +1375,12 @@ function runOptimizer(loadCounts) {
       else if (phase.dest === 'AUB') { drv = findExclusive('Auburn ONLY', hrs, 'AUB');    if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
       else if (phase.dest === 'EVG') { drv = findExclusive('Evergreen ONLY', hrs, 'EVG'); if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
       else                            drv = findGeneral(hrs, phase.dest);
+
+      // Minimize-shoreline fallback: let general pool cover PAN/COL before outside carrier
+      if (!drv && minimizeShoreline && (phase.dest === 'PAN' || phase.dest === 'COL')) {
+        drv = findGeneral(hrs, phase.dest);
+        if (!drv) drv = findAnyAvailable(hrs, phase.dest);
+      }
 
       if (drv) {
         ds[drv.id].hours += hrs;
@@ -2129,7 +2171,7 @@ function generateAssignments() {
     alert('Please enter at least one load before generating assignments.');
     return;
   }
-  const result = runOptimizer(state.loads);
+  const result = runOptimizer(state.loads, !!state.settings.minimizeShoreline);
   state.lastResult = result;
   saveResult();
   renderMetrics(result);
@@ -2717,6 +2759,8 @@ function init() {
   updateHeaderDate();
   renderPhaseInputs();
   renderTemplateDays();
+  const mst = document.getElementById('minimize-shore-toggle');
+  if (mst) mst.checked = !!state.settings.minimizeShoreline;
   renderDriverRules();
   updateMetricsAvail();
   renderMetrics(state.lastResult);
