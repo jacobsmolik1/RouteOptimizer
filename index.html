@@ -1292,8 +1292,7 @@ function runOptimizer(loadCounts, minimizeShoreline) {
     return available
       .filter(d => {
         if (d.restriction !== 'Any + Columbus') return false;
-        if (!minimizeShoreline && ds[d.id].colCount >= 1) return false;
-        if (ds[d.id].loadCount >= d.maxLoads) return false;
+        if (ds[d.id].colCount >= 1 || ds[d.id].loadCount >= d.maxLoads) return false;
         return (ds[d.id].hours + hrs + ds[d.id].homeHrs) <= dotMax;
       })
       .sort((a,b) => {
@@ -1428,6 +1427,34 @@ function runOptimizer(loadCounts, minimizeShoreline) {
       ds[d.id].hours += ds[d.id].eveningDH;
     }
   });
+
+  // Minimize-shoreline post-pass: after DOT/AUB/EVG are fully covered in the main loop,
+  // sweep remaining SHORELINE loads and fill with leftover general-pool capacity.
+  // Only Any / Any+Columbus drivers are eligible — exclusive-route drivers are never rerouted.
+  if (minimizeShoreline) {
+    assignments.forEach(asgn => {
+      if (asgn.autoDriver !== 'SHORELINE') return;
+      const hrs = asgn.hrs;
+      const candidate = available
+        .filter(d => {
+          if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus') return false;
+          if (ds[d.id].loadCount >= d.maxLoads) return false;
+          return (ds[d.id].hours + hrs) <= dotMax;
+        })
+        .sort((x, y) => ds[x.id].loadCount !== ds[y.id].loadCount
+          ? ds[x.id].loadCount - ds[y.id].loadCount
+          : ds[x.id].hours - ds[y.id].hours
+        )[0];
+      if (candidate) {
+        ds[candidate.id].hours += hrs;
+        ds[candidate.id].loadCount++;
+        if (asgn.dest === 'COL' && candidate.restriction === 'Any + Columbus') ds[candidate.id].colCount++;
+        asgn.autoDriver = candidate.name;
+        asgn.driverLoadNum = ds[candidate.id].loadCount;
+        asgn.internal = true;
+      }
+    });
+  }
 
   const workload = available.map(d => ({
     id: d.id, name: d.name,
