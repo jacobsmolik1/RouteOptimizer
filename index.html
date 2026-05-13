@@ -1292,7 +1292,8 @@ function runOptimizer(loadCounts, minimizeShoreline) {
     return available
       .filter(d => {
         if (d.restriction !== 'Any + Columbus') return false;
-        if (ds[d.id].colCount >= 1 || ds[d.id].loadCount >= d.maxLoads) return false;
+        if (!minimizeShoreline && ds[d.id].colCount >= 1) return false;
+        if (ds[d.id].loadCount >= d.maxLoads) return false;
         return (ds[d.id].hours + hrs + ds[d.id].homeHrs) <= dotMax;
       })
       .sort((a,b) => {
@@ -1376,12 +1377,6 @@ function runOptimizer(loadCounts, minimizeShoreline) {
       else if (phase.dest === 'EVG') { drv = findExclusive('Evergreen ONLY', hrs, 'EVG'); if (!drv) drv = findGeneral(hrs, phase.dest); if (!drv) drv = findAnyAvailable(hrs, phase.dest); }
       else                            drv = findGeneral(hrs, phase.dest);
 
-      // Minimize-shoreline fallback: unrestricted pool covers PAN/COL before outside carrier.
-      // Only findGeneral (Any / Any+Columbus / Auburn First) — never findAnyAvailable,
-      // which would incorrectly route Dothan/Auburn/EVG-ONLY drivers to PAN/COL.
-      if (!drv && minimizeShoreline && (phase.dest === 'PAN' || phase.dest === 'COL')) {
-        drv = findGeneral(hrs, phase.dest);
-      }
 
       if (drv) {
         ds[drv.id].hours += hrs;
