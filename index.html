@@ -2720,6 +2720,34 @@ function reassignLoadTo(loadIdx, newName) {
   const newLoads = state.lastResult.assignments.filter((x,i) => i !== loadIdx && (x.override||x.autoDriver) === newName);
   const maxNum   = newLoads.length ? Math.max(...newLoads.map(x => x.driverLoadNum||0)) : 0;
   a.override = newName; a.internal = true; a.driverLoadNum = maxNum + 1;
+
+  // If the source driver now has no loads, auto-fill them with the first available
+  // SHORELINE PAN/COL load that fits within their remaining DOT hours.
+  const srcDriver = state.drivers.find(d => d.name === old);
+  if (srcDriver) {
+    const srcStillHas = state.lastResult.assignments.some(x => (x.override || x.autoDriver) === old);
+    if (!srcStillHas) {
+      const srcHrs = state.lastResult.workload.find(w => w.name === old)?.hours || 0;
+      const canTake = dest =>
+        (dest === 'PAN' && (srcDriver.restriction === 'Any' || srcDriver.restriction === 'Any + Columbus' || srcDriver.restriction === 'Panama City ONLY')) ||
+        (dest === 'COL' && (srcDriver.restriction === 'Any' || srcDriver.restriction === 'Any + Columbus' || srcDriver.restriction === 'Columbus ONLY'));
+      const fill = state.lastResult.assignments.find(x =>
+        x.autoDriver === 'SHORELINE' && !x.override && canTake(x.dest) && (srcHrs + x.hrs) <= dotMax
+      );
+      if (fill) {
+        fill.override = old;
+        fill.internal = true;
+        fill.driverLoadNum = 1;
+        const srcW = state.lastResult.workload.find(w => w.name === old);
+        if (srcW) {
+          srcW.hours += fill.hrs;
+          srcW.loads++;
+          srcW.status = srcW.hours > dotMax ? 'over' : srcW.hours > dotMax * 0.9 ? 'warn' : 'ok';
+        }
+      }
+    }
+  }
+
   saveResult();
   renderDriverCards(state.lastResult);
   renderAssignmentsTable(state.lastResult);
