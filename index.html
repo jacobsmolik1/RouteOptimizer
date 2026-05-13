@@ -1312,6 +1312,10 @@ function runOptimizer(loadCounts, minimizeShoreline) {
   const homePassQueue = [];
   available.forEach(d => {
     if (!d.domicileDest || d.homeFirst) return;
+    // Exclusive-route drivers (any X ONLY restriction) always run their home destination
+    // via findExclusive in the main loop — no reservation needed, and grabbing one here
+    // would decrement the count without a guaranteed home-pass assignment (DOT overflow).
+    if (d.restriction.endsWith(' ONLY')) return;
     const pi = state.phases.findIndex((p, i) => p.dest === d.domicileDest && counts[i] > 0);
     if (pi === -1) return;
     counts[pi]--;
@@ -2725,8 +2729,7 @@ function reassignLoadTo(loadIdx, newName) {
   // SHORELINE PAN/COL load that fits within their remaining DOT hours.
   const srcDriver = state.drivers.find(d => d.name === old);
   if (srcDriver) {
-    const srcStillHas = state.lastResult.assignments.some(x => (x.override || x.autoDriver) === old);
-    if (!srcStillHas) {
+    if ((oldW?.loads ?? 1) === 0) {
       const srcHrs = state.lastResult.workload.find(w => w.name === old)?.hours || 0;
       const canTake = dest =>
         (dest === 'PAN' && (srcDriver.restriction === 'Any' || srcDriver.restriction === 'Any + Columbus' || srcDriver.restriction === 'Panama City ONLY')) ||
