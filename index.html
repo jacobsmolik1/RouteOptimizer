@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CCBCU | Route Optimizer — Montgomery DC</title>
+<title>CCBCU | Route Optimizer — Montgomery DC [TEST]</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#E61D2B">
 <meta name="mobile-web-app-capable" content="yes">
@@ -272,7 +272,10 @@ header {
 .hist-drivers { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 6px; }
 .hist-driver-chip { font-size: 11px; padding: 3px 10px; border-radius: 20px;
   background: var(--gray-100); color: var(--gray-600); white-space: nowrap; }
-.hist-driver-chip.over { background: var(--danger-bg); color: var(--danger); }
+.hist-driver-chip.over  { background: var(--danger-bg); color: var(--danger); }
+.hist-driver-chip.warn  { background: var(--amber-bg);  color: var(--amber); }
+.hist-entry-detail { display: none; border-top: 1px solid var(--gray-100); }
+.hist-entry-detail.open { display: block; }
 .wk-hrs { font-size: 10px; color: var(--gray-400); margin-left: 4px; }
 
 .totals-bar {
@@ -646,9 +649,43 @@ tr.phase-group-hdr td {
 .out-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-bg); }
 .out-btn.stamped { background: var(--green-bg); border-color: var(--green); color: var(--green); font-size: 8px; }
 .run-eta-actual { font-size: 9px; color: var(--green); font-weight: 600; display: block; margin-top: 1px; }
+
+/* ── TEST VERSION BANNER ─────────────────────────────────────────────── */
+.test-banner { background:var(--blue);color:white;text-align:center;font-size:11px;font-weight:700;padding:5px 0;letter-spacing:0.5px; }
+
+/* ── LOAD BUCKET ─────────────────────────────────────────────────────── */
+#load-bucket-panel { background:white;border:2px dashed var(--gray-200);border-radius:var(--radius-lg);padding:14px 16px;transition:border-color 0.2s; }
+#load-bucket-panel.has-items { border-color:var(--red);border-style:solid; }
+.bucket-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px; }
+.bucket-title { font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-600); }
+.bucket-count { font-size:11px;color:var(--gray-400);font-weight:600;white-space:nowrap; }
+.bucket-chips { display:flex;flex-wrap:wrap;gap:6px;min-height:32px;align-items:flex-start; }
+.bucket-chip { display:inline-flex;align-items:center;gap:5px;background:white;border:1.5px solid var(--gray-200);border-radius:20px;padding:4px 10px 4px 7px;font-size:11px;font-weight:600;cursor:grab;user-select:none;transition:all 0.15s;white-space:nowrap; }
+.bucket-chip:active { cursor:grabbing; }
+.bucket-chip:hover { border-color:var(--red);background:#fff5f5; }
+.bucket-chip.dragging { opacity:0.35; }
+.bucket-chip .chip-hrs { color:var(--gray-400);font-size:10px;margin-left:2px; }
+.bucket-chip-assigned { background:var(--green-bg);border-color:var(--green);cursor:default; }
+.bucket-chip-assigned:hover { border-color:var(--green);background:var(--green-bg); }
+.bucket-empty { font-size:12px;color:var(--gray-400);font-style:italic;padding:4px 0; }
+
+/* ── BUCKET/ADHOC CARD ROWS ──────────────────────────────────────────── */
+.run-row.bucket-row { background:#fff8f8;border-left:3px solid var(--red); }
+.run-row.adhoc-row  { background:#f0f7ff;border-left:3px solid var(--blue); }
+.run-row.shore-row  { background:#f8f0ff;border-left:3px solid var(--purple); }
+.run-row.shore-row.drag-over { box-shadow: inset 0 -2px 0 var(--purple); background:#ede0ff !important; }
+.driver-card.is-shore .driver-card-header { cursor:pointer; }
+.driver-card.is-shore .driver-card-header:hover { filter:brightness(1.12); }
+.driver-card.is-shore.drag-target { box-shadow: 0 0 0 2px var(--purple), var(--shadow-md); }
+.run-row.drop-hint  { justify-content:center;color:var(--gray-400);font-style:italic;font-size:11px;background:var(--gray-50);border:1.5px dashed var(--gray-200);border-radius:var(--radius);margin:4px 0;padding:8px; }
+.btn-remove-bkt { font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;border:1px solid var(--gray-200);background:white;color:var(--gray-400);cursor:pointer;margin-left:auto;flex-shrink:0;transition:all 0.15s; }
+.btn-remove-bkt:hover { border-color:var(--danger);color:var(--danger); }
+.btn-adhoc-add { font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;border:1.5px solid var(--blue);background:var(--blue-bg);color:var(--blue);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all 0.15s; }
+.btn-adhoc-add:hover { background:var(--blue);color:white; }
 </style>
 </head>
 <body>
+<div class="test-banner no-print">⚗️ TEST VERSION — Changes here do not affect the live app</div>
 
 <!-- ═══ PRINT HEADER ═══════════════════════════════════════════════════ -->
 <div class="print-header">
@@ -675,11 +712,7 @@ tr.phase-group-hdr td {
 <header>
   <div class="hdr-left">
     <div class="hdr-logo">
-      <div class="hdr-logo-badge">CCBU</div>
-      <div class="hdr-logo-text">
-        <div class="hdr-logo-coke">COCA&#8209;COLA</div>
-        <div class="hdr-logo-united">BOTTLING CO. UNITED</div>
-      </div>
+      <img src="data:image/png;base64,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" alt="CCBCU Logo" style="height:46px;width:46px;border-radius:50%;border:2px solid rgba(255,255,255,0.85);flex-shrink:0;">
     </div>
     <div>
       <div class="hdr-title">Route Optimizer</div>
@@ -754,6 +787,19 @@ tr.phase-group-hdr td {
       <!-- Generate Button -->
       <button class="btn-generate no-print" onclick="generateAssignments()">⚡ Generate Load Assignments</button>
 
+      <!-- Load Bucket (pre-generate manual staging) -->
+      <div id="load-bucket-panel" class="no-print" style="display:none;">
+        <div class="bucket-header">
+          <span class="bucket-title" id="bucket-title">📦 Load Bucket — Drag loads onto a driver card to manually assign</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="bucket-count" id="bucket-count">0 unassigned</span>
+            <button id="bucket-clear-btn" onclick="clearAllBucketAssignments()" style="display:none;font-size:10px;padding:2px 8px;background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger);border-radius:3px;cursor:pointer;" title="Remove all manual assignments">✕ Clear all</button>
+            <button id="bucket-rerun-btn" onclick="generateAssignments()" style="display:none;font-size:10px;padding:2px 8px;background:var(--danger);color:white;border:none;border-radius:3px;cursor:pointer;font-weight:700;" title="Re-run optimizer to place new loads">⚡ Re-run Generate</button>
+          </div>
+        </div>
+        <div class="bucket-chips" id="bucket-chips"></div>
+      </div>
+
       <!-- Summary Metrics (post-generate) -->
       <div id="metrics-grid" style="display:none;">
         <div class="summary-bar">
@@ -817,7 +863,12 @@ tr.phase-group-hdr td {
           </div>
 
           <div class="divider"></div>
-          <div id="what-if-banner" class="no-print" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--amber-bg);border:2px solid var(--amber);border-radius:var(--radius);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div id="stale-result-banner" class="no-print" style="margin-bottom:12px;padding:10px 14px;background:var(--danger-bg);border:2px solid var(--danger);border-radius:var(--radius);align-items:center;gap:10px;flex-wrap:wrap;display:none;">
+            <span style="font-size:12px;font-weight:700;color:var(--danger);">⚠ <span id="stale-banner-title">Results may be stale</span></span>
+            <span id="stale-banner-sub" style="font-size:11px;color:var(--gray-600);flex:1;">Something changed since last Generate — current assignments are still valid until you re-run.</span>
+            <button class="btn btn-sm" style="background:var(--danger);color:white;border:none;padding:5px 12px;" onclick="generateAssignments()">⚡ Re-run Generate</button>
+          </div>
+          <div id="what-if-banner" class="no-print" style="margin-bottom:12px;padding:10px 14px;background:var(--amber-bg);border:2px solid var(--amber);border-radius:var(--radius);align-items:center;gap:10px;flex-wrap:wrap;display:none;">
             <span style="font-size:12px;font-weight:700;color:var(--amber);">⚡ What-if overrides active</span>
             <span style="font-size:11px;color:var(--gray-600);flex:1;">Changes apply on next re-run — drag results are still live.</span>
             <button class="btn btn-sm" style="background:var(--amber);color:white;border:none;padding:5px 12px;" onclick="generateAssignments()">Re-run with overrides</button>
@@ -860,6 +911,7 @@ tr.phase-group-hdr td {
               </tr>
             </thead>
             <tbody id="assignments-tbody"></tbody>
+            <tfoot id="assignments-tfoot"></tfoot>
           </table>
         </div>
       </div>
@@ -984,6 +1036,46 @@ tr.phase-group-hdr td {
       <div id="reassign-load-info" style="background:var(--gray-50);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:12px;line-height:1.6;"></div>
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:8px;">Drivers — Remaining DOT Capacity</div>
       <div id="reassign-driver-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AD HOC MOVE MODAL ════════════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="adhoc-modal">
+  <div class="modal" style="width:480px;max-width:96vw;">
+    <div class="modal-header">
+      <span>Ad Hoc Move — <span id="adhoc-driver-label"></span></span>
+      <button class="modal-close" onclick="closeAdHocModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="adhoc-driver-hidden">
+      <div class="field-group">
+        <label>Destination</label>
+        <select id="adhoc-dest" onchange="updateAdHocHrs()"></select>
+      </div>
+      <div class="field-group">
+        <label>Move Type</label>
+        <select id="adhoc-type" onchange="updateAdHocHrs()">
+          <option value="bobtail-rt">Bobtail — Round Trip</option>
+          <option value="bobtail-ow">Bobtail — One Way</option>
+          <option value="loaded-rt">Loaded — Round Trip</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Dispatch Time</label>
+        <input type="time" id="adhoc-dispatch" class="plain" value="08:00">
+      </div>
+      <div class="field-group">
+        <label>Notes (optional)</label>
+        <input type="text" id="adhoc-notes" placeholder="e.g. Pick up trailer from Columbus yard">
+      </div>
+      <div id="adhoc-hrs-preview" style="margin-top:8px;padding:8px 12px;background:var(--blue-bg);border-radius:var(--radius);font-size:12px;font-weight:600;color:var(--blue);">
+        — select destination —
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeAdHocModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAdHocMove()">Save Ad Hoc Move</button>
     </div>
   </div>
 </div>
@@ -1145,9 +1237,11 @@ function loadState() {
       returned:    JSON.parse(localStorage.getItem('ccu_returned'))   || {},
       history:     JSON.parse(localStorage.getItem('ccu_history'))    || [],
       whatIf:      JSON.parse(localStorage.getItem('ccu_whatif'))     || {},
+      bucketAsgn:  JSON.parse(localStorage.getItem('ccu_basgn'))      || [],
+      adhocMoves:  JSON.parse(localStorage.getItem('ccu_adhoc'))      || [],
     };
   } catch(e) {
-    return {drivers:deepCopy(DEFAULT_DRIVERS),destinations:deepCopy(DEFAULT_DESTINATIONS),settings:deepCopy(DEFAULT_SETTINGS),phases:deepCopy(DEFAULT_PHASES),loads:Array(DEFAULT_PHASES.length).fill(0),lastResult:null,returned:{},templates:{},history:[],whatIf:{}};
+    return {drivers:deepCopy(DEFAULT_DRIVERS),destinations:deepCopy(DEFAULT_DESTINATIONS),settings:deepCopy(DEFAULT_SETTINGS),phases:deepCopy(DEFAULT_PHASES),loads:Array(DEFAULT_PHASES.length).fill(0),lastResult:null,returned:{},templates:{},history:[],whatIf:{},bucketAsgn:[],adhocMoves:[]};
   }
 }
 const saveDrivers   = () => localStorage.setItem('ccu_drivers',    JSON.stringify(state.drivers));
@@ -1159,9 +1253,12 @@ const saveResult    = () => localStorage.setItem('ccu_lastresult', JSON.stringif
 const saveReturned  = () => localStorage.setItem('ccu_returned',   JSON.stringify(state.returned));
 const saveTemplates = () => localStorage.setItem('ccu_templates',  JSON.stringify(state.templates));
 const saveHistory   = () => localStorage.setItem('ccu_history',    JSON.stringify(state.history));
-const saveWhatIf    = () => localStorage.setItem('ccu_whatif',     JSON.stringify(state.whatIf));
+const saveWhatIf     = () => localStorage.setItem('ccu_whatif',    JSON.stringify(state.whatIf));
+const saveBucketAsgn = () => localStorage.setItem('ccu_basgn',    JSON.stringify(state.bucketAsgn));
+const saveAdhocMoves = () => localStorage.setItem('ccu_adhoc',    JSON.stringify(state.adhocMoves));
 const deepCopy      = x  => JSON.parse(JSON.stringify(x));
 let state = loadState();
+let shoreExpanded = false;
 
 // One-time migration: exclusive domicile drivers were missing deadhead/home-dest
 (function migrateExclusiveDomicile() {
@@ -1182,7 +1279,8 @@ let state = loadState();
 // ════════════════════════════════════════════════════════════════════════════
 function getHrsForDest(code) {
   const d = state.destinations.find(x => x.code === code);
-  return d ? (d.miles1Way * 2) / state.settings.avgSpeed : 0;
+  const spd = state.settings.avgSpeed || 45;
+  return d ? (d.miles1Way * 2) / spd : 0;
 }
 function fmtHrs(h) { return h.toFixed(2) + ' hrs'; }
 function getAvailableDrivers() {
@@ -1216,9 +1314,10 @@ function fmt12h(t) {
 function toggleMinimizeShoreline(checked) {
   state.settings.minimizeShoreline = checked;
   saveSettings_();
+  markResultStale();
 }
 
-function runOptimizer(loadCounts, minimizeShoreline) {
+function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
   const available = getAvailableDrivers();
   const dotMax    = state.settings.dotMaxHours;
   const ds = {};
@@ -1227,8 +1326,12 @@ function runOptimizer(loadCounts, minimizeShoreline) {
     // check and settled in post-processing (saved if last load is home destination).
     const mDH = d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0;
     const homeHrs = d.domicileDest ? getHrsForDest(d.domicileDest) / 2 : 0;
-    ds[d.id] = {hours: mDH, morningDH: mDH, eveningDH: mDH, loadCount: 0, colCount: 0, colOfs: 0, homeHrs, reservedSlot: 0};
+    const pre = preLoads[d.id] || {};
+    ds[d.id] = {hours: mDH + (pre.hours||0), morningDH: mDH, eveningDH: mDH, loadCount: pre.loads||0, colCount: pre.colCount||0, colOfs: 0, homeHrs, reservedSlot: 0, returnMinutes: pre.returnMinutes || 0};
   });
+
+  // Current phase's scheduled dispatch time in minutes — updated before each finder call.
+  let phaseDispatchMins = 0;
 
   // Exclusive-route drivers (JR/Marcus/Robert): domiciled at endpoint, gated only by maxLoads.
   function findExclusive(restriction, hrs, destCode) {
@@ -1238,26 +1341,37 @@ function runOptimizer(loadCounts, minimizeShoreline) {
         if (ds[d.id].loadCount >= d.maxLoads) return false;
         // Drivers going home on this load only drive one way — use half hours for the capacity check.
         const checkHrs = d.domicileDest === destCode ? hrs / 2 : hrs;
-        return (ds[d.id].hours + checkHrs) <= dotMax;
+        if ((ds[d.id].hours + checkHrs) > dotMax) return false;
+        const actualDisp = Math.max(phaseDispatchMins, ds[d.id].returnMinutes);
+        return (actualDisp + Math.round((hrs / 2) * 60)) <= 1440;
       })
       .sort((a,b) => ds[a.id].loadCount !== ds[b.id].loadCount
         ? ds[a.id].loadCount - ds[b.id].loadCount
         : ds[a.id].hours - ds[b.id].hours)[0] || null;
   }
 
+  // Auburn First drivers must take an AUB load first — but only if AUB loads still exist.
+  // If no AUB loads remain (all exhausted or never entered), treat them as general pool.
+  function aubLoadsRemain() {
+    return state.phases.some((p, i) => p.dest === 'AUB' && counts[i] > 0);
+  }
+
   // General pool: even distribution by effective load count (actual + reserved home slot),
   // then fewest accumulated hours. Domicile drivers are excluded from their home destination
   // in the main loop — they receive that load last via the home pass below.
   function findGeneral(hrs, destCode) {
+    const blockAubFirst = aubLoadsRemain();
     return available
       .filter(d => {
         if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus' && d.restriction !== 'Auburn First') return false;
         // Count the reserved home slot against maxLoads so domicile drivers don't
         // crowd out others just because their home-dest phase ran without them.
         if (ds[d.id].loadCount + ds[d.id].reservedSlot >= d.maxLoads) return false;
-        if (d.restriction === 'Auburn First' && ds[d.id].loadCount === 0 && destCode !== 'AUB') return false;
+        if (blockAubFirst && d.restriction === 'Auburn First' && ds[d.id].loadCount === 0 && destCode !== 'AUB') return false;
         if (reservedForHome.has(d.id) && d.domicileDest === destCode) return false;
-        return (ds[d.id].hours + hrs + ds[d.id].homeHrs) <= dotMax;
+        if ((ds[d.id].hours + hrs + ds[d.id].homeHrs) > dotMax) return false;
+        const actualDisp = Math.max(phaseDispatchMins, ds[d.id].returnMinutes);
+        return (actualDisp + Math.round((hrs / 2) * 60)) <= 1440;
       })
       .sort((a,b) => {
         const effA = ds[a.id].loadCount + ds[a.id].reservedSlot;
@@ -1270,13 +1384,16 @@ function runOptimizer(loadCounts, minimizeShoreline) {
 
   // Last-resort fallback for inland routes — never let these go to SHORELINE.
   function findAnyAvailable(hrs, destCode) {
+    const blockAubFirst = aubLoadsRemain();
     return available
       .filter(d => {
         if (d.restriction === 'Panama City ONLY' || d.restriction === 'Columbus ONLY') return false;
         if (ds[d.id].loadCount + ds[d.id].reservedSlot >= d.maxLoads) return false;
-        if (d.restriction === 'Auburn First' && ds[d.id].loadCount === 0 && destCode !== 'AUB') return false;
+        if (blockAubFirst && d.restriction === 'Auburn First' && ds[d.id].loadCount === 0 && destCode !== 'AUB') return false;
         if (reservedForHome.has(d.id) && d.domicileDest === destCode) return false;
-        return (ds[d.id].hours + hrs + ds[d.id].homeHrs) <= dotMax;
+        if ((ds[d.id].hours + hrs + ds[d.id].homeHrs) > dotMax) return false;
+        const actualDisp = Math.max(phaseDispatchMins, ds[d.id].returnMinutes);
+        return (actualDisp + Math.round((hrs / 2) * 60)) <= 1440;
       })
       .sort((a,b) => {
         const effA = ds[a.id].loadCount + ds[a.id].reservedSlot;
@@ -1293,7 +1410,9 @@ function runOptimizer(loadCounts, minimizeShoreline) {
       .filter(d => {
         if (d.restriction !== 'Any + Columbus') return false;
         if (ds[d.id].colCount >= 1 || ds[d.id].loadCount >= d.maxLoads) return false;
-        return (ds[d.id].hours + hrs + ds[d.id].homeHrs) <= dotMax;
+        if ((ds[d.id].hours + hrs + ds[d.id].homeHrs) > dotMax) return false;
+        const actualDisp = Math.max(phaseDispatchMins, ds[d.id].returnMinutes);
+        return (actualDisp + Math.round((hrs / 2) * 60)) <= 1440;
       })
       .sort((a,b) => {
         if (ds[a.id].loadCount !== ds[b.id].loadCount) return ds[a.id].loadCount - ds[b.id].loadCount;
@@ -1338,9 +1457,13 @@ function runOptimizer(loadCounts, minimizeShoreline) {
     if (pi === -1 || counts[pi] <= 0) return;
     const hrs = getHrsForDest(targetDest);
     if ((ds[d.id].hours + hrs + ds[d.id].eveningDH) > dotMax) return;
+    const fpDispMins = toMinutes(state.phases[pi].dispatchTime);
+    const fpActualDisp = Math.max(fpDispMins, ds[d.id].returnMinutes);
+    if ((fpActualDisp + Math.round((hrs / 2) * 60)) > 1440) return;
     counts[pi]--;
     ds[d.id].hours += hrs;
     ds[d.id].loadCount++;
+    ds[d.id].returnMinutes = fpActualDisp + Math.round(hrs * 60);
     globalNum++;
     assignments.push({
       loadNum: globalNum, phase: state.phases[pi].label, dest: targetDest, hrs,
@@ -1350,9 +1473,18 @@ function runOptimizer(loadCounts, minimizeShoreline) {
     });
   });
 
-  state.phases.forEach((phase, pi) => {
+  // Process phases in dispatch-time order so drivers are assigned in the sequence they'll
+  // physically run loads. This prevents a driver accumulating later-dispatching loads before
+  // an earlier-dispatching phase (e.g., Auburn x2 before Columbus).
+  const phaseOrder = state.phases
+    .map((p, pi) => ({ pi, dispatchMins: toMinutes(p.dispatchTime) }))
+    .sort((a, b) => a.dispatchMins - b.dispatchMins);
+
+  phaseOrder.forEach(({ pi }) => {
+    const phase = state.phases[pi];
     const count = counts[pi];
     const hrs   = getHrsForDest(phase.dest);
+    phaseDispatchMins = toMinutes(phase.dispatchTime);
 
     for (let i = 0; i < count; i++) {
       globalNum++;
@@ -1367,7 +1499,9 @@ function runOptimizer(loadCounts, minimizeShoreline) {
               if (d.restriction !== 'Columbus ONLY') return false;
               if (ds[d.id].loadCount >= d.maxLoads || ds[d.id].colOfs >= 1) return false;
               const checkHrs = d.domicileDest === 'COL' ? hrs / 2 : hrs;
-              return (ds[d.id].hours + checkHrs) <= dotMax;
+              if ((ds[d.id].hours + checkHrs) > dotMax) return false;
+              const actualDisp = Math.max(phaseDispatchMins, ds[d.id].returnMinutes);
+              return (actualDisp + Math.round((hrs / 2) * 60)) <= 1440;
             })
             .sort((a,b) => ds[a.id].loadCount - ds[b.id].loadCount || ds[a.id].hours - ds[b.id].hours)[0] || null;
         } else {
@@ -1386,6 +1520,8 @@ function runOptimizer(loadCounts, minimizeShoreline) {
         ds[drv.id].loadCount++;
         if (phase.dest === 'COL' && drv.restriction === 'Any + Columbus') ds[drv.id].colCount++;
         if (phase.dest === 'COL' && drv.restriction === 'Columbus ONLY' && phase.label.includes('Small Store')) ds[drv.id].colOfs++;
+        const mlActualDisp = Math.max(phaseDispatchMins, ds[drv.id].returnMinutes);
+        ds[drv.id].returnMinutes = mlActualDisp + Math.round(hrs * 60);
       }
       assignments.push({
         loadNum: globalNum, phase: phase.label, dest: phase.dest, hrs,
@@ -1404,6 +1540,9 @@ function runOptimizer(loadCounts, minimizeShoreline) {
     const hrs = getHrsForDest(d.domicileDest);
     const oneWay = hrs / 2;
     if ((ds[d.id].hours + oneWay) > dotMax) return;
+    const hpDispMins = toMinutes(phase.dispatchTime);
+    const hpActualDisp = Math.max(hpDispMins, ds[d.id].returnMinutes);
+    if ((hpActualDisp + Math.round(oneWay * 60)) > 1440) return;
     globalNum++;
     ds[d.id].hours += hrs; // full round-trip so post-process eveningDH subtraction nets to one-way
     ds[d.id].loadCount++;
@@ -1420,7 +1559,15 @@ function runOptimizer(loadCounts, minimizeShoreline) {
     if (!d.deadheadMiles || !d.domicileDest) return;
     const drvLoads = assignments.filter(a => a.autoDriver === d.name && a.driverLoadNum !== null);
     if (!drvLoads.length) {
-      ds[d.id].hours += ds[d.id].eveningDH;
+      // No auto loads — check if a bucket assignment provides a home return.
+      const bucketHasHomeReturn = d.domicileDest && (state.bucketAsgn || []).some(
+        b => b.driverName === d.name && b.dest === d.domicileDest
+      );
+      if (bucketHasHomeReturn) {
+        ds[d.id].hours -= ds[d.id].eveningDH; // bucket delivers driver home; no evening DH needed
+      } else {
+        ds[d.id].hours += ds[d.id].eveningDH;
+      }
       return;
     }
     const last = drvLoads.reduce((m, a) => (a.driverLoadNum > m.driverLoadNum ? a : m));
@@ -1438,21 +1585,46 @@ function runOptimizer(loadCounts, minimizeShoreline) {
   if (minimizeShoreline) {
     assignments.forEach(asgn => {
       if (asgn.autoDriver !== 'SHORELINE') return;
+      // PAN stays Shoreline — general drivers aren't routed to Panama City
+      if (asgn.dest === 'PAN') return;
+
       const hrs = asgn.hrs;
-      const candidate = available
-        .filter(d => {
-          if (d.restriction !== 'Any' && d.restriction !== 'Any + Columbus') return false;
-          if (ds[d.id].loadCount >= d.maxLoads) return false;
-          return (ds[d.id].hours + hrs) <= dotMax;
-        })
-        .sort((x, y) => ds[x.id].loadCount !== ds[y.id].loadCount
-          ? ds[x.id].loadCount - ds[y.id].loadCount
-          : ds[x.id].hours - ds[y.id].hours
-        )[0];
+      const msDispMins = toMinutes(asgn.dispatchTime);
+      const isCOL = asgn.dest === 'COL';
+
+      const baseFilter = d => {
+        if (ds[d.id].loadCount >= d.maxLoads) return false;
+        if ((ds[d.id].hours + hrs) > dotMax) return false;
+        const actualDisp = Math.max(msDispMins, ds[d.id].returnMinutes);
+        return (actualDisp + Math.round((hrs / 2) * 60)) <= 1440;
+      };
+      const byLoadsThenHours = (x, y) => ds[x.id].loadCount !== ds[y.id].loadCount
+        ? ds[x.id].loadCount - ds[y.id].loadCount
+        : ds[x.id].hours - ds[y.id].hours;
+
+      let candidate;
+      if (isCOL) {
+        // COL: prefer Any+Columbus (cap enforced), fall back to Any as last resort
+        candidate = available
+          .filter(d => d.restriction === 'Any + Columbus' && ds[d.id].colCount < 1 && baseFilter(d))
+          .sort(byLoadsThenHours)[0];
+        if (!candidate) {
+          candidate = available
+            .filter(d => d.restriction === 'Any' && baseFilter(d))
+            .sort(byLoadsThenHours)[0];
+        }
+      } else {
+        candidate = available
+          .filter(d => (d.restriction === 'Any' || d.restriction === 'Any + Columbus') && baseFilter(d))
+          .sort(byLoadsThenHours)[0];
+      }
+
       if (candidate) {
         ds[candidate.id].hours += hrs;
         ds[candidate.id].loadCount++;
-        if (asgn.dest === 'COL' && candidate.restriction === 'Any + Columbus') ds[candidate.id].colCount++;
+        if (isCOL && candidate.restriction === 'Any + Columbus') ds[candidate.id].colCount++;
+        const msActualDisp = Math.max(msDispMins, ds[candidate.id].returnMinutes);
+        ds[candidate.id].returnMinutes = msActualDisp + Math.round(hrs * 60);
         asgn.autoDriver = candidate.name;
         asgn.driverLoadNum = ds[candidate.id].loadCount;
         asgn.internal = true;
@@ -1492,7 +1664,8 @@ function renderTemplateDays() {
 
 function saveTemplate() {
   const todayKey = DAY_KEYS[new Date().getDay()];
-  state.templates[todayKey] = deepCopy(state.loads);
+  // Store as dest+label keyed objects so phase reorders don't corrupt counts
+  state.templates[todayKey] = state.phases.map((p, i) => ({ dest: p.dest, label: p.label, count: state.loads[i] || 0 }));
   saveTemplates();
   renderTemplateDays();
   alert(`✅ Today's load counts saved as ${todayKey} template.`);
@@ -1500,12 +1673,31 @@ function saveTemplate() {
 
 function loadTemplate(day) {
   if (!state.templates[day]) { alert(`No template saved for ${day} yet.`); return; }
-  state.loads = deepCopy(state.templates[day]);
-  // Pad or trim to current phase count
-  while (state.loads.length < state.phases.length) state.loads.push(0);
-  state.loads = state.loads.slice(0, state.phases.length);
+  const tpl = state.templates[day];
+  // Support both old format (plain array of numbers) and new format (array of {dest,label,count})
+  if (Array.isArray(tpl) && tpl.length && typeof tpl[0] === 'object') {
+    state.loads = state.phases.map(p => {
+      const entry = tpl.find(t => t.dest === p.dest && t.label === p.label) || tpl.find(t => t.dest === p.dest);
+      return entry ? (entry.count || 0) : 0;
+    });
+  } else {
+    state.loads = Array.isArray(tpl) ? deepCopy(tpl) : Array(state.phases.length).fill(0);
+    while (state.loads.length < state.phases.length) state.loads.push(0);
+    state.loads = state.loads.slice(0, state.phases.length);
+  }
+  // Clear bucket assignments and stale result — they reference old load chips
+  state.bucketAsgn = [];
+  state.lastResult = null;
+  saveBucketAsgn();
   saveLoads();
+  saveResult();
+  document.getElementById('assignments-section').style.display = 'none';
+  document.getElementById('driver-cards-section').style.display = 'none';
+  document.getElementById('metrics-grid').style.display = 'none';
+  renderMetrics(null); renderWorkload(null); renderShoreline(null);
   renderPhaseInputs();
+  renderLoadBucket();
+  renderAllDriverCards();
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1527,6 +1719,37 @@ function minutesToHHMM(mins) {
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
 }
 
+// Returns when driver is back at DC (minutes since midnight) after all current loads.
+// Uses result assignments (sorted by driverLoadNum) + bucket assignments.
+function getDriverReturnMins(driverName) {
+  const loads = [];
+  if (state.lastResult) {
+    state.lastResult.assignments
+      .filter(a => (a.override || a.autoDriver) === driverName && !a.homeReturn)
+      .forEach(a => loads.push({ dispatchMins: toMinutes(a.dispatchTime), hrs: a.hrs, seq: a.driverLoadNum || 0 }));
+  }
+  (state.bucketAsgn || []).filter(b => b.driverName === driverName).forEach((b, i) =>
+    loads.push({ dispatchMins: toMinutes(b.dispatchTime), hrs: b.hrs, seq: 1000 + i })
+  );
+  loads.sort((a, b) => a.dispatchMins - b.dispatchMins || a.seq - b.seq);
+  let ret = 0;
+  loads.forEach(l => {
+    const actual = Math.max(l.dispatchMins, ret);
+    ret = actual + Math.round(l.hrs * 60);
+  });
+  return ret;
+}
+
+// Checks if dispatching loadHrs (round-trip) at loadDispatchTime would deliver after midnight.
+// Returns { violates, deliveryMins, actualDispatchMins }.
+function checkMidnightViolation(driverName, loadDispatchTime, loadHrs) {
+  const retMins = getDriverReturnMins(driverName);
+  const dispMins = toMinutes(loadDispatchTime);
+  const actualDispatch = Math.max(dispMins, retMins);
+  const deliveryMins = actualDispatch + Math.round((loadHrs / 2) * 60);
+  return { violates: deliveryMins > 1440, deliveryMins, actualDispatchMins: actualDispatch };
+}
+
 function getRollingHours(driverId) {
   const last7 = state.history.slice(-7);
   return last7.reduce((sum, entry) => sum + (entry.driverHours[driverId] || 0), 0);
@@ -1540,9 +1763,19 @@ function commitToHistory() {
 
   const driverHours = {};
   state.lastResult.workload.forEach(w => { driverHours[w.id] = w.hours; });
+  // Layer in ad-hoc move hours that aren't represented in workload
+  (state.adhocMoves || []).forEach(m => {
+    const drv = state.drivers.find(d => d.name === m.driverName);
+    if (drv) driverHours[drv.id] = (driverHours[drv.id] || 0) + m.hrs;
+  });
 
-  const total    = state.lastResult.assignments.length;
-  const internal = state.lastResult.assignments.filter(a => a.internal).length;
+  const wi = state.whatIf || {};
+  const bucketCount = (state.bucketAsgn || []).filter(b => {
+    const d = state.drivers.find(x => x.name === b.driverName);
+    return d && !d.onVacation && !wi[d.id]?.inactive;
+  }).length;
+  const total    = state.lastResult.assignments.length + bucketCount;
+  const internal = state.lastResult.assignments.filter(a => a.internal).length + bucketCount; // bucket assignments are always internal
 
   const entry = { date, dayLabel, total, internal, shoreline: total - internal, driverHours, loads: deepCopy(state.loads) };
 
@@ -1575,24 +1808,42 @@ function renderHistoryTab() {
     return;
   }
   const dotMax = state.settings.dotMaxHours;
-  el.innerHTML = [...state.history].reverse().map(entry => {
-    const driverChips = Object.entries(entry.driverHours).map(([id, hrs]) => {
+  el.innerHTML = [...state.history].reverse().map((entry, eIdx) => {
+    const uid = `hist-${eIdx}`;
+    const driverRows = Object.entries(entry.driverHours).map(([id, hrs]) => {
+      const drv = state.drivers.find(d => d.id === id);
+      const name = drv ? drv.name : id;
+      const over = hrs > dotMax;
+      const warn = !over && hrs > dotMax * 0.9;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 16px;border-bottom:1px solid var(--gray-100);font-size:12px;">
+        <span>${name}</span>
+        <span class="hist-driver-chip ${over?'over':warn?'warn':''}" style="margin:0;">${hrs.toFixed(1)}h${over?' ⚠️':warn?' ⚡':''}</span>
+      </div>`;
+    }).join('');
+    const summaryChips = Object.entries(entry.driverHours).map(([id, hrs]) => {
       const drv = state.drivers.find(d => d.id === id);
       const name = drv ? drv.name.split(' ')[0] : id;
       const over = hrs > dotMax;
-      return `<span class="hist-driver-chip ${over?'over':''}">${name}: ${hrs.toFixed(1)}h${over?' ⚠️':''}</span>`;
+      const warn = !over && hrs > dotMax * 0.9;
+      return `<span class="hist-driver-chip ${over?'over':warn?'warn':''}">${name}: ${hrs.toFixed(1)}h${over?' ⚠️':warn?' ⚡':''}</span>`;
     }).join('');
     return `<div class="hist-entry">
-      <div class="hist-date-bar">
+      <div class="hist-date-bar" onclick="const d=document.getElementById('${uid}');d.classList.toggle('open');this.querySelector('.hist-arrow').textContent=d.classList.contains('open')?'▲':'▼';" style="cursor:pointer;user-select:none;">
         <div><div class="hist-date-label">${entry.dayLabel}</div></div>
-        <div style="font-size:11px;opacity:0.6;">${entry.date}</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:11px;opacity:0.6;">${entry.date}</span>
+          <span class="hist-arrow" style="font-size:13px;opacity:0.7;" title="Expand for driver detail">▼</span>
+        </div>
       </div>
       <div class="hist-metrics-row">
         <div class="hist-metric"><div class="hm-val">${entry.total}</div><div class="hm-lbl">Total</div></div>
         <div class="hist-metric"><div class="hm-val" style="color:var(--green);">${entry.internal}</div><div class="hm-lbl">Internal</div></div>
         <div class="hist-metric"><div class="hm-val" style="color:var(--purple);">${entry.shoreline}</div><div class="hm-lbl">Shoreline</div></div>
       </div>
-      <div class="hist-drivers">${driverChips || '<span style="font-size:11px;color:var(--gray-400);">No driver data</span>'}</div>
+      <div class="hist-drivers">${summaryChips || '<span style="font-size:11px;color:var(--gray-400);">No driver data</span>'}</div>
+      <div id="${uid}" class="hist-entry-detail">
+        ${driverRows || '<div style="padding:10px 16px;font-size:12px;color:var(--gray-400);">No driver hours recorded.</div>'}
+      </div>
     </div>`;
   }).join('');
 }
@@ -1600,12 +1851,42 @@ function renderHistoryTab() {
 // ════════════════════════════════════════════════════════════════════════════
 //  RENDER: PHASE INPUTS
 // ════════════════════════════════════════════════════════════════════════════
+function getPhaseCapacityWarning(destCode) {
+  const avail = getAvailableDrivers();
+  // Destinations that require a specific driver type
+  if (destCode === 'PAN') {
+    const eligible = avail.filter(d => d.restriction === 'Panama City ONLY');
+    if (!eligible.length) return { level: 'danger', msg: 'No PAN driver available — will Shoreline' };
+  }
+  if (destCode === 'COL') {
+    const eligible = avail.filter(d => d.restriction === 'Columbus ONLY' || d.restriction === 'Any + Columbus');
+    if (!eligible.length) return { level: 'danger', msg: 'No COL driver available — will Shoreline' };
+  }
+  if (destCode === 'DOT') {
+    const eligible = avail.filter(d => d.restriction === 'Dothan ONLY' || d.restriction === 'Any' || d.restriction === 'Any + Columbus' || d.restriction === 'Auburn First');
+    if (!eligible.length) return { level: 'warn', msg: 'No eligible driver for DOT' };
+  }
+  if (destCode === 'AUB') {
+    const eligible = avail.filter(d => d.restriction === 'Auburn ONLY' || d.restriction === 'Any' || d.restriction === 'Any + Columbus' || d.restriction === 'Auburn First');
+    if (!eligible.length) return { level: 'warn', msg: 'No eligible driver for AUB' };
+  }
+  if (destCode === 'EVG') {
+    const eligible = avail.filter(d => d.restriction === 'Evergreen ONLY' || d.restriction === 'Any' || d.restriction === 'Any + Columbus');
+    if (!eligible.length) return { level: 'warn', msg: 'No eligible driver for EVG' };
+  }
+  return null;
+}
+
 function renderPhaseInputs() {
   const c = document.getElementById('phase-inputs');
   c.innerHTML = '';
   const n = state.phases.length;
   state.phases.forEach((phase, idx) => {
     const hrs = getHrsForDest(phase.dest);
+    const warn = getPhaseCapacityWarning(phase.dest);
+    const warnHtml = warn
+      ? `<span style="font-size:10px;padding:2px 6px;border-radius:3px;font-weight:600;white-space:nowrap;background:${warn.level==='danger'?'var(--danger-bg)':'var(--amber-bg)'};color:${warn.level==='danger'?'var(--danger)':'var(--amber)'};" title="${warn.msg}">⚠ ${warn.msg}</span>`
+      : '';
     const row = document.createElement('div');
     row.className = 'phase-row';
     row.innerHTML = `
@@ -1619,7 +1900,8 @@ function renderPhaseInputs() {
              onchange="setPhaseTime(${idx},this.value)" title="Dispatch time">
       <input type="number" class="phase-input" min="0" max="99" value="${state.loads[idx]||0}" id="phase-input-${idx}"
              onchange="updateLoad(${idx},this.value)" oninput="updateLoad(${idx},this.value)">
-      <span class="phase-hrs">${hrs.toFixed(2)}h ea</span>`;
+      <span class="phase-hrs">${hrs.toFixed(2)}h ea</span>
+      ${warnHtml}`;
     c.appendChild(row);
   });
   updateTotalsDisplay();
@@ -1628,7 +1910,10 @@ function renderPhaseInputs() {
 function updateLoad(idx, val) {
   state.loads[idx] = Math.max(0, parseInt(val)||0);
   saveLoads();
+  markResultStale('Load counts changed', 'New loads appear in the bucket below — assign them manually or Re-run Generate to let the optimizer place them.');
   updateTotalsDisplay();
+  renderLoadBucket();
+  renderAllDriverCards();
 }
 
 function updateTotalsDisplay() {
@@ -1640,14 +1925,24 @@ function updateTotalsDisplay() {
 
 function resetLoads() {
   state.loads = Array(state.phases.length).fill(0);
+  state.bucketAsgn = [];
+  state.adhocMoves = [];
+  state.lastResult = null;
+  state.returned = {};
   saveLoads();
+  saveBucketAsgn();
+  saveAdhocMoves();
+  saveResult();
+  saveReturned();
   renderPhaseInputs();
+  renderLoadBucket();
   document.getElementById('assignments-section').style.display = 'none';
   document.getElementById('driver-cards-section').style.display = 'none';
   document.getElementById('metrics-grid').style.display = 'none';
   renderMetrics(null);
   renderWorkload(null);
   renderShoreline(null);
+  clearStaleBanner();
   const inputCard = document.querySelector('#tab-dashboard .card');
   inputCard.classList.remove('input-card-collapsed');
   const btn = document.getElementById('input-toggle-btn');
@@ -1660,6 +1955,13 @@ function movePhase(idx, dir) {
   if (to < 0 || to >= n) return;
   [state.phases[idx], state.phases[to]] = [state.phases[to], state.phases[idx]];
   [state.loads[idx],  state.loads[to]]  = [state.loads[to],  state.loads[idx]];
+  // Remap bucket assignments whose phase index moved during the swap
+  state.bucketAsgn = (state.bucketAsgn || []).map(b => {
+    if (b.phaseIdx === idx) return {...b, phaseIdx: to, dest: state.phases[to].dest, phase: state.phases[to].label, dispatchTime: state.phases[to].dispatchTime};
+    if (b.phaseIdx === to)  return {...b, phaseIdx: idx, dest: state.phases[idx].dest, phase: state.phases[idx].label, dispatchTime: state.phases[idx].dispatchTime};
+    return b;
+  });
+  saveBucketAsgn();
   savePhases(); saveLoads();
   // clear stale results since order changed
   state.lastResult = null; saveResult();
@@ -1668,17 +1970,20 @@ function movePhase(idx, dir) {
   document.getElementById('metrics-grid').style.display = 'none';
   renderMetrics(null); renderWorkload(null); renderShoreline(null);
   renderPhaseInputs();
+  renderLoadBucket();
+  renderAllDriverCards();
 }
 
 function setPhaseTime(idx, val) {
   state.phases[idx].dispatchTime = val;
+  // Propagate new dispatch time to any bucket assignments for this phase
+  state.bucketAsgn = (state.bucketAsgn || []).map(b =>
+    b.phaseIdx === idx ? {...b, dispatchTime: val} : b
+  );
+  saveBucketAsgn();
   savePhases();
-  // clear stale results
-  state.lastResult = null; saveResult();
-  document.getElementById('assignments-section').style.display = 'none';
-  document.getElementById('driver-cards-section').style.display = 'none';
-  document.getElementById('metrics-grid').style.display = 'none';
-  renderMetrics(null); renderWorkload(null); renderShoreline(null);
+  markResultStale();
+  renderPhaseInputs(); renderLoadBucket(); renderAllDriverCards();
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1799,8 +2104,9 @@ function reassignShorelineToReturned() {
     if (a.override || a.autoDriver !== 'SHORELINE') return;
     const drv = candidates.find(d => {
       if ((loadCounts[d.id] || 0) >= d.maxLoads) return false;
+      if (checkMidnightViolation(d.name, a.dispatchTime, a.hrs).violates) return false;
       if (d.restriction === 'Any + Columbus') {
-        // Assist drivers can take COL only if they haven't already taken one
+        if (a.dest === 'PAN') return false; // PAN stays exclusive to Panama City ONLY
         if (a.dest === 'COL' && (colCounts[d.id] || 0) >= 1) return false;
         return true;
       }
@@ -1810,14 +2116,21 @@ function reassignShorelineToReturned() {
       return d.restriction === a.dest + ' ONLY' || d.restriction.startsWith(a.dest);
     });
     if (drv) {
-      state.lastResult.assignments[i].autoDriver = drv.name;
-      state.lastResult.assignments[i].internal   = true;
+      const drvExisting = state.lastResult.assignments.filter((x, j) => j !== i && (x.override || x.autoDriver) === drv.name);
+      const maxNum = drvExisting.length ? Math.max(...drvExisting.map(x => x.driverLoadNum || 0)) : 0;
+      state.lastResult.assignments[i].autoDriver    = drv.name;
+      state.lastResult.assignments[i].internal      = true;
+      state.lastResult.assignments[i].driverLoadNum = maxNum + 1;
       loadCounts[drv.id] = (loadCounts[drv.id] || 0) + 1;
       if (a.dest === 'COL' && drv.restriction === 'Any + Columbus')
         colCounts[drv.id] = (colCounts[drv.id] || 0) + 1;
-      // Recalculate hours for workload
+      // Recalculate hours and status for workload
       const wEntry = state.lastResult.workload.find(w => w.id === drv.id);
-      if (wEntry) wEntry.hours += a.hrs;
+      if (wEntry) {
+        wEntry.hours += a.hrs;
+        wEntry.loads++;
+        wEntry.status = wEntry.hours > state.settings.dotMaxHours ? 'over' : wEntry.hours > state.settings.dotMaxHours * 0.9 ? 'warn' : 'ok';
+      }
     }
   });
   saveResult();
@@ -1865,6 +2178,8 @@ function setWhatIfRestriction(driverId, value) {
   _cleanWhatIfEntry(driverId);
   _syncWhatIfCard(driverId);
   saveWhatIf();
+  markResultStale();
+  renderPhaseInputs();
 }
 
 function setWhatIfInactive(driverId, inactive) {
@@ -1874,18 +2189,24 @@ function setWhatIfInactive(driverId, inactive) {
   _cleanWhatIfEntry(driverId);
   _syncWhatIfCard(driverId);
   saveWhatIf();
+  markResultStale();
+  renderPhaseInputs();
 }
 
 function revertWhatIf(driverId) {
   delete state.whatIf[driverId];
   saveWhatIf();
+  markResultStale();
   renderDriverCards(state.lastResult);
+  renderPhaseInputs();
 }
 
 function clearAllWhatIf() {
   state.whatIf = {};
   saveWhatIf();
+  markResultStale();
   renderDriverCards(state.lastResult);
+  renderPhaseInputs();
 }
 
 function _cleanWhatIfEntry(driverId) {
@@ -1910,29 +2231,115 @@ function updateWhatIfBanner() {
   banner.style.display = Object.keys(state.whatIf||{}).length > 0 ? 'flex' : 'none';
 }
 
+function markResultStale(title, sub) {
+  if (!state.lastResult) return;
+  const banner = document.getElementById('stale-result-banner');
+  if (!banner) return;
+  if (title) document.getElementById('stale-banner-title').textContent = title;
+  if (sub)   document.getElementById('stale-banner-sub').textContent   = sub;
+  banner.style.display = 'flex';
+}
+
+function clearStaleBanner() {
+  const banner = document.getElementById('stale-result-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+function toggleShoreCard() {
+  shoreExpanded = !shoreExpanded;
+  renderDriverCards(state.lastResult);
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 //  RENDER: DRIVER ASSIGNMENT CARDS
 // ════════════════════════════════════════════════════════════════════════════
 function renderDriverCards(result) {
   const grid    = document.getElementById('driver-cards-grid');
   const section = document.getElementById('driver-cards-section');
-  if (!result) { section.style.display='none'; return; }
 
-  const byDriver = {};
-  result.assignments.forEach(a => {
-    const finalDrv = a.override || a.autoDriver;
-    if (!byDriver[finalDrv]) byDriver[finalDrv] = [];
-    byDriver[finalDrv].push(a);
+  const bucketAsgn = state.bucketAsgn || [];
+  const adhocMoves = state.adhocMoves || [];
+  const totalLoads = state.loads.reduce((a,b)=>a+b,0);
+
+  if (!result && !bucketAsgn.length && !adhocMoves.length && totalLoads === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  const byAuto = {};
+  if (result) {
+    result.assignments.forEach(a => {
+      const key = a.override || a.autoDriver;
+      if (!byAuto[key]) byAuto[key] = [];
+      byAuto[key].push(a);
+    });
+  }
+  const byBucket = {};
+  bucketAsgn.forEach(b => {
+    if (!byBucket[b.driverName]) byBucket[b.driverName] = [];
+    byBucket[b.driverName].push(b);
+  });
+  const byAdhoc = {};
+  adhocMoves.forEach(m => {
+    if (!byAdhoc[m.driverName]) byAdhoc[m.driverName] = [];
+    byAdhoc[m.driverName].push(m);
   });
 
   const allNonVacation = state.drivers.filter(d => !d.onVacation);
-  const internalDriversWithLoads = allNonVacation
-    .filter(d => byDriver[d.name] && byDriver[d.name].length > 0);
-  const whatIfInactiveDrivers = allNonVacation
-    .filter(d => (state.whatIf||{})[d.id]?.inactive && !byDriver[d.name]?.length);
-  const shoreLoads = byDriver['SHORELINE'] || [];
+  const dotMax = state.settings.dotMaxHours;
+  const hasActivity = d => (byAuto[d.name]?.length || byBucket[d.name]?.length || byAdhoc[d.name]?.length);
 
-  function runCard(driverName, runs, homeBase, totalHrs, dotMax, deadheadHrs, arrivalTime, driverId) {
+  // Show all non-vacation drivers when loads are entered; exclude whatIf-inactive no-activity
+  // drivers so they don't get a regular card AND an inactive card simultaneously.
+  const driversToShow = totalLoads > 0
+    ? (result
+        ? allNonVacation.filter(d => hasActivity(d) || !(state.whatIf||{})[d.id]?.inactive)
+        : allNonVacation)
+    : allNonVacation.filter(hasActivity);
+
+  const whatIfInactiveDrivers = result
+    ? allNonVacation.filter(d => (state.whatIf||{})[d.id]?.inactive && !hasActivity(d))
+    : [];
+
+  const shoreLoads = byAuto['SHORELINE'] || [];
+
+  function buildCard(d) {
+    const bktRuns  = byBucket[d.name] || [];
+    const autoRuns = (byAuto[d.name] || []).sort((a,b) => {
+      if (a.homeReturn && !b.homeReturn) return 1;
+      if (!a.homeReturn && b.homeReturn) return -1;
+      const dispDiff = toMinutes(a.dispatchTime) - toMinutes(b.dispatchTime);
+      if (dispDiff !== 0) return dispDiff;
+      return (a.driverLoadNum||0) - (b.driverLoadNum||0);
+    });
+    const adhRuns  = byAdhoc[d.name] || [];
+
+    const morningDH = d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0;
+    const fullDH    = morningDH * 2;
+
+    // Domicile drivers' last run to their home destination is one-way (home return).
+    // Bucket loads to a driver's domicile dest get the same treatment.
+    const hasBktHomeReturn = !!(d.domicileDest && bktRuns.some(b => b.dest === d.domicileDest));
+    const homeOwSavings    = hasBktHomeReturn ? getHrsForDest(d.domicileDest) / 2 : 0;
+    const bucketHrs        = bktRuns.reduce((s,b) => s + b.hrs, 0) - homeOwSavings;
+    const adhocHrs         = adhRuns.reduce((s,m) => s + m.hrs, 0);
+    const hasHomeReturn    = autoRuns.some(r => r && r.homeReturn) || hasBktHomeReturn;
+
+    // Deadhead for the no-result display: morning only when returning home via bucket
+    const deadheadHrs = (hasBktHomeReturn || autoRuns.some(r=>r&&r.homeReturn))
+      ? morningDH : fullDH;
+
+    let autoHrs = 0;
+    if (result) {
+      const we = result.workload.find(w => w.id === d.id);
+      autoHrs = we ? we.hours : autoRuns.reduce((s,r) => s + r.hrs, 0);
+    }
+    // When result exists, autoHrs (we.hours) already includes deadhead + bucket hrs via preLoads.
+    // Only add adhocHrs on top since those aren't run through the optimizer.
+    const totalHrs = result
+      ? autoHrs + adhocHrs
+      : deadheadHrs + bucketHrs + adhocHrs;
+
     const status = totalHrs > dotMax ? 'over' : totalHrs > dotMax * 0.9 ? 'warn' : 'ok';
     const statusHTML = status==='over'
       ? `<span class="card-dot-status card-dot-over">⚠️ OVER DOT LIMIT</span>`
@@ -1940,12 +2347,31 @@ function renderDriverCards(result) {
       ? `<span class="card-dot-status card-dot-warn">⚡ Near Limit</span>`
       : `<span class="card-dot-status card-dot-ok">✓ DOT OK</span>`;
 
-    const hasHomeReturn = runs.some(r => r && r.homeReturn);
-    const runLabels = ['RUN 1','RUN 2','RUN 3'];
-    const runColors = ['','run2','run3'];
-    let prevReturnMins = arrivalTime ? toMinutes(arrivalTime) : null;
-    const runRows = [0,1,2].map(i => {
-      const r = runs[i];
+    const bktHTML = bktRuns.map(b =>
+      `<div class="run-row bucket-row">
+        <span class="drag-handle" style="visibility:hidden;">⠿</span>
+        <span class="run-label" style="background:var(--red);min-width:38px;font-size:8px;">MANUAL</span>
+        <span class="run-phase">${b.phase}<span style="display:block;font-size:9px;color:var(--gray-400);">${b.dispatchTime} dispatch</span></span>
+        <span class="run-hrs">${b.hrs.toFixed(2)}h</span>
+        <button class="btn-remove-bkt no-print" onclick="event.stopPropagation();removeBucketAssignment('${b.id}')">✕</button>
+      </div>`).join('');
+
+    const typeLabels = {'bobtail-rt':'Bobtail RT','bobtail-ow':'Bobtail OW','loaded-rt':'Loaded RT'};
+    const adhHTML = adhRuns.map(m =>
+      `<div class="run-row adhoc-row">
+        <span class="drag-handle" style="visibility:hidden;">⠿</span>
+        <span class="run-label" style="background:var(--blue);min-width:38px;font-size:8px;">AD HOC</span>
+        <span class="run-phase">${m.destName} — ${typeLabels[m.type]||m.type}${m.notes?`<span style="display:block;font-size:9px;color:var(--gray-400);">${m.notes}</span>`:''}</span>
+        <span class="run-hrs">${m.hrs.toFixed(2)}h</span>
+        <button class="btn-remove-bkt no-print" onclick="event.stopPropagation();removeAdhocMove('${m.id}')">✕</button>
+      </div>`).join('');
+
+    const maxSlots = Math.max(autoRuns.length, d.maxLoads);
+    const runLabels = Array.from({length: maxSlots}, (_, i) => `RUN ${i + 1}`);
+    const runColors = ['', 'run2', 'run3'];
+    let prevReturnMins = d.arrivalTime ? toMinutes(d.arrivalTime) : null;
+    const autoHTML = result ? Array.from({length: maxSlots}, (_, i) => {
+      const r = autoRuns[i];
       if (r) {
         const loadIdx = result.assignments.indexOf(r);
         const dispMins = toMinutes(r.dispatchTime);
@@ -1963,13 +2389,15 @@ function renderDriverCards(result) {
           : (schedBack ? `<span style="display:block;font-size:9px;color:var(--gray-400);font-weight:400;">Back ~${schedBack}</span>` : '');
         const outBtn = `<button class="out-btn ${isStamped?'stamped':''}" onclick="event.stopPropagation();stampOut(${loadIdx})" title="${isStamped?'Click to clear timestamp':'Record actual departure time'}">${isStamped ? '✓ Out' : '⏱ Out'}</button>`;
         return `<div class="run-row" draggable="true"
+          onclick="openReassignModal(${loadIdx})"
           ondragstart="handleDragStart(event,${loadIdx})"
           ondragend="handleDragEnd(event)"
           ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over')"
           ondragleave="this.classList.remove('drag-over')"
-          ondrop="handleRunDrop(event,${loadIdx})">
+          ondrop="handleRunDrop(event,${loadIdx})"
+          title="Drag to reorder · Click to reassign to another driver">
           <span class="drag-handle">⠿</span>
-          <span class="run-label ${runColors[i]}">${runLabels[i]}</span>
+          <span class="run-label ${runColors[i] || 'run3'}">${runLabels[i]}</span>
           <span class="run-phase">${r.phase}${homeTag}<span style="display:block;">${timeInfo}</span></span>
           <span class="run-hrs">${driveHrs.toFixed(2)}h</span>
           ${outBtn}
@@ -1982,44 +2410,52 @@ function renderDriverCards(result) {
           <span class="run-hrs empty">—</span>
         </div>`;
       }
-    }).join('');
+    }).join('') : '';
 
-    const oneDH = deadheadHrs / 2;
-    const deadheadNote = deadheadHrs > 0 && !hasHomeReturn
-      ? `<span style="font-size:10px;color:var(--amber);font-weight:600;">+${deadheadHrs.toFixed(1)}h deadhead (AM+PM)</span>`
-      : deadheadHrs > 0 && hasHomeReturn
-      ? `<span style="font-size:10px;color:var(--green);font-weight:600;">+${oneDH.toFixed(1)}h deadhead (AM only — home return)</span>`
+    const hasAnyRows = bktRuns.length || adhRuns.length || (result && autoRuns.length);
+    const dropHint = (!hasAnyRows && totalLoads > 0)
+      ? `<div class="run-row drop-hint">Drop a load chip here to assign</div>`
       : '';
 
-    const initial = driverName.charAt(0).toUpperCase();
-    const safeName = driverName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const wi = driverId ? ((state.whatIf||{})[driverId]||{}) : {};
+    const deadheadNote = morningDH > 0 && !hasHomeReturn
+      ? `<span style="font-size:10px;color:var(--amber);font-weight:600;">+${fullDH.toFixed(1)}h deadhead (AM+PM)</span>`
+      : morningDH > 0 && hasHomeReturn
+      ? `<span style="font-size:10px;color:var(--green);font-weight:600;">+${morningDH.toFixed(1)}h deadhead (AM only — home return)</span>`
+      : '';
+
+    const initial  = d.name.charAt(0).toUpperCase();
+    const safeName = d.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const wi = (state.whatIf||{})[d.id] || {};
     const isModified = !!(wi.restriction || wi.inactive);
     const restrictionOpts = ['Any','Any + Columbus','Panama City ONLY','Columbus ONLY','Dothan ONLY','Auburn ONLY','Evergreen ONLY','Auburn First'];
-    const wiPanel = driverId ? `
-      <div class="what-if-panel" id="wi-panel-${driverId}">
+    const wiPanel = `
+      <div class="what-if-panel" id="wi-panel-${d.id}">
         <div class="wi-row">
           <span class="wi-label">Restriction</span>
-          <select onchange="setWhatIfRestriction('${driverId}',this.value)">
+          <select onchange="setWhatIfRestriction('${d.id}',this.value)">
             <option value="">— No override —</option>
             ${restrictionOpts.map(r=>`<option value="${r}"${wi.restriction===r?' selected':''}>${r}</option>`).join('')}
           </select>
         </div>
         <div class="wi-row">
-          <label><input type="checkbox"${wi.inactive?' checked':''} onchange="setWhatIfInactive('${driverId}',this.checked)"> Mark inactive for next run</label>
-          <button class="wi-revert-btn" style="${isModified?'':'display:none'}" id="wi-revert-${driverId}" onclick="revertWhatIf('${driverId}')">Revert</button>
+          <label><input type="checkbox"${wi.inactive?' checked':''} onchange="setWhatIfInactive('${d.id}',this.checked)"> Mark inactive for next run</label>
+          <button class="wi-revert-btn" style="${isModified?'':'display:none'}" id="wi-revert-${d.id}" onclick="revertWhatIf('${d.id}')">Revert</button>
         </div>
-      </div>` : '';
-    return `<div class="driver-card${isModified?' is-modified':''}" id="drv-card-${driverId||''}"
+      </div>`;
+
+    return `<div class="driver-card${isModified?' is-modified':''}" id="drv-card-${d.id}"
       ondragover="handleCardDragOver(event,this)"
       ondragleave="this.classList.remove('drag-target')"
       ondrop="handleCardDrop(event,'${safeName}')">
       <div class="driver-card-header">
         <div class="drv-initial">${initial}</div>
-        <div><div class="drv-name">${driverName}${isModified?'<span class="wi-badge">~</span>':''}</div><div class="drv-base">${homeBase}</div></div>
-        ${driverId?`<button class="wi-toggle-btn no-print" onclick="toggleWhatIfPanel('${driverId}')" id="wi-toggle-${driverId}">⚙ What-if</button>`:''}
+        <div><div class="drv-name">${d.name}${isModified?'<span class="wi-badge">~</span>':''}</div><div class="drv-base">${d.homeBase}</div></div>
+        <div style="display:flex;gap:5px;align-items:center;margin-left:auto;">
+          <button class="btn-adhoc-add no-print" onclick="openAdHocModal('${safeName}')">+ Ad Hoc</button>
+          <button class="wi-toggle-btn no-print" onclick="toggleWhatIfPanel('${d.id}')" id="wi-toggle-${d.id}">⚙ What-if</button>
+        </div>
       </div>
-      <div class="driver-card-runs">${runRows}</div>
+      <div class="driver-card-runs">${bktHTML}${adhHTML}${autoHTML}${dropHint}</div>
       ${wiPanel}
       <div class="driver-card-footer">
         <span class="card-total-hrs">${totalHrs.toFixed(2)} hrs</span>
@@ -2029,17 +2465,7 @@ function renderDriverCards(result) {
     </div>`;
   }
 
-  let cardsHTML = internalDriversWithLoads.map(d => {
-    const runs = (byDriver[d.name] || []).sort((a,b) => {
-      if (a.homeReturn && !b.homeReturn) return 1;
-      if (!a.homeReturn && b.homeReturn) return -1;
-      return (a.driverLoadNum||0) - (b.driverLoadNum||0);
-    });
-    const workloadEntry = result.workload.find(w => w.id === d.id);
-    const totalHrs = workloadEntry ? workloadEntry.hours : runs.reduce((s,r) => s + r.hrs, 0);
-    const deadheadHrs = d.deadheadMiles ? (d.deadheadMiles * 2) / state.settings.avgSpeed : 0;
-    return runCard(d.name, runs, d.homeBase, totalHrs, state.settings.dotMaxHours, deadheadHrs, d.arrivalTime, d.id);
-  }).join('');
+  let cardsHTML = driversToShow.map(buildCard).join('');
 
   // Cards for what-if inactive drivers (no loads — shown so user can revert)
   cardsHTML += whatIfInactiveDrivers.map(d => {
@@ -2074,23 +2500,48 @@ function renderDriverCards(result) {
 
   if (shoreLoads.length > 0) {
     const dNames = {PAN:'Panama City',COL:'Columbus',DOT:'Dothan',AUB:'Auburn',EVG:'Evergreen'};
-    const byDest = {};
-    shoreLoads.forEach(a => { byDest[a.dest] = (byDest[a.dest]||0)+1; });
-    const runRows = Object.entries(byDest).map(([code,cnt]) =>
-      `<div class="run-row">
-        <span class="run-label" style="background:var(--purple);width:auto;padding:2px 6px;">${code}</span>
-        <span class="run-phase">${dNames[code]} × ${cnt} load${cnt!==1?'s':''}</span>
-        <span class="run-hrs">${(cnt * getHrsForDest(code)).toFixed(2)}h</span>
-      </div>`).join('');
-    cardsHTML += `<div class="driver-card is-shore">
-      <div class="driver-card-header">
+    let runRows;
+    if (shoreExpanded) {
+      const sorted = shoreLoads.slice().sort((a,b) => (a.driverLoadNum||0) - (b.driverLoadNum||0));
+      runRows = sorted.map(a => {
+        const loadIdx = result.assignments.indexOf(a);
+        return `<div class="run-row shore-row" draggable="true"
+          onclick="openReassignModal(${loadIdx})"
+          ondragstart="handleDragStart(event,${loadIdx})"
+          ondragend="handleDragEnd(event)"
+          ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="event.preventDefault();this.classList.remove('drag-over')"
+          title="Drag to a driver card · Click to assign to an internal driver">
+          <span class="drag-handle">⠿</span>
+          <span class="run-label" style="background:var(--purple);">${a.dest}</span>
+          <span class="run-phase">${a.phase}<span style="display:block;font-size:9px;color:var(--gray-400);">${a.dispatchTime} dispatch</span></span>
+          <span class="run-hrs">${a.hrs.toFixed(2)}h</span>
+        </div>`;
+      }).join('');
+    } else {
+      const byDest = {};
+      shoreLoads.forEach(a => { byDest[a.dest] = (byDest[a.dest]||0)+1; });
+      runRows = Object.entries(byDest).map(([code,cnt]) =>
+        `<div class="run-row">
+          <span class="run-label" style="background:var(--purple);width:auto;padding:2px 6px;">${code}</span>
+          <span class="run-phase">${dNames[code]||code} × ${cnt} load${cnt!==1?'s':''}</span>
+          <span class="run-hrs">${(cnt * getHrsForDest(code)).toFixed(2)}h</span>
+        </div>`).join('');
+    }
+    cardsHTML += `<div class="driver-card is-shore" ondragover="handleCardDragOver(event,this)" ondrop="handleCardDrop(event,'SHORELINE')">
+      <div class="driver-card-header" onclick="toggleShoreCard()" title="${shoreExpanded?'Collapse':'Click to expand — drag loads onto driver cards'}">
         <div class="drv-initial" style="background:white;color:var(--purple);">S</div>
-        <div><div class="drv-name">SHORELINE CARRIER</div><div class="drv-base">Outside Carrier — Overflow</div></div>
+        <div style="flex:1;">
+          <div class="drv-name">SHORELINE CARRIER</div>
+          <div class="drv-base">${shoreExpanded ? 'Drag a load onto any driver card ↓' : `Outside Carrier — ${shoreLoads.length} load${shoreLoads.length!==1?'s':''}`}</div>
+        </div>
+        <div style="font-size:15px;color:white;opacity:0.6;flex-shrink:0;">${shoreExpanded ? '▲' : '▼'}</div>
       </div>
       <div class="driver-card-runs">${runRows}</div>
       <div class="driver-card-footer">
         <span class="card-total-hrs">${shoreLoads.length} total loads</span>
-        <span class="card-dot-status" style="color:var(--purple);">📋 External</span>
+        <span class="card-dot-status" style="color:var(--purple);">${shoreExpanded ? '👆 Drag to reassign' : '📋 External'}</span>
       </div>
     </div>`;
   }
@@ -2109,7 +2560,7 @@ function renderDriverCards(result) {
 // ════════════════════════════════════════════════════════════════════════════
 function renderAssignmentsTable(result) {
   const tbody = document.getElementById('assignments-tbody');
-  const allDriverOptions = [...state.drivers.map(d=>d.name),'SHORELINE']
+  const allDriverOptions = [...state.drivers.filter(d=>!d.onVacation).map(d=>d.name),'SHORELINE']
     .map(n=>`<option value="${n}">${n}</option>`).join('');
   const statusOptions = ['Pending','Assigned','In Transit','Delivered','Complete']
     .map(s=>`<option value="${s}">${s}</option>`).join('');
@@ -2157,29 +2608,116 @@ function renderAssignmentsTable(result) {
       <td>${driverCell}</td>
       <td class="text-center">${a.driverLoadNum!==null?`<span style="font-size:11px;font-weight:700;color:var(--gray-400);">#${a.driverLoadNum}</span>`:'—'}</td>
       <td class="col-detail"><input type="text" value="${a.trailerNum||''}" onchange="setTrailerNum(${idx},this.value)" style="width:60px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—"></td>
-      <td class="col-detail">${a.autoDriver==='SHORELINE'?`<input type="text" value="${a.carrierDriver||''}" onchange="setCarrierDriver(${idx},this.value)" style="width:90px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="Driver name">`:`<span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span>`}</td>
+      <td class="col-detail">${(a.override||a.autoDriver)==='SHORELINE'?`<input type="text" value="${a.carrierDriver||''}" onchange="setCarrierDriver(${idx},this.value)" style="width:90px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="Driver name">`:`<span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span>`}</td>
       <td class="no-print">${overrideSel}</td>
       <td class="no-print">${statusSel}</td>
     </tr>`;
   }).join('');
+
+  // Append bucket (manual) and ad hoc rows — always visible including print
+  const bktRows = (state.bucketAsgn || []).filter(b => {
+    const d = state.drivers.find(x => x.name === b.driverName);
+    return d && !d.onVacation && !(state.whatIf||{})[d.id]?.inactive;
+  }).map(b => {
+    const dest = state.destinations.find(d => d.code === b.dest);
+    return `<tr class="row-${DEST_COLORS[b.dest]||'shore'}" style="opacity:0.85;">
+      <td class="tbl-num" style="color:var(--red);font-weight:700;">M</td>
+      <td><span class="tag ${DEST_TAGS[b.dest]||''}">${b.dest}</span> ${b.phase}</td>
+      <td style="font-size:11px;color:var(--gray-600);">${dest?dest.name:b.dest}</td>
+      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${b.dispatchTime||'—'}</td>
+      <td class="text-center">${dest?dest.miles1Way*2:'—'}</td>
+      <td class="text-center">${b.hrs.toFixed(2)}</td>
+      <td><strong>${b.driverName}</strong> <span style="font-size:9px;color:var(--red);font-weight:700;">MANUAL</span></td>
+      <td class="text-center">—</td>
+      <td class="col-detail">—</td>
+      <td class="col-detail"><span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span></td>
+      <td class="no-print">—</td>
+      <td class="no-print">—</td>
+    </tr>`;
+  });
+
+  const typeLabels = {'bobtail-rt':'Bobtail RT','bobtail-ow':'Bobtail OW','loaded-rt':'Loaded RT'};
+  const adhRows = (state.adhocMoves || []).map(m => {
+    const typeLabel = typeLabels[m.type] || m.type;
+    return `<tr style="background:var(--blue-bg);">
+      <td class="tbl-num" style="color:var(--blue);font-weight:700;">A</td>
+      <td><span class="tag tag-dot" style="background:var(--blue);">${m.type==='bobtail-ow'?'OW':'RT'}</span> ${typeLabel}</td>
+      <td style="font-size:11px;color:var(--gray-600);">${m.destName}</td>
+      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${m.dispatchTime||'—'}</td>
+      <td class="text-center">${m.miles||'—'}</td>
+      <td class="text-center">${m.hrs.toFixed(2)}</td>
+      <td><strong>${m.driverName}</strong> <span style="font-size:9px;color:var(--blue);font-weight:700;">AD HOC</span></td>
+      <td class="text-center">—</td>
+      <td class="col-detail">—</td>
+      <td class="col-detail"><span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span></td>
+      <td class="no-print">—</td>
+      <td class="no-print">—</td>
+    </tr>`;
+  });
+
+  if (bktRows.length || adhRows.length) {
+    tbody.innerHTML += bktRows.join('') + adhRows.join('');
+  }
+
+  // Summary footer (Fix 12)
+  const tfoot = document.getElementById('assignments-tfoot');
+  if (tfoot) {
+    const total   = result.assignments.length + bktRows.length;
+    const internal = result.assignments.filter(a => a.internal).length + bktRows.length;
+    const shoreline = result.assignments.filter(a => (a.override||a.autoDriver) === 'SHORELINE').length;
+    const unassigned = result.assignments.filter(a => a.autoDriver === 'UNASSIGNED' && !a.override).length;
+    tfoot.innerHTML = `<tr style="background:#1A1A1A;color:white;font-weight:700;font-size:11px;">
+      <td class="tbl-num" style="color:white;">#</td>
+      <td colspan="5">TOTALS — ${total} load${total!==1?'s':''} this day</td>
+      <td><span style="color:#86EFAC;">✓ ${internal} internal</span> · <span style="color:#FF8A80;">${shoreline} Shoreline</span>${unassigned?` · <span style="color:#FF8A80;">⚠ ${unassigned} unassigned</span>`:''}</td>
+      <td></td>
+      <td class="col-detail"></td>
+      <td class="col-detail"></td>
+      <td class="no-print"></td>
+      <td class="no-print"></td>
+    </tr>`;
+  }
+
   document.getElementById('assignments-section').style.display='block';
 }
 
-function setOverride(idx,val) {
-  state.lastResult.assignments[idx].override = val;
-  saveResult();
-  const row = document.querySelector(`#assignments-tbody tr[data-load-idx="${idx}"]`);
-  if (row) {
-    const a = state.lastResult.assignments[idx];
-    const final = val || a.autoDriver;
-    row.querySelectorAll('td')[6].innerHTML =
-      (a.internal || val) ? `<strong>${final}</strong>` : `<span class="badge badge-shore">🚛 ${final}</span>`;
+function setOverride(idx, val) {
+  const a = state.lastResult.assignments[idx];
+  const oldName = a.override || a.autoDriver;
+  const newName = val || a.autoDriver;
+  const dotMax  = state.settings.dotMaxHours;
+  if (oldName !== newName) {
+    const oldW = state.lastResult.workload.find(w => w.name === oldName);
+    if (oldW) {
+      oldW.hours = Math.max(0, oldW.hours - a.hrs);
+      oldW.loads = Math.max(0, oldW.loads - 1);
+      oldW.status = oldW.hours > dotMax ? 'over' : oldW.hours > dotMax * 0.9 ? 'warn' : 'ok';
+    }
+    if (newName !== 'SHORELINE' && newName !== 'UNASSIGNED') {
+      let newW = state.lastResult.workload.find(w => w.name === newName);
+      if (newW) {
+        newW.hours += a.hrs;
+        newW.loads++;
+        newW.status = newW.hours > dotMax ? 'over' : newW.hours > dotMax * 0.9 ? 'warn' : 'ok';
+      } else {
+        const d = state.drivers.find(d => d.name === newName);
+        state.lastResult.workload.push({ id: d?d.id:newName, name: newName, hours: a.hrs, loads: 1, dotMax, deadheadHrs: 0, status: a.hrs > dotMax ? 'over' : a.hrs > dotMax * 0.9 ? 'warn' : 'ok' });
+      }
+    }
   }
+  a.override = val;
+  a.internal = val ? (val !== 'SHORELINE') : (a.autoDriver !== 'SHORELINE' && a.autoDriver !== 'UNASSIGNED');
+  saveResult();
+  renderWorkload(state.lastResult);
   renderDriverCards(state.lastResult);
+  renderAssignmentsTable(state.lastResult);
 }
 
 function setStatus(idx,val) {
-  if (state.lastResult) { state.lastResult.assignments[idx].status=val; saveResult(); }
+  if (!state.lastResult) return;
+  state.lastResult.assignments[idx].status = val;
+  saveResult();
+  renderAssignmentsTable(state.lastResult);
 }
 
 function setTrailerNum(idx,val) {
@@ -2198,7 +2736,29 @@ function generateAssignments() {
     alert('Please enter at least one load before generating assignments.');
     return;
   }
-  const result = runOptimizer(state.loads, !!state.settings.minimizeShoreline);
+  // Subtract manually-assigned bucket loads so optimizer only fills what's left
+  const bucketByPhase = {};
+  const preLoads = {};
+  (state.bucketAsgn || []).forEach(b => {
+    if (b.driverName === 'SHORELINE') { bucketByPhase[b.phaseIdx] = (bucketByPhase[b.phaseIdx] || 0) + 1; return; }
+    const driver = state.drivers.find(d => d.name === b.driverName);
+    if (!driver || driver.onVacation || (state.whatIf||{})[driver.id]?.inactive) return; // vacation/inactive drivers' slots go back to the optimizer
+    bucketByPhase[b.phaseIdx] = (bucketByPhase[b.phaseIdx] || 0) + 1;
+    if (!preLoads[driver.id]) preLoads[driver.id] = {loads: 0, hours: 0, colCount: 0};
+    preLoads[driver.id].loads++;
+    preLoads[driver.id].hours += b.hrs;
+    if (b.dest === 'COL') preLoads[driver.id].colCount++;
+  });
+  // Also include ad-hoc move hours so the optimizer knows these drivers are partially consumed
+  (state.adhocMoves || []).forEach(m => {
+    const driver = state.drivers.find(d => d.name === m.driverName);
+    if (driver) {
+      if (!preLoads[driver.id]) preLoads[driver.id] = {loads: 0, hours: 0, colCount: 0};
+      preLoads[driver.id].hours += m.hrs;
+    }
+  });
+  const adjustedLoads = state.loads.map((n, i) => Math.max(0, n - (bucketByPhase[i] || 0)));
+  const result = runOptimizer(adjustedLoads, !!state.settings.minimizeShoreline, preLoads);
   state.lastResult = result;
   saveResult();
   renderMetrics(result);
@@ -2206,6 +2766,8 @@ function generateAssignments() {
   renderShoreline(result);
   renderDriverCards(result);
   renderAssignmentsTable(result);
+  renderLoadBucket(); // switch bucket to post-generate review mode
+  clearStaleBanner();
   // Collapse input card and show summary chips
   const inputCard = document.querySelector('#tab-dashboard .card');
   inputCard.classList.add('input-card-collapsed');
@@ -2224,6 +2786,10 @@ function renderFleetTable() {
     const resBadge = d.restriction==='Panama City ONLY'  ? `<span class="badge badge-pan">🌴 Panama Only</span>`
                    : d.restriction==='Columbus ONLY'     ? `<span class="badge badge-col">⚓ Columbus Only</span>`
                    : d.restriction==='Any + Columbus'    ? `<span class="badge badge-col" style="background:#E3F2FD;color:#1565C0;border:1px solid #BBDEFB;">⚓+ Any + Columbus</span>`
+                   : d.restriction==='Dothan ONLY'       ? `<span class="badge" style="background:#DCFCE7;color:#166534;border:1px solid #BBF7D0;">🚛 Dothan Only</span>`
+                   : d.restriction==='Auburn ONLY'       ? `<span class="badge" style="background:#F3E8FF;color:#6B21A8;border:1px solid #E9D5FF;">🚛 Auburn Only</span>`
+                   : d.restriction==='Evergreen ONLY'    ? `<span class="badge" style="background:#CCFBF1;color:#0F766E;border:1px solid #99F6E4;">🚛 Evergreen Only</span>`
+                   : d.restriction==='Auburn First'      ? `<span class="badge" style="background:#FEF9C3;color:#854D0E;border:1px solid #FDE68A;">⭐ Auburn First</span>`
                    : `<span class="badge badge-any">Any Route</span>`;
     const statusBadge = d.onVacation
       ? `<span class="badge badge-vac">☀️ Vacation</span>`
@@ -2255,8 +2821,14 @@ function renderFleetTable() {
 }
 
 function toggleVacation(id, val) {
-  const d = state.drivers.find(x=>x.id===id);
-  if (d) { d.onVacation=val; saveDrivers(); renderFleetTable(); renderDriverRules(); updateMetricsAvail(); }
+  const d = state.drivers.find(x => x.id === id);
+  if (d) {
+    d.onVacation = val;
+    saveDrivers();
+    markResultStale();
+    renderFleetTable(); renderDriverRules(); updateMetricsAvail();
+    renderLoadBucket(); renderAllDriverCards();
+  }
 }
 function updateMetricsAvail() { document.getElementById('m-avail').textContent = getAvailableDrivers().length; }
 
@@ -2321,20 +2893,33 @@ function saveDriver() {
     notes: document.getElementById('drv-notes').value.trim(),
   };
   if (editId) {
-    const idx = state.drivers.findIndex(x=>x.id===editId);
-    if (idx>=0) state.drivers[idx] = {...state.drivers[idx],...data};
+    const idx = state.drivers.findIndex(x => x.id === editId);
+    if (idx >= 0) {
+      const oldName = state.drivers[idx].name;
+      state.drivers[idx] = {...state.drivers[idx], ...data};
+      if (oldName !== data.name) {
+        state.bucketAsgn = (state.bucketAsgn || []).map(b => b.driverName === oldName ? {...b, driverName: data.name} : b);
+        state.adhocMoves = (state.adhocMoves || []).map(m => m.driverName === oldName ? {...m, driverName: data.name} : m);
+        saveBucketAsgn(); saveAdhocMoves();
+      }
+    }
   } else {
     state.drivers.push({id:nextId(),...data});
   }
-  saveDrivers(); renderFleetTable(); renderDriverRules(); updateMetricsAvail(); closeModal();
+  saveDrivers(); renderFleetTable(); renderDriverRules(); updateMetricsAvail(); renderAllDriverCards(); closeModal();
 }
 
 function confirmDeleteDriver(id) {
   const d = state.drivers.find(x=>x.id===id);
   if (!d) return;
   if (confirm(`Remove ${d.name} from the roster?\n\nTip: If they're just on vacation, use the vacation toggle instead.`)) {
-    state.drivers = state.drivers.filter(x=>x.id!==id);
-    saveDrivers(); renderFleetTable(); renderDriverRules(); updateMetricsAvail();
+    state.drivers    = state.drivers.filter(x => x.id !== id);
+    state.bucketAsgn = (state.bucketAsgn || []).filter(b => b.driverName !== d.name);
+    state.adhocMoves = (state.adhocMoves || []).filter(m => m.driverName !== d.name);
+    delete state.whatIf[id];
+    saveDrivers(); saveBucketAsgn(); saveAdhocMoves(); saveWhatIf();
+    renderFleetTable(); renderDriverRules(); updateMetricsAvail();
+    renderLoadBucket(); renderAllDriverCards();
   }
 }
 
@@ -2352,27 +2937,41 @@ function openReassignModal(idx) {
     `<strong>${a.phase}</strong> &nbsp;·&nbsp; ${dest ? dest.name : a.dest} &nbsp;·&nbsp; <strong>${a.hrs.toFixed(2)}h</strong> &nbsp;·&nbsp; Dispatch ${a.dispatchTime || '—'}<br>` +
     `<span style="color:var(--gray-400);">Currently: <strong>${currentDriver}</strong></span>`;
 
-  const drivers = state.drivers.filter(d => !d.onVacation);
+  const drivers = getAvailableDrivers();
   const rows = drivers.map(d => {
     const w = state.lastResult.workload.find(x => x.id === d.id);
     const usedHrs  = w ? w.hours : (d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0);
     const loadsDone = w ? w.loads : 0;
     const remaining = dotMax - usedHrs;
-    const loadsFull = loadsDone >= d.maxLoads;
-    const fits      = remaining >= a.hrs && !loadsFull;
-    const tight     = fits && (remaining - a.hrs) < 1.5;
-    const over      = !fits;
-    const isCurrent = d.name === currentDriver;
+    const loadsFull  = loadsDone >= d.maxLoads;
+    const fits       = remaining >= a.hrs && !loadsFull;
+    const tight      = fits && (remaining - a.hrs) < 1.5;
+    const over       = !fits;
+    const canRoute   = driverCanTakeDest(d, a.dest);
+    // Columbus cap: Any+Columbus drivers are limited to 1 COL load per day
+    const colLoads = a.dest === 'COL' && d.restriction === 'Any + Columbus'
+      ? state.lastResult.assignments.filter(x => (x.override||x.autoDriver) === d.name && x.dest === 'COL').length
+      : 0;
+    const colCapHit = colLoads >= 1;
+    const isCurrent  = d.name === currentDriver;
+
+    const midRes    = checkMidnightViolation(d.name, a.dispatchTime, a.hrs);
+    const afterMid  = midRes.violates && !isCurrent;
+    const etaStr    = afterMid ? minutesToHHMM(midRes.deliveryMins % 1440) : '';
 
     const usedPct  = Math.min(100, (usedHrs / dotMax) * 100);
     const afterPct = Math.min(100, ((usedHrs + a.hrs) / dotMax) * 100);
-    const barColor = over ? 'var(--danger)' : tight ? 'var(--amber)' : 'var(--green)';
-    const cls      = over ? 'over-limit' : tight ? 'too-tight' : 'can-fit';
-    const label    = over ? (loadsFull ? 'max loads' : `${remaining.toFixed(1)}h left`) : `${remaining.toFixed(1)}h left`;
+    const barColor = over ? 'var(--danger)' : (!canRoute || colCapHit || tight || afterMid) ? 'var(--amber)' : 'var(--green)';
+    const cls      = over ? 'over-limit' : (!canRoute || colCapHit || tight || afterMid) ? 'too-tight' : 'can-fit';
+    const label    = over ? (loadsFull ? 'max loads' : `${remaining.toFixed(1)}h left`)
+                   : !canRoute ? `⚠ ${d.restriction}`
+                   : colCapHit ? `⚠ Columbus cap`
+                   : afterMid  ? `⛔ ETA ${etaStr}`
+                   : `${remaining.toFixed(1)}h left`;
 
     return {
       remaining, over, isCurrent,
-      html: `<div class="reassign-driver-row ${cls}" onclick="${over ? '' : `doReassign(${idx},'${escQ(d.name)}')`}">
+      html: `<div class="reassign-driver-row ${cls}" onclick="${(over || colCapHit) ? '' : `doReassign(${idx},'${escQ(d.name)}')`}">
         <div class="reassign-drv-name">${d.name}${isCurrent ? ' <span style="font-size:10px;font-weight:400;color:var(--gray-400);">(current)</span>' : ''}</div>
         <div class="reassign-bar"><div class="reassign-bar-fill" style="width:${afterPct}%;background:${barColor};"></div></div>
         <div class="reassign-cap-text">${label}</div>
@@ -2380,49 +2979,145 @@ function openReassignModal(idx) {
     };
   }).sort((a, b) => b.remaining - a.remaining);
 
-  document.getElementById('reassign-driver-list').innerHTML = rows.map(r => r.html).join('');
+  const shoreOption = currentDriver !== 'SHORELINE'
+    ? `<div class="reassign-driver-row" onclick="doReassign(${idx},'SHORELINE')" style="border-color:var(--purple);margin-top:10px;">
+        <div class="reassign-drv-name" style="color:var(--purple);">→ Send to Shoreline</div>
+        <div class="reassign-bar"></div>
+        <div class="reassign-cap-text" style="color:var(--purple);">External</div>
+      </div>`
+    : '';
+  document.getElementById('reassign-driver-list').innerHTML = rows.map(r => r.html).join('') + shoreOption;
   document.getElementById('reassign-modal').classList.add('open');
 }
 
 function escQ(s) { return s.replace(/'/g, "\\'"); }
 
 function doReassign(idx, newName) {
-  const a       = state.lastResult.assignments[idx];
-  const oldName = a.override || a.autoDriver;
-  const dotMax  = state.settings.dotMaxHours;
-
-  const oldW = state.lastResult.workload.find(w => w.name === oldName);
-  const newW = state.lastResult.workload.find(w => w.name === newName);
-
-  if (oldW) {
-    oldW.hours  = Math.max(0, oldW.hours - a.hrs);
-    oldW.loads  = Math.max(0, oldW.loads - 1);
-    oldW.status = oldW.hours > dotMax ? 'over' : oldW.hours > dotMax * 0.9 ? 'warn' : 'ok';
-  }
-  if (newW) {
-    newW.hours += a.hrs;
-    newW.loads++;
-    newW.status = newW.hours > dotMax ? 'over' : newW.hours > dotMax * 0.9 ? 'warn' : 'ok';
-  } else {
-    const d = state.drivers.find(d => d.name === newName);
-    state.lastResult.workload.push({
-      id: d ? d.id : newName, name: newName,
-      hours: a.hrs, loads: 1, dotMax, deadheadHrs: 0,
-      status: a.hrs > dotMax ? 'over' : a.hrs > dotMax * 0.9 ? 'warn' : 'ok',
-    });
-  }
-
-  a.override = newName;
-  a.internal = true;
-  saveResult();
   closeReassignModal();
-  renderAssignmentsTable(state.lastResult);
-  renderDriverCards(state.lastResult);
-  renderWorkload(state.lastResult);
+  reassignLoadTo(idx, newName, true);
 }
 
 function closeReassignModal() {
   document.getElementById('reassign-modal').classList.remove('open');
+  _bucketPickLoad = null;
+  _newLoadPickPayload = null;
+}
+
+let _bucketPickLoad = null;
+
+function openBucketPickModal(encodedPayload) {
+  _bucketPickLoad = JSON.parse(decodeURIComponent(encodedPayload));
+  const load = _bucketPickLoad;
+  const dest = state.destinations.find(d => d.code === load.dest);
+  const sub  = load.phase.match(/\(([^)]+)\)/)?.[1] || load.phase;
+
+  document.getElementById('reassign-title').textContent = 'Assign to Driver';
+  document.getElementById('reassign-load-info').innerHTML =
+    `<strong>${sub}</strong> &nbsp;·&nbsp; ${dest ? dest.name : load.dest} &nbsp;·&nbsp; <strong>${load.hrs.toFixed(2)}h</strong> &nbsp;·&nbsp; Dispatch ${load.dispatchTime || '—'}<br>` +
+    `<span style="color:var(--gray-400);">Pre-assignment — optimizer will respect this choice when you hit Generate</span>`;
+
+  const eligible = getAvailableDrivers().filter(d => driverCanTakeDest(d, load.dest));
+  document.getElementById('reassign-driver-list').innerHTML = eligible.map(d => {
+    const bktCount = (state.bucketAsgn || []).filter(b => b.driverName === d.name).length;
+    const full = bktCount >= d.maxLoads;
+    const pct  = Math.min(100, (bktCount / Math.max(d.maxLoads, 1)) * 100);
+    const cls  = full ? 'over-limit' : 'can-fit';
+    return `<div class="reassign-driver-row ${cls}" onclick="${full ? '' : `doBucketPick('${escQ(d.name)}')`}">
+      <div class="reassign-drv-name">${d.name}</div>
+      <div class="reassign-bar"><div class="reassign-bar-fill" style="width:${pct}%;background:${full ? 'var(--danger)' : 'var(--green)'};"></div></div>
+      <div class="reassign-cap-text">${full ? 'max loads' : `${bktCount}/${d.maxLoads} pre-assigned`}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('reassign-modal').classList.add('open');
+}
+
+function doBucketPick(driverName) {
+  const load = _bucketPickLoad;
+  closeReassignModal();
+  if (load) dropBucketToDriver(load, driverName);
+}
+
+let _newLoadPickPayload = null;
+
+function openNewLoadPickModal(encodedPayload) {
+  _newLoadPickPayload = JSON.parse(decodeURIComponent(encodedPayload));
+  const load   = _newLoadPickPayload;
+  const dest   = state.destinations.find(d => d.code === load.dest);
+  const sub    = load.phase.match(/\(([^)]+)\)/)?.[1] || load.phase;
+  const dotMax = state.settings.dotMaxHours;
+
+  document.getElementById('reassign-title').textContent = 'Assign New Load';
+  document.getElementById('reassign-load-info').innerHTML =
+    `<strong>${sub}</strong> &nbsp;·&nbsp; ${dest ? dest.name : load.dest} &nbsp;·&nbsp; <strong>${load.hrs.toFixed(2)}h</strong> &nbsp;·&nbsp; Dispatch ${load.dispatchTime || '—'}<br>` +
+    `<span style="color:var(--gray-400);">Assign manually — or close and click <strong>Re-run Generate</strong> to let the optimizer place it</span>`;
+
+  const drivers = getAvailableDrivers();
+  const rows = drivers.map(d => {
+    const w         = state.lastResult ? state.lastResult.workload.find(x => x.id === d.id) : null;
+    const usedHrs   = w ? w.hours : (d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0);
+    const loadsDone = w ? w.loads : 0;
+    const remaining = dotMax - usedHrs;
+    const loadsFull = loadsDone >= d.maxLoads;
+    const fits      = remaining >= load.hrs && !loadsFull;
+    const tight     = fits && (remaining - load.hrs) < 1.5;
+    const over      = !fits;
+    const canRoute  = driverCanTakeDest(d, load.dest);
+    const colLoads  = load.dest === 'COL' && d.restriction === 'Any + Columbus'
+      ? (state.lastResult ? state.lastResult.assignments.filter(x => (x.override||x.autoDriver) === d.name && x.dest === 'COL').length : 0)
+      : 0;
+    const colCapHit = colLoads >= 1;
+
+    const midRes   = checkMidnightViolation(d.name, load.dispatchTime, load.hrs);
+    const afterMid = midRes.violates;
+    const etaStr   = afterMid ? minutesToHHMM(midRes.deliveryMins % 1440) : '';
+
+    const afterPct = Math.min(100, ((usedHrs + load.hrs) / dotMax) * 100);
+    const barColor = over ? 'var(--danger)' : (!canRoute || colCapHit || tight || afterMid) ? 'var(--amber)' : 'var(--green)';
+    const cls      = over ? 'over-limit' : (!canRoute || colCapHit || tight || afterMid) ? 'too-tight' : 'can-fit';
+    const label    = over      ? (loadsFull ? 'max loads' : `${remaining.toFixed(1)}h left`)
+                   : !canRoute ? `⚠ ${d.restriction}`
+                   : colCapHit ? `⚠ Columbus cap`
+                   : afterMid  ? `⛔ ETA ${etaStr}`
+                   : `${remaining.toFixed(1)}h left`;
+
+    return {
+      remaining, over,
+      html: `<div class="reassign-driver-row ${cls}" onclick="${(over || colCapHit) ? '' : `doNewLoadPick('${escQ(d.name)}')`}">
+        <div class="reassign-drv-name">${d.name}</div>
+        <div class="reassign-bar"><div class="reassign-bar-fill" style="width:${afterPct}%;background:${barColor};"></div></div>
+        <div class="reassign-cap-text">${label}</div>
+      </div>`,
+    };
+  }).sort((a, b) => b.remaining - a.remaining);
+
+  const shoreOption = `<div class="reassign-driver-row" onclick="doNewLoadPick('SHORELINE')" style="border-color:var(--purple);margin-top:10px;">
+    <div class="reassign-drv-name" style="color:var(--purple);">→ Send to Shoreline</div>
+    <div class="reassign-bar"></div>
+    <div class="reassign-cap-text" style="color:var(--purple);">External</div>
+  </div>`;
+  document.getElementById('reassign-driver-list').innerHTML = rows.map(r => r.html).join('') + shoreOption;
+  document.getElementById('reassign-modal').classList.add('open');
+}
+
+function doNewLoadPick(driverName) {
+  const load = _newLoadPickPayload;
+  closeReassignModal();
+  if (!load) return;
+  if (driverName === 'SHORELINE') {
+    if (!state.bucketAsgn) state.bucketAsgn = [];
+    state.bucketAsgn.push({
+      id: 'ba_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      phaseIdx: load.phaseIdx, dest: load.dest, phase: load.phase,
+      hrs: load.hrs, dispatchTime: load.dispatchTime,
+      driverName: 'SHORELINE', driverLoadNum: 0,
+    });
+    saveBucketAsgn();
+    renderLoadBucket();
+    renderAllDriverCards();
+  } else {
+    dropBucketToDriver(load, driverName);
+  }
 }
 
 function updateHomefirstVisibility() {
@@ -2470,7 +3165,16 @@ function updateDestMiles(idx,val) {
   state.destinations[idx].miles1Way = parseFloat(val)||0;
   renderDestinations(); renderPhaseInputs();
 }
-function saveDestinations() { saveDests(); renderPhaseInputs(); alert('✅ Destinations saved!'); }
+function saveDestinations() {
+  // Recalculate bucket chip hours now that miles may have changed
+  state.bucketAsgn = (state.bucketAsgn || []).map(b => ({...b, hrs: getHrsForDest(b.dest)}));
+  saveBucketAsgn();
+  saveDests();
+  renderPhaseInputs();
+  renderLoadBucket();
+  renderAllDriverCards();
+  alert('✅ Destinations saved!');
+}
 
 function renderSettings() {
   document.getElementById('set-avg-speed').value  = state.settings.avgSpeed;
@@ -2481,7 +3185,10 @@ function saveSettings() {
   state.settings.avgSpeed        = parseFloat(document.getElementById('set-avg-speed').value)||45;
   state.settings.dotMaxHours     = parseFloat(document.getElementById('set-dot-max').value)||10;
   state.settings.defaultMaxLoads = parseInt(document.getElementById('set-max-loads').value)||3;
-  saveSettings_(); renderDestinations(); renderPhaseInputs(); alert('✅ Settings saved!');
+  // Recalculate bucket hrs — avgSpeed change affects getHrsForDest
+  state.bucketAsgn = (state.bucketAsgn || []).map(b => ({...b, hrs: getHrsForDest(b.dest)}));
+  saveBucketAsgn();
+  saveSettings_(); renderDestinations(); renderPhaseInputs(); renderLoadBucket(); renderAllDriverCards(); alert('✅ Settings saved!');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2510,7 +3217,19 @@ function renderDriverRules() {
     else colLine += ` — all COL loads → Shoreline`;
     rules.push(colLine);
   }
-  rules.push(`🚚 <strong>${gen.length} Montgomery driver${gen.length!==1?'s':''}</strong>${flex.length ? ` + ${flex.length} flex` : ''} for Dothan / Auburn / Evergreen`);
+  const dot = avail.filter(d=>d.restriction==='Dothan ONLY');
+  const aub = avail.filter(d=>d.restriction==='Auburn ONLY');
+  const evg = avail.filter(d=>d.restriction==='Evergreen ONLY');
+  const af  = avail.filter(d=>d.restriction==='Auburn First');
+  // Domicile drivers with non-ONLY restrictions have 1 slot reserved for their home-dest run
+  const genCap = gen.reduce((s,d) => s + d.maxLoads - (d.domicileDest && !d.restriction.endsWith(' ONLY') && !d.homeFirst ? 1 : 0), 0);
+  const afCap  = af.reduce((s,d)  => s + Math.max(0, d.maxLoads - 1), 0); // Auburn First must use 1st load on AUB; only remaining slots go to general pool
+  const poolCap = genCap + (flex.length ? flexCap : 0) + afCap;
+  rules.push(`🚚 <strong>${gen.length} Montgomery driver${gen.length!==1?'s':''}</strong>${flex.length ? ` + ${flex.length} flex` : ''}${af.length ? ` + ${af.length} Auburn First` : ''} — ${poolCap} general-pool load${poolCap!==1?'s':''}/day`);
+  if (dot.length) rules.push(`🚛 <strong>${dot.map(d=>d.name).join(', ')}</strong> → Dothan ONLY (${dot.reduce((s,d)=>s+d.maxLoads,0)} load${dot.reduce((s,d)=>s+d.maxLoads,0)!==1?'s':''}/day)`);
+  if (aub.length) rules.push(`🚛 <strong>${aub.map(d=>d.name).join(', ')}</strong> → Auburn ONLY (${aub.reduce((s,d)=>s+d.maxLoads,0)} load${aub.reduce((s,d)=>s+d.maxLoads,0)!==1?'s':''}/day)`);
+  if (evg.length) rules.push(`🚛 <strong>${evg.map(d=>d.name).join(', ')}</strong> → Evergreen ONLY (${evg.reduce((s,d)=>s+d.maxLoads,0)} load${evg.reduce((s,d)=>s+d.maxLoads,0)!==1?'s':''}/day)`);
+  if (af.length)  rules.push(`⭐ <strong>${af.map(d=>d.name).join(', ')}</strong> → Auburn First, then any route`);
   el.innerHTML = rules.map(r=>`<div style="padding:3px 0;border-bottom:1px solid var(--gray-100);">${r}</div>`).join('');
 }
 
@@ -2518,30 +3237,45 @@ function renderDriverRules() {
 //  EXPORT CSV
 // ════════════════════════════════════════════════════════════════════════════
 function exportCSV() {
-  if (!state.lastResult) return;
+  if (!state.lastResult && !(state.bucketAsgn||[]).length && !(state.adhocMoves||[]).length) return;
   const rows = [['Load#','Phase','Destination','Miles','Hours','Driver','Run','Trailer #','Carrier Driver','Status','Actual Out','Actual ETA']];
-  state.lastResult.assignments.forEach(a => {
-    const dest = state.destinations.find(d=>d.code===a.dest);
-    const driveHrs = a.homeReturn ? a.hrs/2 : a.hrs;
-    const actualOut = a.actualOutTime ? fmtActualTime(a.actualOutTime) : '';
-    const actualEta = a.actualOutTime ? calcActualEta(a.actualOutTime, driveHrs) : '';
-    rows.push([
-      a.loadNum, a.phase, dest?dest.name:a.dest,
-      dest?(a.homeReturn?dest.miles1Way:dest.miles1Way*2):'',
-      driveHrs.toFixed(2),
-      a.override||a.autoDriver,
-      a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—',
-      a.trailerNum||'',
-      a.autoDriver==='SHORELINE'?a.carrierDriver||'':'Coca-Cola United',
-      a.status, actualOut, actualEta,
-    ]);
+  if (state.lastResult) {
+    state.lastResult.assignments.forEach(a => {
+      const dest = state.destinations.find(d=>d.code===a.dest);
+      const driveHrs = a.homeReturn ? a.hrs/2 : a.hrs;
+      const actualOut = a.actualOutTime ? fmtActualTime(a.actualOutTime) : '';
+      const actualEta = a.actualOutTime ? calcActualEta(a.actualOutTime, driveHrs) : '';
+      rows.push([
+        a.loadNum, a.phase, dest?dest.name:a.dest,
+        dest?(a.homeReturn?dest.miles1Way:dest.miles1Way*2):'',
+        driveHrs.toFixed(2),
+        a.override||a.autoDriver,
+        a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—',
+        a.trailerNum||'',
+        a.autoDriver==='SHORELINE'?a.carrierDriver||'':'Coca-Cola United',
+        a.status, actualOut, actualEta,
+      ]);
+    });
+  }
+  (state.bucketAsgn || []).forEach(b => {
+    const dest = state.destinations.find(d=>d.code===b.dest);
+    rows.push(['MANUAL', b.phase, dest?dest.name:b.dest,
+      dest?dest.miles1Way*2:'', b.hrs.toFixed(2),
+      b.driverName, 'MANUAL', '', 'Coca-Cola United', 'Manual Pre-Assignment', '', '']);
+  });
+  (state.adhocMoves || []).forEach(m => {
+    const typeLabel = {'bobtail-rt':'Bobtail RT','bobtail-ow':'Bobtail OW','loaded-rt':'Loaded RT'}[m.type]||m.type;
+    rows.push(['AD HOC', `${typeLabel}`, m.destName,
+      m.miles, m.hrs.toFixed(2),
+      m.driverName, 'AD HOC', '', 'Coca-Cola United', 'Ad Hoc', m.dispatchTime, m.notes||'']);
   });
   const csv  = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const blob = new Blob([csv],{type:'text/csv'});
   const url  = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `CCBCU_Routes_${new Date().toISOString().slice(0,10)}.csv`;
+  const today = new Date(); const localDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  link.download = `CCBCU_Routes_${localDate}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -2557,12 +3291,16 @@ function exportState() {
     loads: deepCopy(state.loads), returned: deepCopy(state.returned),
     templates: deepCopy(state.templates), history: deepCopy(state.history),
     lastResult: state.lastResult ? deepCopy(state.lastResult) : null,
+    whatIf: deepCopy(state.whatIf || {}),
+    bucketAsgn: deepCopy(state.bucketAsgn || []),
+    adhocMoves: deepCopy(state.adhocMoves || []),
   };
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], {type: 'application/json'});
   const url  = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `CCBCU_RouteOptimizer_${new Date().toISOString().slice(0,10)}.json`;
+  const ed = new Date(); const edStr = `${ed.getFullYear()}-${String(ed.getMonth()+1).padStart(2,'0')}-${String(ed.getDate()).padStart(2,'0')}`;
+  link.download = `CCBCU_RouteOptimizer_${edStr}.json`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -2588,7 +3326,10 @@ function handleImportFile(evt) {
       state.templates = (data.templates && Object.values(data.templates).every(t => t.length === state.phases.length)) ? data.templates : {};
       state.history      = data.history    || [];
       state.lastResult   = data.lastResult || null;
-      saveDrivers(); saveDests(); saveSettings_(); savePhases(); saveLoads(); saveReturned(); saveTemplates(); saveHistory(); saveResult();
+      state.whatIf       = data.whatIf     || {};
+      state.bucketAsgn   = data.bucketAsgn || [];
+      state.adhocMoves   = data.adhocMoves || [];
+      saveDrivers(); saveDests(); saveSettings_(); savePhases(); saveLoads(); saveReturned(); saveTemplates(); saveHistory(); saveResult(); saveWhatIf(); saveBucketAsgn(); saveAdhocMoves();
       init();
       alert(`✅ State imported from ${file.name}\n${data.drivers.length} drivers loaded.`);
     } catch(err) {
@@ -2618,7 +3359,7 @@ function switchTab(tab, evt) {
 function showResetConfirm()  { document.getElementById('reset-confirm-box').classList.add('show'); document.getElementById('reset-btn').style.display='none'; }
 function hideResetConfirm()  { document.getElementById('reset-confirm-box').classList.remove('show'); document.getElementById('reset-btn').style.display=''; }
 function hardReset() {
-  ['ccu_drivers','ccu_dests','ccu_settings','ccu_phases','ccu_loads','ccu_lastresult','ccu_returned','ccu_templates','ccu_history'].forEach(k=>localStorage.removeItem(k));
+  ['ccu_drivers','ccu_dests','ccu_settings','ccu_phases','ccu_loads','ccu_lastresult','ccu_returned','ccu_templates','ccu_history','ccu_basgn','ccu_adhoc','ccu_whatif'].forEach(k=>localStorage.removeItem(k));
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => {
       Promise.all(regs.map(r => r.unregister())).then(() => location.reload(true));
@@ -2673,6 +3414,11 @@ function handleRunDrop(e, targetLoadIdx) {
   const tgtDriver = tgt.override || tgt.autoDriver;
   if (srcDriver === tgtDriver) {
     [src.driverLoadNum, tgt.driverLoadNum] = [tgt.driverLoadNum, src.driverLoadNum];
+    // Recompute homeReturn for both based on whether the dest matches driver domicile.
+    // Swapping the homeReturn flags blindly would give OW hours to the wrong leg.
+    const swapDriver = state.drivers.find(d => d.name === srcDriver);
+    src.homeReturn = !!(swapDriver?.domicileDest && src.dest === swapDriver.domicileDest);
+    tgt.homeReturn = !!(swapDriver?.domicileDest && tgt.dest === swapDriver.domicileDest);
     saveResult();
     renderDriverCards(state.lastResult);
     renderAssignmentsTable(state.lastResult);
@@ -2690,18 +3436,48 @@ function handleCardDragOver(e, card) {
 function handleCardDrop(e, driverName) {
   e.preventDefault();
   document.querySelectorAll('.drag-over, .drag-target').forEach(el => el.classList.remove('drag-over','drag-target'));
-  const sourceIdx = parseInt(e.dataTransfer.getData('text/plain'));
+  const raw = e.dataTransfer.getData('text/plain');
+  let parsed = null;
+  try { parsed = JSON.parse(raw); } catch(_) {}
+  if (parsed && parsed.type === 'bucket') {
+    if (driverName === 'SHORELINE') return;
+    dropBucketToDriver(parsed, driverName);
+    return;
+  }
+  const sourceIdx = parseInt(raw);
   if (isNaN(sourceIdx)) return;
+  if (!state.lastResult) return;
   const src = state.lastResult.assignments[sourceIdx];
   if (!src) return;
   if ((src.override || src.autoDriver) === driverName) return;
   reassignLoadTo(sourceIdx, driverName);
 }
 
-function reassignLoadTo(loadIdx, newName) {
+function driverCanTakeDest(driver, destCode) {
+  const r = driver.restriction;
+  if (r === 'Panama City ONLY') return destCode === 'PAN';
+  if (r === 'Columbus ONLY')    return destCode === 'COL';
+  if (r === 'Dothan ONLY')      return destCode === 'DOT';
+  if (r === 'Auburn ONLY')      return destCode === 'AUB';
+  if (r === 'Evergreen ONLY')   return destCode === 'EVG';
+  return true; // Any, Any + Columbus, Auburn First — no destination restriction
+}
+
+function reassignLoadTo(loadIdx, newName, skipMidnightCheck = false) {
   const a   = state.lastResult.assignments[loadIdx];
   const old = a.override || a.autoDriver;
   const dotMax = state.settings.dotMaxHours;
+  const newDriver = state.drivers.find(d => d.name === newName);
+  if (newDriver && !driverCanTakeDest(newDriver, a.dest)) {
+    if (!confirm(`⚠️ Restriction: ${newName} is "${newDriver.restriction}" but this is a ${a.dest} load.\n\nAssign anyway?`)) return;
+  }
+  if (!skipMidnightCheck && newName !== 'SHORELINE' && newName !== old) {
+    const midRes = checkMidnightViolation(newName, a.dispatchTime, a.hrs);
+    if (midRes.violates) {
+      const eta = minutesToHHMM(midRes.deliveryMins % 1440);
+      if (!confirm(`⛔ After midnight: ${newName} would not deliver this ${a.dest} load until ${eta}.\n\nAssign anyway?`)) return;
+    }
+  }
   const oldW = state.lastResult.workload.find(w => w.name === old);
   if (oldW) {
     oldW.hours = Math.max(0, oldW.hours - a.hrs);
@@ -2712,23 +3488,30 @@ function reassignLoadTo(loadIdx, newName) {
     if (i !== loadIdx && (x.override || x.autoDriver) === old && x.driverLoadNum > a.driverLoadNum)
       x.driverLoadNum--;
   });
-  let newW = state.lastResult.workload.find(w => w.name === newName);
-  if (newW) {
-    newW.hours += a.hrs;
-    newW.loads++;
-    newW.status = newW.hours > dotMax ? 'over' : newW.hours > dotMax * 0.9 ? 'warn' : 'ok';
-  } else {
-    const d = state.drivers.find(d => d.name === newName);
-    state.lastResult.workload.push({ id: d?d.id:newName, name: newName, hours: a.hrs, loads: 1, dotMax, status: a.hrs > dotMax ? 'over' : 'ok' });
+  if (newName !== 'SHORELINE') {
+    let newW = state.lastResult.workload.find(w => w.name === newName);
+    if (newW) {
+      newW.hours += a.hrs;
+      newW.loads++;
+      newW.status = newW.hours > dotMax ? 'over' : newW.hours > dotMax * 0.9 ? 'warn' : 'ok';
+    } else {
+      const d = state.drivers.find(d => d.name === newName);
+      state.lastResult.workload.push({ id: d?d.id:newName, name: newName, hours: a.hrs, loads: 1, dotMax, deadheadHrs: 0, status: a.hrs > dotMax ? 'over' : a.hrs > dotMax * 0.9 ? 'warn' : 'ok' });
+    }
   }
   const newLoads = state.lastResult.assignments.filter((x,i) => i !== loadIdx && (x.override||x.autoDriver) === newName);
   const maxNum   = newLoads.length ? Math.max(...newLoads.map(x => x.driverLoadNum||0)) : 0;
-  a.override = newName; a.internal = true; a.driverLoadNum = maxNum + 1;
+  if (newName === 'SHORELINE') {
+    a.override = 'SHORELINE'; a.internal = false; a.driverLoadNum = 0; a.actualOutTime = null;
+  } else {
+    a.override = newName; a.internal = true; a.driverLoadNum = maxNum + 1; a.actualOutTime = null;
+  }
 
   // If the source driver now has no loads, auto-fill them with the first available
   // SHORELINE PAN/COL load that fits within their remaining DOT hours.
+  // Skip this when the move itself was TO Shoreline — auto-fill would immediately reverse it.
   const srcDriver = state.drivers.find(d => d.name === old);
-  if (srcDriver) {
+  if (srcDriver && newName !== 'SHORELINE') {
     if ((oldW?.loads ?? 1) === 0) {
       const srcHrs = state.lastResult.workload.find(w => w.name === old)?.hours || 0;
       const canTake = dest =>
@@ -2798,6 +3581,354 @@ function buildCollapsedSummary() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+//  LOAD BUCKET
+// ════════════════════════════════════════════════════════════════════════════
+function getBucketItems() {
+  const wi = state.whatIf || {};
+  const skipNames = new Set(state.drivers
+    .filter(d => d.onVacation || wi[d.id]?.inactive)
+    .map(d => d.name));
+  const assignedByPhase = {};
+  (state.bucketAsgn || []).forEach(b => {
+    if (skipNames.has(b.driverName)) return; // vacation/inactive driver slots appear as unassigned
+    assignedByPhase[b.phaseIdx] = (assignedByPhase[b.phaseIdx] || 0) + 1;
+  });
+  const items = [];
+  state.phases.forEach((p, idx) => {
+    const total    = state.loads[idx] || 0;
+    const assigned = assignedByPhase[idx] || 0;
+    const hrs      = getHrsForDest(p.dest);
+    for (let i = 0; i < Math.max(0, total - assigned); i++) {
+      items.push({ phaseIdx: idx, dest: p.dest, phase: p.label, hrs, dispatchTime: p.dispatchTime });
+    }
+  });
+  return items;
+}
+
+function renderLoadBucket() {
+  const panel   = document.getElementById('load-bucket-panel');
+  const chips   = document.getElementById('bucket-chips');
+  const countEl = document.getElementById('bucket-count');
+  const clearBtn  = document.getElementById('bucket-clear-btn');
+  const rerunBtn  = document.getElementById('bucket-rerun-btn');
+  if (!panel) return;
+  const total = state.loads.reduce((a,b)=>a+b,0);
+  if (total === 0) { panel.style.display = 'none'; if (rerunBtn) rerunBtn.style.display = 'none'; return; }
+  panel.style.display = 'block';
+
+  const titleEl = document.getElementById('bucket-title');
+  // POST-GENERATE: show manual assignments + any new loads added after generate
+  if (state.lastResult) {
+    const wi = state.whatIf || {};
+    const skipNames = new Set(state.drivers.filter(d => d.onVacation || wi[d.id]?.inactive).map(d => d.name));
+    const validBkt = (state.bucketAsgn || []).filter(b => {
+      if (b.driverName === 'SHORELINE') return true;
+      const d = state.drivers.find(x => x.name === b.driverName);
+      return d && !skipNames.has(b.driverName);
+    });
+
+    // Count how many loads per phase the optimizer already covers.
+    // homeReturn loads ARE reserved slots (counts[] was decremented for them), so include them.
+    const optiCountByLabel = {};
+    state.lastResult.assignments.forEach(a => {
+      optiCountByLabel[a.phase] = (optiCountByLabel[a.phase] || 0) + 1;
+    });
+    // Count bucket pre-assignments per phase (including explicit Shoreline assignments)
+    const bktCountByPhase = {};
+    (state.bucketAsgn || []).forEach(b => {
+      if (b.driverName === 'SHORELINE' || !skipNames.has(b.driverName)) bktCountByPhase[b.phaseIdx] = (bktCountByPhase[b.phaseIdx] || 0) + 1;
+    });
+    // Any load counts increased after generate appear as new unassigned items
+    const newItems = [];
+    state.phases.forEach((p, idx) => {
+      const total   = state.loads[idx] || 0;
+      const covered = (optiCountByLabel[p.label] || 0) + (bktCountByPhase[idx] || 0);
+      const hrs     = getHrsForDest(p.dest);
+      for (let i = 0; i < Math.max(0, total - covered); i++) {
+        newItems.push({ phaseIdx: idx, dest: p.dest, phase: p.label, hrs, dispatchTime: p.dispatchTime });
+      }
+    });
+
+    const optiCount = state.lastResult.assignments.length;
+    const hasNew = newItems.length > 0;
+    if (titleEl) titleEl.textContent = hasNew
+      ? `📦 ${newItems.length} new load${newItems.length !== 1 ? 's' : ''} added after generate — assign manually or Re-run Generate`
+      : '📦 Manual Assignments — Click ✕ to un-assign (will clear result)';
+    panel.classList.toggle('has-items', validBkt.length > 0 || hasNew);
+    countEl.textContent = `${validBkt.length} manual · ${optiCount} optimizer${hasNew ? ` · ${newItems.length} new` : ''}`;
+    if (clearBtn) clearBtn.style.display = validBkt.length > 1 ? '' : 'none';
+    if (rerunBtn) rerunBtn.style.display = hasNew ? '' : 'none';
+
+    if (!validBkt.length && !hasNew) {
+      chips.innerHTML = `<span class="bucket-empty">All ${optiCount} load${optiCount!==1?'s':''} optimizer-assigned. Manual pre-assignments shown on driver cards.</span>`;
+      return;
+    }
+
+    const bktChips = validBkt.map(b => {
+      const tagCls    = DEST_TAGS[b.dest] || '';
+      const sub       = b.phase.match(/\(([^)]+)\)/)?.[1] || b.phase;
+      const isShore   = b.driverName === 'SHORELINE';
+      const assignLbl = isShore
+        ? `<span style="font-size:10px;color:var(--purple);font-weight:700;">→ Shoreline</span>`
+        : `<span style="font-size:10px;color:var(--green);font-weight:700;">→ ${b.driverName.split(' ')[0]}</span>`;
+      return `<div class="bucket-chip bucket-chip-assigned" style="${isShore ? 'border-color:var(--purple);' : ''}" title="${b.phase} → ${b.driverName} · ${b.hrs.toFixed(2)}h">
+        <span class="tag ${tagCls}" style="font-size:8px;">${b.dest}</span>
+        <span>${sub}</span>
+        ${assignLbl}
+        <span class="chip-hrs">${b.hrs.toFixed(1)}h</span>
+        <button class="btn-remove-bkt no-print" onclick="removeBucketAssignment('${b.id}')" title="Un-assign (clears result — regenerate needed)">✕</button>
+      </div>`;
+    }).join('');
+
+    const newChips = newItems.map(item => {
+      const tagCls  = DEST_TAGS[item.dest] || '';
+      const sub     = item.phase.match(/\(([^)]+)\)/)?.[1] || item.phase;
+      const payload = JSON.stringify({ type:'bucket', phaseIdx:item.phaseIdx, dest:item.dest, phase:item.phase, hrs:item.hrs, dispatchTime:item.dispatchTime });
+      return `<div class="bucket-chip" style="border-color:var(--amber);" draggable="true"
+        onclick="openNewLoadPickModal('${encodeURIComponent(payload)}')"
+        ondragstart="handleBucketDragStart(event,'${encodeURIComponent(payload)}')"
+        ondragend="this.classList.remove('dragging')"
+        title="${item.phase} — ${item.hrs.toFixed(2)}h · ${item.dispatchTime} dispatch&#10;New load · Click to assign · Drag to driver card · Or Re-run Generate">
+        <span class="tag ${tagCls}" style="font-size:8px;">${item.dest}</span>
+        <span>${sub}</span>
+        <span class="chip-hrs">${item.hrs.toFixed(1)}h</span>
+      </div>`;
+    }).join('');
+
+    chips.innerHTML = bktChips + newChips;
+    return;
+  }
+
+  // PRE-GENERATE: show unassigned chips that can be dragged to drivers
+  if (rerunBtn) rerunBtn.style.display = 'none';
+  if (titleEl) titleEl.textContent = '📦 Load Bucket — Drag loads onto a driver card to manually assign';
+  const items = getBucketItems();
+  const manualCount = (state.bucketAsgn || []).length;
+  panel.classList.toggle('has-items', items.length > 0);
+  countEl.textContent = items.length + ' unassigned';
+  if (clearBtn) clearBtn.style.display = manualCount > 1 ? '' : 'none';
+  if (!items.length) {
+    chips.innerHTML = '<span class="bucket-empty">All loads manually placed — click Generate to optimizer-fill remaining, or re-enter load counts to add more.</span>';
+    return;
+  }
+  chips.innerHTML = items.map(item => {
+    const tagCls  = DEST_TAGS[item.dest] || '';
+    const sub     = item.phase.match(/\(([^)]+)\)/)?.[1] || item.phase;
+    const payload = JSON.stringify({ type:'bucket', phaseIdx:item.phaseIdx, dest:item.dest, phase:item.phase, hrs:item.hrs, dispatchTime:item.dispatchTime });
+    return `<div class="bucket-chip" draggable="true"
+      onclick="openBucketPickModal('${encodeURIComponent(payload)}')"
+      ondragstart="handleBucketDragStart(event,'${encodeURIComponent(payload)}')"
+      ondragend="this.classList.remove('dragging')"
+      title="${item.phase} — ${item.hrs.toFixed(2)}h · ${item.dispatchTime} dispatch&#10;Drag to assign · Click to pick a driver">
+      <span class="tag ${tagCls}" style="font-size:8px;">${item.dest}</span>
+      <span>${sub}</span>
+      <span class="chip-hrs">${item.hrs.toFixed(1)}h</span>
+    </div>`;
+  }).join('');
+}
+
+function handleBucketDragStart(e, encodedPayload) {
+  e.target.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', decodeURIComponent(encodedPayload));
+}
+
+function dropBucketToDriver(load, driverName) {
+  const driver = state.drivers.find(d => d.name === driverName);
+  if (!driver) return;
+  // Warn if driver is marked whatIf-inactive — their bucket assignment won't be included in the next generate run
+  if ((state.whatIf||{})[driver.id]?.inactive) {
+    if (!confirm(`⚠️ ${driverName} is marked inactive for next run.\n\nA load assigned here won't be picked up by the optimizer. Assign anyway?`)) return;
+  }
+  // Use whatIf-adjusted restriction for cap/restriction checks
+  const effectiveDriver = getAvailableDrivers().find(d => d.name === driverName) || driver;
+
+  const bktForDriver  = (state.bucketAsgn || []).filter(b => b.driverName === driverName);
+  const autoForDriver = state.lastResult ? state.lastResult.assignments.filter(a => (a.override||a.autoDriver) === driverName) : [];
+  const adhForDriver  = (state.adhocMoves || []).filter(m => m.driverName === driverName);
+  const currentLoads  = bktForDriver.length + autoForDriver.length;
+
+  // Project total hours AFTER this drop, built from components to avoid double-counting.
+  // we.hours from the optimizer already embeds preLoads (bucket hrs), so we never use it here.
+  const morningDH = driver.deadheadMiles ? driver.deadheadMiles / state.settings.avgSpeed : 0;
+  const allBktAfter = [...bktForDriver, load];
+  const hasHomeReturnAfter = !!(driver.domicileDest && allBktAfter.some(b => b.dest === driver.domicileDest));
+  const homeOwSavings = hasHomeReturnAfter ? getHrsForDest(driver.domicileDest) / 2 : 0;
+  const bktHrsAfter = allBktAfter.reduce((s,b) => s + b.hrs, 0) - homeOwSavings;
+  const adhHrs = adhForDriver.reduce((s,m) => s + m.hrs, 0);
+  const autoHasHomeReturn = autoForDriver.some(a => a.homeReturn);
+  const autoRunTotal = autoForDriver.reduce((s,a) => s + a.hrs, 0);
+  const autoHRsavings = (autoHasHomeReturn && driver.domicileDest) ? getHrsForDest(driver.domicileDest) / 2 : 0;
+  const netAutoRunHrs = autoRunTotal - autoHRsavings;
+  const effectiveDH = (hasHomeReturnAfter || autoHasHomeReturn) ? morningDH : morningDH * 2;
+  const projectedHrs = effectiveDH + bktHrsAfter + netAutoRunHrs + adhHrs;
+
+  const colCount = [...bktForDriver, ...autoForDriver].filter(x => x.dest === 'COL').length;
+  const dotMax   = state.settings.dotMaxHours;
+
+  const warnings = [];
+  if (currentLoads >= driver.maxLoads)
+    warnings.push(`Over max loads: ${driverName} already has ${currentLoads} load(s) (max ${driver.maxLoads}).`);
+  if (projectedHrs > dotMax)
+    warnings.push(`Over DOT limit: would put ${driverName} at ${projectedHrs.toFixed(1)}h (limit ${dotMax}h).`);
+  if (load.dest === 'COL' && effectiveDriver.restriction === 'Any + Columbus' && colCount >= 1)
+    warnings.push(`Columbus cap: ${driverName} is "Any + Columbus" and already has a Columbus load (max 1).`);
+  if (!driverCanTakeDest(effectiveDriver, load.dest))
+    warnings.push(`Restriction: ${driverName} is "${effectiveDriver.restriction}" but this is a ${load.dest} load.`);
+  const midRes = checkMidnightViolation(driverName, load.dispatchTime, load.hrs);
+  if (midRes.violates)
+    warnings.push(`After midnight: ${driverName} would not deliver this ${load.dest} load until ${minutesToHHMM(midRes.deliveryMins % 1440)} (after midnight).`);
+
+  if (warnings.length && !confirm('⚠️ Warning:\n\n' + warnings.join('\n') + '\n\nAssign anyway?')) return;
+
+  if (!state.bucketAsgn) state.bucketAsgn = [];
+  state.bucketAsgn.push({
+    id:           'ba_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+    phaseIdx:     load.phaseIdx,
+    dest:         load.dest,
+    phase:        load.phase,
+    hrs:          load.hrs,
+    dispatchTime: load.dispatchTime,
+    driverName,
+    driverLoadNum: currentLoads + 1,
+  });
+  saveBucketAsgn();
+  renderLoadBucket();
+  renderAllDriverCards();
+}
+
+function removeBucketAssignment(id) {
+  state.bucketAsgn = (state.bucketAsgn || []).filter(b => b.id !== id);
+  saveBucketAsgn();
+  // If a result exists it's stale — that slot is now unassigned and needs regenerating
+  if (state.lastResult) {
+    state.lastResult = null;
+    saveResult();
+    document.getElementById('assignments-section').style.display = 'none';
+    document.getElementById('driver-cards-section').style.display = 'none';
+    document.getElementById('metrics-grid').style.display = 'none';
+    renderMetrics(null); renderWorkload(null); renderShoreline(null);
+    clearStaleBanner();
+  }
+  renderLoadBucket();
+  renderAllDriverCards();
+}
+
+function clearAllBucketAssignments() {
+  if (!(state.bucketAsgn||[]).length) return;
+  const count = state.bucketAsgn.length;
+  if (!confirm(`Remove all ${count} manual assignment${count!==1?'s':''}?\n\nThe optimizer will reassign them on next Generate.`)) return;
+  state.bucketAsgn = [];
+  saveBucketAsgn();
+  if (state.lastResult) {
+    state.lastResult = null;
+    saveResult();
+    document.getElementById('assignments-section').style.display = 'none';
+    document.getElementById('driver-cards-section').style.display = 'none';
+    document.getElementById('metrics-grid').style.display = 'none';
+    renderMetrics(null); renderWorkload(null); renderShoreline(null);
+    clearStaleBanner();
+  }
+  renderLoadBucket();
+  renderAllDriverCards();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  AD HOC MOVES
+// ════════════════════════════════════════════════════════════════════════════
+function openAdHocModal(driverName) {
+  document.getElementById('adhoc-driver-hidden').value   = driverName;
+  document.getElementById('adhoc-driver-label').textContent = driverName;
+  const driver = state.drivers.find(d => d.name === driverName);
+  const sel = document.getElementById('adhoc-dest');
+  // Show all destinations; mark ones outside the driver's restriction with a warning prefix
+  sel.innerHTML = state.destinations.map(d => {
+    const ok = !driver || driverCanTakeDest(driver, d.code);
+    return `<option value="${d.code}">${ok ? '' : '⚠ '}${d.name} (${d.miles1Way}mi one-way)</option>`;
+  }).join('');
+  // Pre-select driver's home destination if they have one
+  if (driver?.domicileDest) sel.value = driver.domicileDest;
+  document.getElementById('adhoc-type').value     = 'bobtail-rt';
+  document.getElementById('adhoc-dispatch').value = '08:00';
+  document.getElementById('adhoc-notes').value    = '';
+  updateAdHocHrs();
+  document.getElementById('adhoc-modal').classList.add('open');
+}
+
+function updateAdHocHrs() {
+  const destCode = document.getElementById('adhoc-dest')?.value;
+  const moveType = document.getElementById('adhoc-type')?.value;
+  const preview  = document.getElementById('adhoc-hrs-preview');
+  if (!destCode || !preview) return;
+  const dest = state.destinations.find(d => d.code === destCode);
+  if (!dest) return;
+  const rtHrs = (dest.miles1Way * 2) / state.settings.avgSpeed;
+  const owHrs = dest.miles1Way / state.settings.avgSpeed;
+  const hrs   = moveType === 'bobtail-ow' ? owHrs : rtHrs;
+  const typeLabel = {'bobtail-rt':'Bobtail Round Trip','bobtail-ow':'Bobtail One Way','loaded-rt':'Loaded Round Trip'}[moveType] || moveType;
+  preview.textContent = `${typeLabel} · Est. ${hrs.toFixed(2)}h · ${dest.miles1Way}mi one-way`;
+}
+
+function saveAdHocMove() {
+  const driverName = document.getElementById('adhoc-driver-hidden').value;
+  const destCode   = document.getElementById('adhoc-dest').value;
+  const moveType   = document.getElementById('adhoc-type').value;
+  const dispatch   = document.getElementById('adhoc-dispatch').value;
+  const notes      = document.getElementById('adhoc-notes').value.trim();
+  if (!driverName || !destCode) return;
+  const dest = state.destinations.find(d => d.code === destCode);
+  if (!dest) return;
+  const rtHrs = (dest.miles1Way * 2) / state.settings.avgSpeed;
+  const owHrs = dest.miles1Way / state.settings.avgSpeed;
+  const hrs   = moveType === 'bobtail-ow' ? owHrs : rtHrs;
+  // Warn before committing a move that would exceed DOT
+  const adhDriver = state.drivers.find(d => d.name === driverName);
+  if (adhDriver) {
+    const we = state.lastResult ? state.lastResult.workload.find(w => w.id === adhDriver.id) : null;
+    // When result exists, we.hours already includes deadhead + bucket hrs via preLoads.
+    // When no result, manually sum deadhead + bucket hrs so the projection is accurate.
+    const optiHrs = we
+      ? we.hours
+      : (adhDriver.deadheadMiles ? adhDriver.deadheadMiles / state.settings.avgSpeed : 0)
+        + (state.bucketAsgn||[]).filter(b => b.driverName === driverName).reduce((s,b) => s + b.hrs, 0);
+    const existingAdhocHrs = (state.adhocMoves || []).filter(m => m.driverName === driverName).reduce((s,m) => s+m.hrs, 0);
+    const projected = optiHrs + existingAdhocHrs + hrs;
+    if (projected > state.settings.dotMaxHours) {
+      if (!confirm(`⚠️ DOT Warning: This move would put ${driverName} at ${projected.toFixed(1)}h (limit: ${state.settings.dotMaxHours}h).\n\nSave anyway?`)) return;
+    }
+  }
+  if (!state.adhocMoves) state.adhocMoves = [];
+  state.adhocMoves.push({
+    id:           'ah_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+    driverName,
+    dest:         destCode,
+    destName:     dest.name,
+    miles:        moveType === 'bobtail-ow' ? dest.miles1Way : dest.miles1Way * 2,
+    type:         moveType,
+    hrs,
+    dispatchTime: dispatch,
+    notes,
+  });
+  saveAdhocMoves();
+  closeAdHocModal();
+  renderAllDriverCards();
+}
+
+function closeAdHocModal() {
+  document.getElementById('adhoc-modal').classList.remove('open');
+}
+
+function removeAdhocMove(id) {
+  state.adhocMoves = (state.adhocMoves || []).filter(m => m.id !== id);
+  saveAdhocMoves();
+  renderAllDriverCards();
+}
+
+function renderAllDriverCards() {
+  renderDriverCards(state.lastResult);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════════════════════════════════
 function updateHeaderDate() {
@@ -2819,6 +3950,7 @@ function init() {
   renderDriverRules();
   updateMetricsAvail();
   renderMetrics(state.lastResult);
+  renderLoadBucket();
   if (state.lastResult) {
     renderWorkload(state.lastResult);
     renderShoreline(state.lastResult);
@@ -2827,6 +3959,7 @@ function init() {
   } else {
     renderWorkload(null);
     renderShoreline(null);
+    renderAllDriverCards();
   }
 }
 
