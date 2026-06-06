@@ -1167,6 +1167,17 @@ tr.phase-group-hdr td {
       <button class="btn btn-dark btn-sm mt-8" onclick="saveDestinations()" style="margin-bottom:24px;">Save Destinations</button>
 
       <div class="divider"></div>
+      <div class="settings-section-title">Receiver Windows</div>
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Set each destination's receiving hours. Deliveries outside the window get a plan quality warning and are deprioritized in the optimizer. Leave blank for no constraint.</p>
+      <div class="tbl-wrap" style="margin-bottom:12px;">
+        <table>
+          <thead><tr><th>Code</th><th>Destination</th><th>Opens</th><th>Closes</th></tr></thead>
+          <tbody id="recv-window-tbody"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-dark btn-sm mt-8" onclick="saveReceiverWindows()" style="margin-bottom:24px;">Save Windows</button>
+
+      <div class="divider"></div>
       <div class="settings-section-title">Operational Settings</div>
       <div class="field-group"><label>Average Speed (mph)</label><input type="number" class="plain" id="set-avg-speed" min="20" max="75" step="1"></div>
       <div class="field-group"><label>DOT Max Driving Hours</label><input type="number" class="plain" id="set-dot-max" min="8" max="11" step="0.5"></div>
@@ -1662,6 +1673,7 @@ const DEFAULT_SETTINGS = {
   dotMaxHours:         DC_CONFIG.settings?.dotMaxHours ?? 10,
   minimizeShoreline:   DC_CONFIG.optimizer?.minimizeExternalCarrierDefault ?? false,
   deliveryWindowHours: DC_CONFIG.optimizer?.deliveryWindowHours ?? 5,
+  receiverWindows:     {},
 };
 
 // Dest → CSS class maps — index-based so any DC's dest codes work without CSS changes.
@@ -2218,6 +2230,20 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
   // Used to prefer drivers whose assignment keeps the destination within the window target.
   const windowMins = Math.round((state.settings.deliveryWindowHours ?? DC_CONFIG.optimizer?.deliveryWindowHours ?? 5) * 60);
   const destDeliveries = {};
+  function getReceiverWindow(destCode) {
+    const ov = state.settings.receiverWindows?.[destCode];
+    if (ov?.open && ov?.close) return ov;
+    const dest = DC_CONFIG.destinations.find(d => d.code === destCode);
+    if (dest?.windowOpen && dest?.windowClose) return { open: dest.windowOpen, close: dest.windowClose };
+    return null;
+  }
+  function wouldMissReceiverWindow(driver, destCode, hrs) {
+    const w = getReceiverWindow(destCode);
+    if (!w) return false;
+    const { deliveryMins } = getCandidateTiming(driver, hrs);
+    return deliveryMins < toMinutes(w.open) || deliveryMins > toMinutes(w.close);
+  }
+
   function wouldExceedWindow(driver, destCode, hrs) {
     const existing = destDeliveries[destCode];
     if (!existing || existing.length === 0) return false;
@@ -2324,6 +2350,9 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         const routeCmp = compareRoutePackage(a, b, destCode, packShortRoutes);
         if (routeCmp !== 0) return routeCmp;
         if (!winFirst && aWin !== bWin) return aWin ? -1 : 1;
+        const aRcv = !wouldMissReceiverWindow(a, destCode, hrs);
+        const bRcv = !wouldMissReceiverWindow(b, destCode, hrs);
+        if (aRcv !== bRcv) return aRcv ? -1 : 1;
         const aHomeExtra = allowExtraHome && reservedForHome.has(a.id) && a.domicileDest === destCode;
         const bHomeExtra = allowExtraHome && reservedForHome.has(b.id) && b.domicileDest === destCode;
         if (aHomeExtra !== bHomeExtra) return aHomeExtra ? -1 : 1;
@@ -2366,6 +2395,9 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         const routeCmp = compareRoutePackage(a, b, destCode, packShortRoutes);
         if (routeCmp !== 0) return routeCmp;
         if (!winFirst && aWin !== bWin) return aWin ? -1 : 1;
+        const aRcv = !wouldMissReceiverWindow(a, destCode, hrs);
+        const bRcv = !wouldMissReceiverWindow(b, destCode, hrs);
+        if (aRcv !== bRcv) return aRcv ? -1 : 1;
         const aHomeExtra = allowExtraHome && reservedForHome.has(a.id) && a.domicileDest === destCode;
         const bHomeExtra = allowExtraHome && reservedForHome.has(b.id) && b.domicileDest === destCode;
         if (aHomeExtra !== bHomeExtra) return aHomeExtra ? -1 : 1;
@@ -3351,6 +3383,55 @@ function getDestinationDeliveryWindowWarnings(result) {
   });
 }
 
+function getReceiverWindowWarnings(result) {
+  if (!result) return [];
+  const byDest = {};
+  const driverReturn = {};
+  const driverGroups = {};
+  result.assignments.forEach(a => {
+    const finalDriver = getFinalDriverName(a);
+    if (!finalDriver || finalDriver === 'UNASSIGNED') return;
+    if (finalDriver === DC_CONFIG.externalCarrier) {
+      const delivery = toMinutes(a.dispatchTime || '00:00') + Math.round((a.hrs / 2) * 60);
+      if (!byDest[a.dest]) byDest[a.dest] = [];
+      byDest[a.dest].push(delivery);
+      return;
+    }
+    if (!driverGroups[finalDriver]) driverGroups[finalDriver] = [];
+    driverGroups[finalDriver].push(a);
+  });
+  Object.entries(driverGroups).forEach(([driverName, loads]) => {
+    const driver = state.drivers.find(d => d.name === driverName);
+    driverReturn[driverName] = driver?.arrivalTime ? toMinutes(driver.arrivalTime) : 0;
+    loads
+      .sort((a, b) => ((a.driverLoadNum??999) - (b.driverLoadNum??999)) || (toMinutes(a.dispatchTime||'00:00') - toMinutes(b.dispatchTime||'00:00')))
+      .forEach(a => {
+        const actualDispatch = Math.max(toMinutes(a.dispatchTime || '00:00'), driverReturn[driverName] || 0);
+        const delivery = actualDispatch + Math.round((a.hrs / 2) * 60);
+        if (!byDest[a.dest]) byDest[a.dest] = [];
+        byDest[a.dest].push(delivery);
+        driverReturn[driverName] = actualDispatch + Math.round(a.hrs * 60);
+      });
+  });
+  const warnings = [];
+  Object.entries(byDest).forEach(([dest, times]) => {
+    const w = (state.settings.receiverWindows || {})[dest]
+           || (() => { const d = DC_CONFIG.destinations.find(x => x.code === dest); return (d?.windowOpen && d?.windowClose) ? { open: d.windowOpen, close: d.windowClose } : null; })();
+    if (!w) return;
+    const openMins  = toMinutes(w.open);
+    const closeMins = toMinutes(w.close);
+    const outside = times.filter(t => t < openMins || t > closeMins);
+    if (!outside.length) return;
+    const destCfg = state.destinations.find(d => d.code === dest) || DC_CONFIG.destinations.find(d => d.code === dest) || {};
+    const destName = destCfg.name?.split(',')[0] || dest;
+    warnings.push({
+      type: 'gap',
+      text: `${destName} has ${outside.length} delivery${outside.length > 1 ? 'ies' : 'y'} outside receiver window ${w.open}–${w.close} (plan range ${minutesToHHMM(Math.min(...times) % 1440)}–${minutesToHHMM(Math.max(...times) % 1440)})`,
+    });
+  });
+  return warnings;
+}
+
 function getPlanQualityWarnings(result) {
   if (!result) return [];
   const dotMax   = state.settings.dotMaxHours;
@@ -3400,6 +3481,7 @@ function getPlanQualityWarnings(result) {
     warnings.push({ type:'gap', text:`⚠ ${unassignedLoads.length} internal-only load${unassignedLoads.length !== 1 ? 's' : ''} could not be covered — all drivers over DOT or past midnight (${parts.join(', ')}). Add a driver or manually reassign.` });
   }
   warnings.push(...getDestinationDeliveryWindowWarnings(result));
+  warnings.push(...getReceiverWindowWarnings(result));
   return warnings;
 }
 
@@ -4705,6 +4787,7 @@ document.getElementById('reassign-modal').addEventListener('click', e => { if(e.
 // ════════════════════════════════════════════════════════════════════════════
 function openSettings() {
   renderDestinations();
+  renderReceiverWindows();
   renderSettings();
   document.getElementById('settings-modal').classList.add('open');
 }
@@ -4753,6 +4836,32 @@ function saveDestinations() {
   renderLoadBucket();
   renderAllDriverCards();
   alert('✅ Destinations saved!');
+}
+
+function renderReceiverWindows() {
+  const wins = state.settings.receiverWindows || {};
+  document.getElementById('recv-window-tbody').innerHTML = state.destinations.map((d, idx) => {
+    const w = wins[d.code] || {};
+    const open  = w.open  || d.windowOpen  || '';
+    const close = w.close || d.windowClose || '';
+    return `<tr>
+      <td><span class="tag ${DEST_TAGS[d.code]||''}">${d.code}</span></td>
+      <td>${d.name.split(',')[0]}</td>
+      <td><input type="time" class="plain" id="rw-open-${idx}"  value="${open}"  style="width:96px;font-size:12px;"></td>
+      <td><input type="time" class="plain" id="rw-close-${idx}" value="${close}" style="width:96px;font-size:12px;"></td>
+    </tr>`;
+  }).join('');
+}
+function saveReceiverWindows() {
+  const wins = {};
+  state.destinations.forEach((d, idx) => {
+    const open  = document.getElementById(`rw-open-${idx}`)?.value  || '';
+    const close = document.getElementById(`rw-close-${idx}`)?.value || '';
+    if (open || close) wins[d.code] = { open, close };
+  });
+  state.settings.receiverWindows = wins;
+  saveSettings_();
+  alert('✅ Receiver windows saved!');
 }
 
 function renderSettings() {
