@@ -775,7 +775,7 @@ tr.phase-group-hdr td {
 </head>
 <body>
 <!-- DC Selector Screen — visible only when no DC is active -->
-<div id="dc-selector-screen" style="display:none;position:fixed;inset:0;background:#E61D2B;z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:Inter,sans-serif;">
+<div id="dc-selector-screen" style="display:none;position:fixed;inset:0;background:#E61D2B;z-index:20000;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:Inter,sans-serif;">
   <div style="color:white;font-size:32px;font-weight:900;letter-spacing:-1px;">Route Optimizer</div>
   <div style="color:rgba(255,255,255,0.85);font-size:15px;margin-bottom:8px;">Select your distribution center</div>
   <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">
@@ -1574,10 +1574,12 @@ const _activeDcId = localStorage.getItem('_active_dc') || '';
 const DC_CONFIG = ALL_DC_CONFIGS[_activeDcId] || null;
 
 if (!DC_CONFIG) {
-  // No DC selected — show selector overlay and halt app initialization
+  // No DC selected — show selector overlay, hide auth gate, halt app initialization
   document.addEventListener('DOMContentLoaded', () => {
     const s = document.getElementById('dc-selector-screen');
     if (s) s.style.display = 'flex';
+    const g = document.getElementById('auth-gate');
+    if (g) g.style.display = 'none';
   });
   throw new Error('RouteOptimizer: awaiting DC selection');
 }
