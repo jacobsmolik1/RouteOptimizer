@@ -127,6 +127,28 @@ header {
 }
 .hdr-settings-btn:hover { background: rgba(0,0,0,0.32); border-color: rgba(255,255,255,0.4); }
 
+/* ── DC SWITCHER DROPDOWN ────────────────────────────────────────────── */
+.dc-switcher { position: relative; }
+.dc-switcher-dropdown {
+  display: none; position: absolute; top: calc(100% + 8px); right: 0;
+  background: white; border-radius: 10px; min-width: 190px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18); overflow: hidden; z-index: 30000;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+.dc-switcher-dropdown.open { display: block; }
+.dc-switcher-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; cursor: pointer; font-size: 13px; font-weight: 600;
+  color: #1a1a2e; transition: background 0.12s; border: none; background: none;
+  width: 100%; text-align: left;
+}
+.dc-switcher-item:hover { background: #f5f5f8; }
+.dc-switcher-item.active { background: #fff0f1; color: var(--red); }
+.dc-switcher-item .dc-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--gray-300); flex-shrink: 0;
+}
+.dc-switcher-item.active .dc-dot { background: var(--red); }
+
 /* ── TABS ────────────────────────────────────────────────────────────── */
 .tab-bar {
   background: var(--white);
@@ -831,7 +853,10 @@ tr.phase-group-hdr td {
       <span id="hdr-day"></span>
     </div>
     <button class="hdr-settings-btn no-print" onclick="openSettings()" title="Settings">⚙</button>
-    <button class="hdr-settings-btn no-print" onclick="switchDC()" title="Switch DC" style="font-size:16px;">⇄</button>
+    <div class="dc-switcher no-print" id="dc-switcher">
+      <button class="hdr-settings-btn" onclick="toggleDCSwitcher(event)" title="Switch DC" style="font-size:15px;">⇄</button>
+      <div class="dc-switcher-dropdown" id="dc-switcher-dropdown"></div>
+    </div>
   </div>
 </header>
 
@@ -1568,6 +1593,22 @@ function switchDC() {
   localStorage.removeItem('_active_dc');
   location.reload();
 }
+function toggleDCSwitcher(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('dc-switcher-dropdown');
+  if (!dd) return;
+  if (dd.classList.contains('open')) { dd.classList.remove('open'); return; }
+  // Build items
+  dd.innerHTML = Object.values(ALL_DC_CONFIGS).map(cfg => `
+    <button class="dc-switcher-item${cfg.id === DC_CONFIG?.id ? ' active' : ''}" onclick="selectDC('${cfg.id}')">
+      <span class="dc-dot"></span>${cfg.name}
+    </button>`).join('');
+  dd.classList.add('open');
+}
+document.addEventListener('click', () => {
+  const dd = document.getElementById('dc-switcher-dropdown');
+  if (dd) dd.classList.remove('open');
+});
 
 // ── Activate DC from localStorage ────────────────────────────────────────
 const _activeDcId = localStorage.getItem('_active_dc') || '';
