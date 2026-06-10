@@ -2514,7 +2514,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
     }))
     .sort((a, b) => {
       if (a.externalRank !== b.externalRank) return a.externalRank - b.externalRank;
-      if (a.fullDayRank !== b.fullDayRank) return b.fullDayRank - a.fullDayRank;
+      if (a.fullDayRank !== b.fullDayRank) return a.fullDayRank - b.fullDayRank;
       return a.dispatchMins - b.dispatchMins;
     });
 
