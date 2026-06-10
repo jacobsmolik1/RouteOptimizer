@@ -2514,7 +2514,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
     }))
     .sort((a, b) => {
       if (a.externalRank !== b.externalRank) return a.externalRank - b.externalRank;
-      if (a.fullDayRank !== b.fullDayRank) return a.fullDayRank - b.fullDayRank;
+      if (a.fullDayRank !== b.fullDayRank) return b.fullDayRank - a.fullDayRank;
       return a.dispatchMins - b.dispatchMins;
     });
 
@@ -2689,9 +2689,6 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
       const msAssistDef = DC_CONFIG.restrictions.find(r => r.type === 'assist' && r.destCode === asgn.dest);
       const msCanExt    = destCanExternal(asgn.dest);
 
-      // Destinations with no assist rule that are external-carrier-eligible stay with carrier.
-      // (e.g. PAN: no assist restriction defined → stays Shoreline)
-      if (!msAssistDef && msCanExt) return;
 
       const hrs        = asgn.hrs;
       const msDispMins = toMinutes(asgn.dispatchTime);
