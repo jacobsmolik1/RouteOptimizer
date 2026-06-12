@@ -255,6 +255,15 @@ header {
 }
 .phase-input:focus { outline: none; border-color: var(--red); background: white; }
 .phase-hrs { font-size: 11px; color: var(--gray-400); width: 56px; text-align: right; }
+.phase-buildday-btn {
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  border: 1px solid var(--gray-200); background: white; color: var(--gray-500);
+  cursor: pointer; white-space: nowrap; line-height: 1.6; flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.phase-buildday-btn.prior {
+  background: #EDE7F6; color: #5C35A8; border-color: #C5AAEB;
+}
 
 /* ── RETURNED BUTTON ─────────────────────────────────────────────────── */
 .btn-return {
@@ -1392,10 +1401,10 @@ const ALL_DC_CONFIGS = {
     ],
 
     phases: [
-      { label:'Panama City (Small Store)', dest:'PAN', dispatchTime:'06:00' },
-      { label:'Columbus (Small Store)',    dest:'COL', dispatchTime:'06:00' },
-      { label:'Panama City (Bulk)',        dest:'PAN', dispatchTime:'07:30' },
-      { label:'Columbus (Bulk)',           dest:'COL', dispatchTime:'07:30' },
+      { label:'Panama City (Small Store)', dest:'PAN', dispatchTime:'06:00', buildDay:'prior' },
+      { label:'Columbus (Small Store)',    dest:'COL', dispatchTime:'06:00', buildDay:'prior' },
+      { label:'Panama City (Bulk)',        dest:'PAN', dispatchTime:'07:30', buildDay:'prior' },
+      { label:'Columbus (Bulk)',           dest:'COL', dispatchTime:'07:30', buildDay:'prior' },
       { label:'Dothan (OFS)',              dest:'DOT', dispatchTime:'08:00' },
       { label:'Dothan (Bulk)',             dest:'DOT', dispatchTime:'08:00' },
       { label:'Auburn (OFS)',              dest:'AUB', dispatchTime:'08:30' },
@@ -2583,6 +2592,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
       }
       assignments.push({
         loadNum: globalNum, phase: phase.label, dest: phase.dest, hrs,
+        buildDay: phase.buildDay || 'same',
         dispatchTime: phase.dispatchTime,
         autoDriver: drv ? drv.name : (canExt ? DC_CONFIG.externalCarrier : 'UNASSIGNED'),
         externalReason: drv ? '' : getExternalReason(phase.dest, hrs, ds, available),
@@ -2611,6 +2621,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
       ds[d.id].destCounts[d.domicileDest] = (ds[d.id].destCounts[d.domicileDest] || 0) + 1;
       assignments.push({
         loadNum: globalNum, phase: phase.label, dest: d.domicileDest, hrs,
+        buildDay: phase.buildDay || 'same',
         dispatchTime: phase.dispatchTime,
         autoDriver: d.name, driverLoadNum: ds[d.id].loadCount,
         homePass: true,
@@ -2632,6 +2643,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         destDeliveries[d.domicileDest].push(delivMins);
         assignments.push({
           loadNum: globalNum, phase: phase.label, dest: d.domicileDest, hrs,
+          buildDay: phase.buildDay || 'same',
           dispatchTime: phase.dispatchTime,
           autoDriver: fallbackDrv.name, driverLoadNum: ds[fallbackDrv.id].loadCount,
           override: '', status: 'Pending', notes: '', trailerNum: '', carrierDriver: '', internal: true,
@@ -2642,6 +2654,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         const canExt = destCanExternal(d.domicileDest);
         assignments.push({
           loadNum: globalNum, phase: phase.label, dest: d.domicileDest, hrs,
+          buildDay: phase.buildDay || 'same',
           dispatchTime: phase.dispatchTime,
           autoDriver: canExt ? DC_CONFIG.externalCarrier : 'UNASSIGNED',
           externalReason: getExternalReason(d.domicileDest, hrs, ds, available),
@@ -3008,6 +3021,7 @@ function renderPhaseInputs() {
       <input type="number" class="phase-input" min="0" max="99" value="${state.loads[idx]||0}" id="phase-input-${idx}"
              onchange="updateLoad(${idx},this.value)" oninput="updateLoad(${idx},this.value)">
       <span class="phase-hrs">${hrs.toFixed(2)}h ea</span>
+      <button class="phase-buildday-btn${phase.buildDay==='prior'?' prior':''}" onclick="togglePhaseBuildDay(${idx})" title="${phase.buildDay==='prior'?'Built prior night — click to change to same day':'Built same day — click to mark as prior night'}">${phase.buildDay==='prior'?'◑ Prior Night':'☀ Same Day'}</button>
       ${warnHtml}`;
     c.appendChild(row);
   });
@@ -3091,6 +3105,13 @@ function setPhaseTime(idx, val) {
   savePhases();
   markResultStale();
   renderPhaseInputs(); renderLoadBucket(); renderAllDriverCards();
+}
+
+function togglePhaseBuildDay(idx) {
+  state.phases[idx].buildDay = state.phases[idx].buildDay === 'prior' ? 'same' : 'prior';
+  savePhases();
+  markResultStale();
+  renderPhaseInputs();
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -4097,7 +4118,10 @@ function renderAssignmentsTable(result) {
 
     let separator = '';
     if (a.phase !== lastPhase) {
-      separator = `<tr class="phase-group-hdr"><td colspan="12"><span class="tag ${DEST_TAGS[a.dest]}" style="margin-right:6px;">${a.dest}</span>${a.phase}</td></tr>`;
+      const priorBadge = a.buildDay === 'prior'
+        ? `<span style="font-size:10px;font-weight:700;background:#EDE7F6;color:#5C35A8;border-radius:3px;padding:1px 6px;margin-left:8px;vertical-align:middle;">◑ Prior Night</span>`
+        : '';
+      separator = `<tr class="phase-group-hdr"><td colspan="12"><span class="tag ${DEST_TAGS[a.dest]}" style="margin-right:6px;">${a.dest}</span>${a.phase}${priorBadge}</td></tr>`;
       lastPhase = a.phase;
     }
 
