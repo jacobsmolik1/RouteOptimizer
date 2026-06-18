@@ -4925,7 +4925,11 @@ function renderDriverRules() {
       if (drivers.length) {
         rules.push(`🚛 <strong>${drivers.map(d=>d.name).join(', ')}</strong> → ${destName} ONLY`);
       } else if (canExt) {
-        rules.push(`⚠️ <span style="color:var(--danger)">No ${destName} ONLY driver — all ${rDef.destCode} loads → ${extCarrier}</span>`);
+        const hasGeneralCoverage = DC_CONFIG.optimizer?.assignExternalEligibleToInternal &&
+          avail.some(d => { const def = DC_CONFIG.restrictions.find(r => r.value === d.restriction); return !def || def.type === 'any'; });
+        if (!hasGeneralCoverage) {
+          rules.push(`⚠️ <span style="color:var(--danger)">No ${destName} ONLY driver — all ${rDef.destCode} loads → ${extCarrier}</span>`);
+        }
       }
     }
 
