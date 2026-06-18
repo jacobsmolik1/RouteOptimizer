@@ -3444,7 +3444,7 @@ function getReceiverWindowWarnings(result) {
     const destName = destCfg.name?.split(',')[0] || dest;
     warnings.push({
       type: 'gap',
-      text: `${destName} has ${outside.length} delivery${outside.length > 1 ? 'ies' : 'y'} outside receiver window ${w.open}–${w.close} (plan range ${minutesToHHMM(Math.min(...times) % 1440)}–${minutesToHHMM(Math.max(...times) % 1440)})`,
+      text: `${destName} has ${outside.length} ${outside.length > 1 ? 'deliveries' : 'delivery'} outside receiver window ${w.open}–${w.close} (plan range ${minutesToHHMM(Math.min(...times) % 1440)}–${minutesToHHMM(Math.max(...times) % 1440)})`,
     });
   });
   return warnings;
