@@ -1166,14 +1166,48 @@ tr.phase-group-hdr td {
     <div class="settings-body">
 
       <div class="settings-section-title">Destinations</div>
-      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Edit one-way miles. Round-trip and hours auto-calculate.</p>
-      <div class="tbl-wrap" style="margin-bottom:20px;">
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Edit one-way miles, or add/remove receiving locations. Round-trip and hours auto-calculate.</p>
+      <div class="tbl-wrap" style="margin-bottom:12px;">
         <table>
-          <thead><tr><th>Code</th><th>Location</th><th>Miles (1-way)</th><th>Miles (RT)</th><th>Est. Hrs</th><th>Carrier</th></tr></thead>
+          <thead><tr><th>Code</th><th>Location</th><th>Miles (1-way)</th><th>Miles (RT)</th><th>Est. Hrs</th><th>Carrier</th><th></th></tr></thead>
           <tbody id="dest-tbody"></tbody>
         </table>
       </div>
-      <button class="btn btn-dark btn-sm mt-8" onclick="saveDestinations()" style="margin-bottom:24px;">Save Destinations</button>
+      <button class="btn btn-dark btn-sm mt-8" onclick="saveDestinations()" style="margin-bottom:8px;">Save Destinations</button>
+      <div id="add-dest-form" style="display:none;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px;margin-bottom:8px;">
+        <div class="field-group"><label>Code (2-4 chars)</label><input type="text" class="plain" id="new-dest-code" placeholder="e.g. LRY" maxlength="4" style="text-transform:uppercase;"></div>
+        <div class="field-group"><label>Full Name</label><input type="text" class="plain" id="new-dest-name" placeholder="e.g. Leroy, AL"></div>
+        <div class="field-group"><label>Address</label><input type="text" class="plain" id="new-dest-address" placeholder="e.g. 123 Main St, Leroy, AL 36548"></div>
+        <div class="field-group"><label>Miles (one-way)</label><input type="number" class="plain" id="new-dest-miles" min="1" placeholder="e.g. 90"></div>
+        <div class="field-group"><label>Carrier</label>
+          <select class="plain" id="new-dest-carrier">
+            <option value="Internal Only">Internal Only</option>
+            <option value="Internal/Shoreline">Internal / Shoreline (overflow)</option>
+          </select>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-dark btn-sm" onclick="addDestination()">Add</button>
+          <button class="btn btn-ghost btn-sm" onclick="hideAddDestForm()">Cancel</button>
+        </div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="showAddDestForm()" style="margin-bottom:24px;">+ Add Destination</button>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Phases (Build Order)</div>
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Each phase maps a destination to a dispatch time. A destination needs at least one phase before loads can be entered for it. Reorder &amp; set times on the dashboard.</p>
+      <div id="phase-mgmt-list" style="margin-bottom:12px;"></div>
+      <div id="add-phase-form" style="display:none;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px;margin-bottom:8px;">
+        <div class="field-group"><label>Label</label><input type="text" class="plain" id="new-phase-label" placeholder="e.g. Leroy (Bulk)"></div>
+        <div class="field-group"><label>Destination</label>
+          <select class="plain" id="new-phase-dest"></select>
+        </div>
+        <div class="field-group"><label>Dispatch Time</label><input type="time" class="plain" id="new-phase-time" value="07:00"></div>
+        <div class="btn-group">
+          <button class="btn btn-dark btn-sm" onclick="addPhase()">Add Phase</button>
+          <button class="btn btn-ghost btn-sm" onclick="hideAddPhaseForm()">Cancel</button>
+        </div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="showAddPhaseForm()" style="margin-bottom:24px;">+ Add Phase</button>
 
       <div class="divider"></div>
       <div class="settings-section-title">Receiver Windows</div>
@@ -1647,7 +1681,14 @@ if (!DC_CONFIG) {
 
 // Convenience lookup — call instead of hardcoding restriction strings in logic.
 function getResDef(restrictionValue) {
-  return DC_CONFIG.restrictions.find(r => r.value === restrictionValue) || { type:'any' };
+  const found = DC_CONFIG.restrictions.find(r => r.value === restrictionValue);
+  if (found) return found;
+  // Synthesize a def for "{CODE} ONLY" restrictions created for runtime-added destinations.
+  const m = /^(.+) ONLY$/.exec(restrictionValue || '');
+  if (m && typeof state !== 'undefined' && state.destinations?.some(d => d.code === m[1])) {
+    return { value: restrictionValue, type: 'only', destCode: m[1] };
+  }
+  return { type:'any' };
 }
 function getExclusivePhaseCapRule(phase) {
   return (DC_CONFIG.optimizer?.specialRules || []).find(r =>
@@ -1658,7 +1699,8 @@ function getExclusivePhaseCapRule(phase) {
 }
 // Does this destination fall back to the external carrier?
 function destCanExternal(destCode) {
-  const d = DC_CONFIG.destinations.find(x => x.code === destCode);
+  const d = (typeof state !== 'undefined' && state.destinations?.find(x => x.code === destCode))
+            || DC_CONFIG.destinations.find(x => x.code === destCode);
   if (!DC_CONFIG.externalCarrier || !d?.carrier) return false;
   return d.carrier.toLowerCase().includes(DC_CONFIG.externalCarrier.toLowerCase());
 }
@@ -1768,6 +1810,32 @@ const { saveDrivers, saveDests, saveSettings_, savePhases, saveLoads, saveResult
         saveReturned, saveTemplates, saveHistory, saveWhatIf,
         saveBucketAsgn, saveAdhocMoves } = StateManager.save;
 let state = StateManager.load();
+
+// Rebuild the dest→CSS-class maps from the live (editable) destination list so
+// destinations added/removed at runtime get correct colors everywhere. The maps
+// are the same object refs used across all render code, so we mutate in place.
+function rebuildDestMaps() {
+  Object.keys(DEST_COLORS).forEach(k => delete DEST_COLORS[k]);
+  Object.keys(DEST_TAGS).forEach(k => delete DEST_TAGS[k]);
+  (state.destinations || []).forEach((d, i) => {
+    DEST_COLORS[d.code] = `dest-${i % 8}`;
+    DEST_TAGS[d.code]   = `tag-dest-${i % 8}`;
+  });
+}
+rebuildDestMaps();
+
+// Effective restriction list = DC-configured restrictions whose destination still
+// exists, plus an auto-generated "{CODE} ONLY" for every destination not already
+// covered by a configured 'only' rule. Used by the driver dropdowns and rules panel.
+function getEffectiveRestrictions() {
+  const destCodes = new Set((state.destinations || []).map(d => d.code));
+  const configured = DC_CONFIG.restrictions.filter(r => !r.destCode || destCodes.has(r.destCode));
+  const covered = new Set(configured.filter(r => r.type === 'only').map(r => r.destCode));
+  const synthesized = (state.destinations || [])
+    .filter(d => !covered.has(d.code))
+    .map(d => ({ value: `${d.code} ONLY`, type: 'only', destCode: d.code }));
+  return configured.concat(synthesized);
+}
 let shoreExpanded = false;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2242,7 +2310,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
   function getReceiverWindow(destCode) {
     const ov = state.settings.receiverWindows?.[destCode];
     if (ov?.open && ov?.close) return ov;
-    const dest = DC_CONFIG.destinations.find(d => d.code === destCode);
+    const dest = state.destinations.find(d => d.code === destCode) || DC_CONFIG.destinations.find(d => d.code === destCode);
     if (dest?.windowOpen && dest?.windowClose) return { open: dest.windowOpen, close: dest.windowClose };
     return null;
   }
@@ -3250,7 +3318,7 @@ function reassignShorelineToReturned() {
       if (checkMidnightViolation(d.name, a.dispatchTime, a.hrs).violates) return false;
       const def        = getResDef(d.restriction);
       const aAssistDef = DC_CONFIG.restrictions.find(r => r.type === 'assist' && r.destCode === a.dest);
-      const destObj    = DC_CONFIG.destinations.find(x => x.code === a.dest);
+      const destObj    = state.destinations.find(x => x.code === a.dest) || DC_CONFIG.destinations.find(x => x.code === a.dest);
       // Internal drivers can take this load if the destination allows internal carriers
       // OR an explicit assist rule exists. External-only routes (no 'Internal' in carrier) stay with carrier.
       const internalOk = !!destObj?.carrier?.toLowerCase().includes('internal') || !!aAssistDef;
@@ -3297,7 +3365,7 @@ function renderShoreline(result) {
   if (!shore.length) { panel.style.display='none'; renderDomicileWarnings(result); return; }
   const byDest = {};
   shore.forEach(a => { byDest[a.dest] = (byDest[a.dest]||0)+1; });
-  const dNames = Object.fromEntries(DC_CONFIG.destinations.map(d => [d.code, d.name.split(',')[0]]));
+  const dNames = Object.fromEntries(state.destinations.map(d => [d.code, d.name.split(',')[0]]));
   let rows = Object.entries(byDest).map(([code,cnt]) =>
     `<div class="shoreline-row">
       <span><span class="tag ${DEST_TAGS[code]}">${code}</span> ${dNames[code]}</span>
@@ -3321,8 +3389,8 @@ function getDomicileRuleViolations() {
     if (!asgns.length) return;
     const last = asgns[asgns.length - 1];
     if (last.dest !== driver.domicileDest) {
-      const lastDestName = DC_CONFIG.destinations.find(d => d.code === last.dest)?.name?.split(',')[0] || last.dest;
-      const homeDestName = DC_CONFIG.destinations.find(d => d.code === driver.domicileDest)?.name?.split(',')[0] || driver.domicileDest;
+      const lastDestName = state.destinations.find(d => d.code === last.dest)?.name?.split(',')[0] || last.dest;
+      const homeDestName = state.destinations.find(d => d.code === driver.domicileDest)?.name?.split(',')[0] || driver.domicileDest;
       violations.push({ driver: driver.name, lastDest: last.dest, lastDestName, homeDest: driver.domicileDest, homeDestName });
     }
   });
@@ -4016,7 +4084,7 @@ function renderDriverCards(result) {
   }).join('');
 
   if (shoreLoads.length > 0) {
-    const dNames = Object.fromEntries(DC_CONFIG.destinations.map(d => [d.code, d.name.split(',')[0]]));
+    const dNames = Object.fromEntries(state.destinations.map(d => [d.code, d.name.split(',')[0]]));
     let runRows;
     if (shoreExpanded) {
       const sorted = shoreLoads.slice().sort((a,b) => (a.driverLoadNum||0) - (b.driverLoadNum||0));
@@ -4808,6 +4876,9 @@ document.getElementById('reassign-modal').addEventListener('click', e => { if(e.
 // ════════════════════════════════════════════════════════════════════════════
 function openSettings() {
   renderDestinations();
+  renderPhaseMgmtList();
+  hideAddDestForm();
+  hideAddPhaseForm();
   renderReceiverWindows();
   renderSettings();
   document.getElementById('settings-modal').classList.add('open');
@@ -4840,6 +4911,7 @@ function renderDestinations() {
       <td class="text-center">${rt}</td>
       <td class="text-center"><strong>${hrs}</strong></td>
       <td style="font-size:11px;color:var(--gray-400);">${d.carrier}</td>
+      <td><button onclick="deleteDestination(${idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;" title="Delete destination">🗑</button></td>
     </tr>`;
   }).join('');
 }
@@ -4857,6 +4929,162 @@ function saveDestinations() {
   renderLoadBucket();
   renderAllDriverCards();
   alert('✅ Destinations saved!');
+}
+
+// ── Destination add / delete ──────────────────────────────────────────────
+function showAddDestForm() {
+  document.getElementById('add-dest-form').style.display = '';
+  document.getElementById('new-dest-code').value    = '';
+  document.getElementById('new-dest-name').value    = '';
+  document.getElementById('new-dest-address').value = '';
+  document.getElementById('new-dest-miles').value   = '';
+}
+function hideAddDestForm() {
+  const f = document.getElementById('add-dest-form');
+  if (f) f.style.display = 'none';
+}
+function addDestination() {
+  const code    = document.getElementById('new-dest-code').value.trim().toUpperCase();
+  const name    = document.getElementById('new-dest-name').value.trim();
+  const address = document.getElementById('new-dest-address').value.trim();
+  const miles   = parseFloat(document.getElementById('new-dest-miles').value)||0;
+  const carrier = document.getElementById('new-dest-carrier').value;
+  if (!code || !name || !miles) { alert('Code, name, and miles are required.'); return; }
+  if (state.destinations.find(d => d.code === code)) { alert('A destination with that code already exists.'); return; }
+  state.destinations.push({ code, name, address, miles1Way: miles, carrier });
+  saveDests();
+  rebuildDestMaps();
+  renderDestinations();
+  hideAddDestForm();
+  populateRestrictionDropdowns();
+  renderDriverRules();
+  renderPhaseInputs();
+  alert(`✅ Added ${name}. Now add a phase below so loads can be entered for it.`);
+}
+function deleteDestination(idx) {
+  const dest = state.destinations[idx];
+  if (!dest) return;
+  const tiedToDest = d => getResDef(d.restriction).destCode === dest.code || d.domicileDest === dest.code;
+  const relPhases = state.phases.filter(p => p.dest === dest.code).length;
+  const relDrivers = state.drivers.filter(tiedToDest).length;
+  let warn = `Delete destination "${dest.name}"?`;
+  if (relPhases)  warn += `\n\n• ${relPhases} phase${relPhases!==1?'s':''} for this destination will be removed (with their load counts).`;
+  if (relDrivers) warn += `\n• ${relDrivers} driver${relDrivers!==1?'s':''} restricted to / domiciled at this destination will be reset to "Any".`;
+  warn += `\n• Any current generated plan will be cleared.`;
+  if (!confirm(warn)) return;
+
+  // Map old phase indexes → new (or -1 if removed), realign loads + bucket assignments.
+  const oldToNew = [];
+  const newPhases = [];
+  const newLoads  = [];
+  state.phases.forEach((p, i) => {
+    if (p.dest === dest.code) { oldToNew[i] = -1; return; }
+    oldToNew[i] = newPhases.length;
+    newPhases.push(p);
+    newLoads.push(state.loads[i] || 0);
+  });
+  state.phases = newPhases;
+  state.loads  = newLoads;
+  state.bucketAsgn = (state.bucketAsgn || [])
+    .filter(b => oldToNew[b.phaseIdx] !== -1 && oldToNew[b.phaseIdx] !== undefined)
+    .map(b => ({ ...b, phaseIdx: oldToNew[b.phaseIdx] }));
+
+  // Reset drivers pointing at the removed destination (ONLY / assist / first
+  // restrictions resolve to this dest's code, or it's their domicile).
+  state.drivers.forEach(d => {
+    if (getResDef(d.restriction).destCode === dest.code) d.restriction = 'Any';
+    if (d.domicileDest === dest.code) { d.domicileDest = ''; }
+  });
+
+  // Drop its receiver window and the now-stale generated plan.
+  if (state.settings.receiverWindows) delete state.settings.receiverWindows[dest.code];
+  state.lastResult = null;
+
+  state.destinations.splice(idx, 1);
+
+  saveDests(); savePhases(); saveLoads(); saveBucketAsgn(); saveDrivers(); saveSettings_(); saveResult();
+  rebuildDestMaps();
+
+  const asgn = document.getElementById('assignments-section');
+  const cards= document.getElementById('driver-cards-section');
+  const mg   = document.getElementById('metrics-grid');
+  if (asgn) asgn.style.display = 'none';
+  if (cards) cards.style.display = 'none';
+  if (mg) mg.style.display = 'none';
+
+  renderDestinations();
+  renderPhaseMgmtList();
+  renderReceiverWindows();
+  populateRestrictionDropdowns();
+  renderDriverRules();
+  renderPhaseInputs();
+  renderLoadBucket();
+}
+
+// ── Phase add / delete ────────────────────────────────────────────────────
+function showAddPhaseForm() {
+  const sel = document.getElementById('new-phase-dest');
+  if (!state.destinations.length) { alert('Add a destination first.'); return; }
+  sel.innerHTML = state.destinations.map(d => `<option value="${d.code}">${d.code} — ${d.name.split(',')[0]}</option>`).join('');
+  document.getElementById('new-phase-label').value = '';
+  document.getElementById('new-phase-time').value  = '07:00';
+  document.getElementById('add-phase-form').style.display = '';
+}
+function hideAddPhaseForm() {
+  const f = document.getElementById('add-phase-form');
+  if (f) f.style.display = 'none';
+}
+function addPhase() {
+  const label = document.getElementById('new-phase-label').value.trim();
+  const dest  = document.getElementById('new-phase-dest').value;
+  const time  = document.getElementById('new-phase-time').value;
+  if (!label || !dest) { alert('Label and destination are required.'); return; }
+  // Appended at the end → no existing phase index shifts, so loads/bucket stay aligned.
+  state.phases.push({ label, dest, dispatchTime: time });
+  state.loads.push(0);
+  savePhases(); saveLoads();
+  hideAddPhaseForm();
+  renderPhaseMgmtList();
+  renderPhaseInputs();
+  renderLoadBucket();
+}
+function deletePhase(idx) {
+  const p = state.phases[idx];
+  if (!p) return;
+  if (!confirm(`Delete phase "${p.label}"?\n\nIts load count will be cleared and any current plan reset.`)) return;
+  state.phases.splice(idx, 1);
+  state.loads.splice(idx, 1);
+  // Realign bucket assignments: drop this phase's chips, shift higher indexes down.
+  state.bucketAsgn = (state.bucketAsgn || [])
+    .filter(b => b.phaseIdx !== idx)
+    .map(b => b.phaseIdx > idx ? { ...b, phaseIdx: b.phaseIdx - 1 } : b);
+  state.lastResult = null;
+  savePhases(); saveLoads(); saveBucketAsgn(); saveResult();
+  const asgn = document.getElementById('assignments-section');
+  const cards= document.getElementById('driver-cards-section');
+  const mg   = document.getElementById('metrics-grid');
+  if (asgn) asgn.style.display = 'none';
+  if (cards) cards.style.display = 'none';
+  if (mg) mg.style.display = 'none';
+  renderPhaseMgmtList();
+  renderPhaseInputs();
+  renderLoadBucket();
+}
+function renderPhaseMgmtList() {
+  const el = document.getElementById('phase-mgmt-list');
+  if (!el) return;
+  if (!state.phases.length) {
+    el.innerHTML = '<div style="color:var(--gray-400);font-size:12px;">No phases configured yet.</div>';
+    return;
+  }
+  el.innerHTML = state.phases.map((p,i) =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-100);">
+      <span class="tag ${DEST_TAGS[p.dest]||''}">${p.dest}</span>
+      <span style="flex:1;font-size:12px;">${p.label}</span>
+      <span style="font-size:11px;color:var(--gray-400);">${p.dispatchTime||''}</span>
+      <button onclick="deletePhase(${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;" title="Delete phase">🗑</button>
+    </div>`
+  ).join('');
 }
 
 function renderReceiverWindows() {
@@ -4908,8 +5136,9 @@ function renderDriverRules() {
   const avail = getAvailableDrivers();
   const rules = [];
 
-  // Report on each restriction type defined in DC_CONFIG
-  DC_CONFIG.restrictions.forEach(rDef => {
+  // Report on each effective restriction (DC-configured + runtime-added "{CODE} ONLY")
+  const destNameOf = code => (state.destinations.find(x=>x.code===code)?.name || code || '').split(',')[0];
+  getEffectiveRestrictions().forEach(rDef => {
     const drivers = avail.filter(d => d.restriction === rDef.value);
     const extCarrier = DC_CONFIG.externalCarrier || 'external carrier';
 
@@ -4919,14 +5148,13 @@ function renderDriverRules() {
     }
 
     if (rDef.type === 'only') {
-      const destDef = DC_CONFIG.destinations.find(x=>x.code===rDef.destCode);
-      const destName = destDef ? destDef.name.split(',')[0] : rDef.destCode;
+      const destName = destNameOf(rDef.destCode);
       const canExt   = destCanExternal(rDef.destCode);
       if (drivers.length) {
         rules.push(`🚛 <strong>${drivers.map(d=>d.name).join(', ')}</strong> → ${destName} ONLY`);
       } else if (canExt) {
         const hasGeneralCoverage = DC_CONFIG.optimizer?.assignExternalEligibleToInternal &&
-          avail.some(d => { const def = DC_CONFIG.restrictions.find(r => r.value === d.restriction); return !def || def.type === 'any'; });
+          avail.some(d => getResDef(d.restriction).type === 'any');
         if (!hasGeneralCoverage) {
           rules.push(`⚠️ <span style="color:var(--danger)">No ${destName} ONLY driver — all ${rDef.destCode} loads → ${extCarrier}</span>`);
         }
@@ -4934,12 +5162,12 @@ function renderDriverRules() {
     }
 
     if (rDef.type === 'assist') {
-      const destName  = (DC_CONFIG.destinations.find(x=>x.code===rDef.destCode)?.name||rDef.destCode).split(',')[0];
+      const destName  = destNameOf(rDef.destCode);
       if (drivers.length) rules.push(`⚓ <strong>${drivers.map(d=>d.name).join(', ')}</strong> → ${destName} assist (${rDef.cap??1}/driver cap)`);
     }
 
     if (rDef.type === 'first') {
-      const destName = (DC_CONFIG.destinations.find(x=>x.code===rDef.destCode)?.name||rDef.destCode).split(',')[0];
+      const destName = destNameOf(rDef.destCode);
       if (drivers.length) rules.push(`⭐ <strong>${drivers.map(d=>d.name).join(', ')}</strong> → ${destName} first, then any route`);
     }
   });
@@ -5034,10 +5262,10 @@ function handleImportFile(evt) {
       state.drivers      = data.drivers;
       state.destinations = data.destinations || deepCopy(DEFAULT_DESTINATIONS);
       state.settings     = data.settings;
-      state.phases    = (data.phases && data.phases.length === DEFAULT_PHASES.length) ? data.phases : deepCopy(DEFAULT_PHASES);
-      state.loads     = (data.loads  && data.loads.length  === state.phases.length)  ? data.loads  : Array(state.phases.length).fill(0);
+      state.phases    = (Array.isArray(data.phases) && data.phases.length) ? data.phases : deepCopy(DEFAULT_PHASES);
+      state.loads     = (Array.isArray(data.loads)  && data.loads.length  === state.phases.length)  ? data.loads  : Array(state.phases.length).fill(0);
       state.returned  = data.returned  || {};
-      state.templates = (data.templates && Object.values(data.templates).every(t => t.length === state.phases.length)) ? data.templates : {};
+      state.templates = data.templates || {};  // loadTemplate() matches by dest+label, so mismatched lengths are fine
       state.history      = data.history    || [];
       state.lastResult   = data.lastResult || null;
       state.whatIf       = data.whatIf     || {};
@@ -5674,10 +5902,12 @@ function populateRestrictionDropdowns() {
   const domEl  = document.getElementById('drv-domiciledest');
 
   if (resEl) {
-    resEl.innerHTML = DC_CONFIG.restrictions.map(r => {
+    resEl.innerHTML = getEffectiveRestrictions().map(r => {
+      const destName = (state.destinations.find(d => d.code === r.destCode)?.name || r.destCode || '').split(',')[0];
       const label = r.type === 'any'    ? `${r.value} — Any route`
                   : r.type === 'assist' ? `${r.value} — Any route + ${r.destCode} assist (cap ${r.cap ?? 1})`
                   : r.type === 'first'  ? `${r.value} — ${r.destCode} first, then any`
+                  : r.type === 'only'   ? `${r.value} — ${destName} only`
                   : r.value;
       return `<option value="${r.value}">${label}</option>`;
     }).join('');
@@ -5686,17 +5916,18 @@ function populateRestrictionDropdowns() {
   if (homeEl) {
     const dcCity = DC_CONFIG.city || 'DC';
     homeEl.innerHTML = `<option value="${dcCity}">${dcCity} (Internal)</option>`
-      + DC_CONFIG.destinations.map(d => `<option value="${d.name.split(',')[0]}, ${d.name.split(',')[1]?.trim() || ''}">${d.name}</option>`).join('')
+      + state.destinations.map(d => `<option value="${d.name.split(',')[0]}, ${d.name.split(',')[1]?.trim() || ''}">${d.name}</option>`).join('')
       + `<option value="Other">Other</option>`;
   }
 
   if (domEl) {
     domEl.innerHTML = `<option value="">— None (${DC_CONFIG.city}-based) —</option>`
-      + DC_CONFIG.destinations.map(d => `<option value="${d.code}">${d.name}</option>`).join('');
+      + state.destinations.map(d => `<option value="${d.code}">${d.name}</option>`).join('');
   }
 }
 
 function init() {
+  rebuildDestMaps();
   populateRestrictionDropdowns();
   updateHeaderDate();
   const sub = document.getElementById('hdr-dc-subtitle');
