@@ -916,6 +916,7 @@ tr.phase-group-hdr td {
         <div class="card-header" style="background:var(--black);color:white;">
           <div style="display:flex;justify-content:space-between;align-items:center;">Daily Load Input<button class="input-toggle-btn" id="input-toggle-btn" onclick="toggleInputCard()">▲ Collapse</button></div><div style="font-size:11px;font-weight:400;opacity:0.6;margin-top:2px;"><span id="phase-count-label">7</span>-phase build order</div>
         </div>
+        <div id="disabled-loc-banner" class="no-print" style="display:none;align-items:center;gap:8px;background:#fef3c7;color:#92400e;font-size:12px;padding:8px 14px;border-bottom:1px solid #fcd34d;"></div>
         <div id="phase-inputs"></div>
         <div class="collapsed-summary" id="collapsed-summary"></div>
         <div class="totals-bar">
@@ -1169,7 +1170,7 @@ tr.phase-group-hdr td {
       <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Edit one-way miles, or add/remove receiving locations. Round-trip and hours auto-calculate.</p>
       <div class="tbl-wrap" style="margin-bottom:12px;">
         <table>
-          <thead><tr><th>Code</th><th>Location</th><th>Miles (1-way)</th><th>Miles (RT)</th><th>Est. Hrs</th><th>Carrier</th><th></th></tr></thead>
+          <thead><tr><th>Code</th><th>Location</th><th>Miles (1-way)</th><th>Miles (RT)</th><th>Est. Hrs</th><th>Carrier</th><th>Active</th><th></th></tr></thead>
           <tbody id="dest-tbody"></tbody>
         </table>
       </div>
@@ -3063,13 +3064,21 @@ function getPhaseCapacityWarning(destCode) {
   return null;
 }
 
+function isDestDisabled(code) {
+  return !!state.destinations.find(d => d.code === code)?.disabled;
+}
 function renderPhaseInputs() {
   const c = document.getElementById('phase-inputs');
   c.innerHTML = '';
   const n = state.phases.length;
+  const visiblePhases = state.phases.filter(p => !isDestDisabled(p.dest)).length;
   const lbl = document.getElementById('phase-count-label');
-  if (lbl) lbl.textContent = n;
+  if (lbl) lbl.textContent = visiblePhases;
+  updateDisabledBanner();
+  let shown = 0;
   state.phases.forEach((phase, idx) => {
+    if (isDestDisabled(phase.dest)) return;  // hidden — its loads are stashed to 0
+    shown++;
     const hrs = getHrsForDest(phase.dest);
     const warn = getPhaseCapacityWarning(phase.dest);
     const warnHtml = warn
@@ -3082,7 +3091,7 @@ function renderPhaseInputs() {
         <button onclick="movePhase(${idx},-1)" ${idx===0?'disabled':''} title="Move up">▲</button>
         <button onclick="movePhase(${idx},1)"  ${idx===n-1?'disabled':''} title="Move down">▼</button>
       </div>
-      <div class="phase-num">${idx+1}</div>
+      <div class="phase-num">${shown}</div>
       <label class="phase-label">${phase.label}</label>
       <input type="time" class="phase-time" value="${phase.dispatchTime||'06:00'}"
              onchange="setPhaseTime(${idx},this.value)" title="Dispatch time">
@@ -4475,7 +4484,9 @@ function generateAssignments() {
       ensurePreLoad(driver.id).hours += m.hrs;
     }
   });
-  const adjustedLoads = state.loads.map((n, i) => Math.max(0, n - (bucketByPhase[i] || 0)));
+  const disabledCodes = new Set(state.destinations.filter(d => d.disabled).map(d => d.code));
+  const adjustedLoads = state.loads.map((n, i) =>
+    disabledCodes.has(state.phases[i]?.dest) ? 0 : Math.max(0, n - (bucketByPhase[i] || 0)));
   const result = runOptimizer(adjustedLoads, !!state.settings.minimizeShoreline, preLoads);
   state.lastResult = result; // must be set before rebalance (recalcAffectedDrivers reads state.lastResult)
   rebalanceFairness();
@@ -4904,16 +4915,61 @@ function renderDestinations() {
   document.getElementById('dest-tbody').innerHTML = state.destinations.map((d,idx) => {
     const rt = d.miles1Way*2;
     const hrs= (rt/spd).toFixed(2);
-    return `<tr>
+    const off = !!d.disabled;
+    const toggleBtn = off
+      ? `<button onclick="toggleDestEnabled(${idx})" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;border:1px solid var(--gray-300);background:var(--gray-100);color:var(--gray-400);cursor:pointer;" title="Disabled — click to enable">✗ Off</button>`
+      : `<button onclick="toggleDestEnabled(${idx})" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;border:1px solid #16a34a;background:#dcfce7;color:#166534;cursor:pointer;" title="Active — click to disable">✓ On</button>`;
+    return `<tr${off?' style="opacity:0.45;"':''}>
       <td><span class="tag ${DEST_TAGS[d.code]||''}">${d.code}</span></td>
       <td>${d.name}</td>
       <td><input type="number" class="plain" id="dest-miles-${idx}" value="${d.miles1Way}" min="0" style="width:70px;" onchange="updateDestMiles(${idx},this.value)"></td>
       <td class="text-center">${rt}</td>
       <td class="text-center"><strong>${hrs}</strong></td>
       <td style="font-size:11px;color:var(--gray-400);">${d.carrier}</td>
+      <td class="text-center">${toggleBtn}</td>
       <td><button onclick="deleteDestination(${idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;" title="Delete destination">🗑</button></td>
     </tr>`;
   }).join('');
+}
+
+// Enable/disable a destination for hypotheticals without deleting it. Disabling
+// stashes the entered load counts of its phases to 0 (restored on re-enable) so
+// the location reads as 0 loads everywhere — phase inputs, bucket, and optimizer.
+function toggleDestEnabled(idx) {
+  const dest = state.destinations[idx];
+  if (!dest) return;
+  dest.disabled = !dest.disabled;
+  if (dest.disabled) {
+    state.phases.forEach((p, i) => {
+      if (p.dest === dest.code) { p._stashLoad = state.loads[i] || 0; state.loads[i] = 0; }
+    });
+    state.bucketAsgn = (state.bucketAsgn || []).filter(b => b.dest !== dest.code);
+  } else {
+    state.phases.forEach((p, i) => {
+      if (p.dest === dest.code) { state.loads[i] = p._stashLoad || 0; delete p._stashLoad; }
+    });
+  }
+  state.lastResult = null;
+  saveDests(); savePhases(); saveLoads(); saveBucketAsgn(); saveResult();
+  ['assignments-section','driver-cards-section','metrics-grid'].forEach(id => {
+    const e = document.getElementById(id); if (e) e.style.display = 'none';
+  });
+  renderDestinations();
+  renderPhaseMgmtList();
+  renderPhaseInputs();
+  renderLoadBucket();
+  if (typeof renderAllDriverCards === 'function') renderAllDriverCards();
+}
+
+// Banner shown on the dashboard whenever any location is toggled off, so the plan
+// is clearly a hypothetical (reduced) configuration.
+function updateDisabledBanner() {
+  const el = document.getElementById('disabled-loc-banner');
+  if (!el) return;
+  const off = state.destinations.filter(d => d.disabled);
+  if (!off.length) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  el.innerHTML = `<span>🧪 <strong>Hypothetical:</strong> ${off.map(d => d.name.split(',')[0]).join(', ')} disabled — excluded from the plan. Re-enable in Settings → Destinations.</span>`;
 }
 
 function updateDestMiles(idx,val) {
@@ -5077,14 +5133,15 @@ function renderPhaseMgmtList() {
     el.innerHTML = '<div style="color:var(--gray-400);font-size:12px;">No phases configured yet.</div>';
     return;
   }
-  el.innerHTML = state.phases.map((p,i) =>
-    `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-100);">
+  el.innerHTML = state.phases.map((p,i) => {
+    const off = isDestDisabled(p.dest);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-100);${off?'opacity:0.45;':''}">
       <span class="tag ${DEST_TAGS[p.dest]||''}">${p.dest}</span>
-      <span style="flex:1;font-size:12px;">${p.label}</span>
+      <span style="flex:1;font-size:12px;">${p.label}${off?' <span style="font-size:10px;color:var(--gray-400);">(disabled)</span>':''}</span>
       <span style="font-size:11px;color:var(--gray-400);">${p.dispatchTime||''}</span>
       <button onclick="deletePhase(${i})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;" title="Delete phase">🗑</button>
-    </div>`
-  ).join('');
+    </div>`;
+  }).join('');
 }
 
 function renderReceiverWindows() {
