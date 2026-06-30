@@ -5014,14 +5014,23 @@ function addDestination() {
   if (!code || !name || !miles) { alert('Code, name, and miles are required.'); return; }
   if (state.destinations.find(d => d.code === code)) { alert('A destination with that code already exists.'); return; }
   state.destinations.push({ code, name, address, miles1Way: miles, carrier });
+  // Auto-create a starter phase so the destination shows on the dashboard and can
+  // take loads immediately. Appended at the end → no existing index shifts.
+  const shortName = name.split(',')[0];
+  state.phases.push({ label: shortName, dest: code, dispatchTime: '07:00' });
+  state.loads.push(0);
   saveDests();
+  savePhases();
+  saveLoads();
   rebuildDestMaps();
   renderDestinations();
+  renderPhaseMgmtList();
   hideAddDestForm();
   populateRestrictionDropdowns();
   renderDriverRules();
   renderPhaseInputs();
-  alert(`✅ Added ${name}. Now add a phase below so loads can be entered for it.`);
+  renderLoadBucket();
+  alert(`✅ Added ${name}. It now appears in your Daily Load Input as "${shortName}" — enter a load count to use it. (Add more phases or rename it in Settings → Phases.)`);
 }
 function deleteDestination(idx) {
   const dest = state.destinations[idx];
