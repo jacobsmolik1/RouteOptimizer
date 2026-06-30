@@ -421,6 +421,12 @@ header {
 
 /* ── TABLES ──────────────────────────────────────────────────────────── */
 .tbl-wrap { overflow-x: auto; }
+/* Destinations settings table has many columns — tighten it so the On/Off
+   toggle and delete button stay fully visible in the 640px panel. */
+.dest-settings-table { font-size: 11.5px; }
+.dest-settings-table th, .dest-settings-table td { padding: 6px 5px; }
+.dest-settings-table th { font-size: 10px; }
+.dest-settings-table td:nth-child(6) { font-size: 10px; line-height: 1.25; }
 table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 thead tr { background: var(--black); color: white; }
 thead th { padding: 9px 10px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
@@ -519,7 +525,7 @@ select.status-sel { padding: 3px 6px; font-size: 11px; border-radius: 4px; borde
 .modal-overlay.open { display: flex; }
 .settings-panel {
   background: white;
-  width: 600px;
+  width: 640px;
   max-width: 96vw;
   height: 100vh;
   overflow-y: auto;
@@ -1169,8 +1175,8 @@ tr.phase-group-hdr td {
       <div class="settings-section-title">Destinations</div>
       <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Edit one-way miles, or add/remove receiving locations. Round-trip and hours auto-calculate.</p>
       <div class="tbl-wrap" style="margin-bottom:12px;">
-        <table>
-          <thead><tr><th>Code</th><th>Location</th><th>Miles (1-way)</th><th>Miles (RT)</th><th>Est. Hrs</th><th>Carrier</th><th>Active</th><th></th></tr></thead>
+        <table class="dest-settings-table">
+          <thead><tr><th>Code</th><th>Location</th><th title="Miles, one-way">Mi&nbsp;1w</th><th title="Miles, round trip">RT</th><th title="Estimated hours">Hrs</th><th>Carrier</th><th>On</th><th></th></tr></thead>
           <tbody id="dest-tbody"></tbody>
         </table>
       </div>

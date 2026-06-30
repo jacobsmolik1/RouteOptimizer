@@ -1,4 +1,4 @@
-const CACHE = 'route-optimizer-v52';
+const CACHE = 'route-optimizer-v53';
 const ASSETS = [
   'https://jacobsmolik1.github.io/RouteOptimizer/',
   'https://jacobsmolik1.github.io/RouteOptimizer/index.html',
