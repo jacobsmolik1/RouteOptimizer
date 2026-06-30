@@ -3904,6 +3904,7 @@ function renderDriverCards(result) {
     : [];
 
   const shoreLoads = byAuto[DC_CONFIG.externalCarrier] || [];
+  const unassignedLoads = byAuto['UNASSIGNED'] || [];
 
   function buildCard(d) {
     const bktRuns  = byBucket[d.name] || [];
@@ -4067,6 +4068,45 @@ function renderDriverCards(result) {
   }
 
   let cardsHTML = driversToShow.map(buildCard).join('');
+
+  // Unassigned card — loads the optimizer could not place. Modeled on the external
+  // carrier card: each load is draggable onto a driver card (or click to reassign).
+  if (unassignedLoads.length > 0) {
+    const totalUnHrs = unassignedLoads.reduce((s,a) => s + a.hrs, 0);
+    const unRows = unassignedLoads
+      .slice()
+      .sort((a,b) => toMinutes(a.dispatchTime||'00:00') - toMinutes(b.dispatchTime||'00:00'))
+      .map(a => {
+        const loadIdx = result.assignments.indexOf(a);
+        return `<div class="run-row" draggable="true"
+          onclick="openReassignModal(${loadIdx})"
+          ondragstart="handleDragStart(event,${loadIdx})"
+          ondragend="handleDragEnd(event)"
+          ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="event.preventDefault();this.classList.remove('drag-over')"
+          title="Drag onto a driver card · Click to assign to a driver">
+          <span class="drag-handle">⠿</span>
+          <span class="run-label" style="background:var(--danger);">${a.dest}</span>
+          <span class="run-phase">${a.phase}<span style="display:block;font-size:9px;color:var(--gray-400);">${a.dispatchTime} dispatch</span></span>
+          <span class="run-hrs">${a.hrs.toFixed(2)}h</span>
+        </div>`;
+      }).join('');
+    cardsHTML += `<div class="driver-card is-unassigned" style="border-color:var(--danger);">
+      <div class="driver-card-header" style="background:var(--danger);color:white;">
+        <div class="drv-initial" style="background:white;color:var(--danger);">⚠</div>
+        <div style="flex:1;">
+          <div class="drv-name">UNASSIGNED</div>
+          <div class="drv-base">No eligible driver — ${unassignedLoads.length} load${unassignedLoads.length!==1?'s':''} · drag onto a driver ↓</div>
+        </div>
+      </div>
+      <div class="driver-card-runs">${unRows}</div>
+      <div class="driver-card-footer">
+        <span class="card-total-hrs">${totalUnHrs.toFixed(2)} hrs · ${unassignedLoads.length} load${unassignedLoads.length!==1?'s':''}</span>
+        <span class="card-dot-status" style="color:var(--danger);">👆 Needs a driver</span>
+      </div>
+    </div>`;
+  }
 
   // Cards for what-if inactive drivers (no loads — shown so user can revert)
   cardsHTML += whatIfInactiveDrivers.map(d => {
@@ -5650,12 +5690,9 @@ function renderLoadBucket() {
 
     // Count how many loads per phase the optimizer already covers.
     // homeReturn loads ARE reserved slots (counts[] was decremented for them), so include them.
-    // UNASSIGNED loads (optimizer found no eligible driver) are NOT counted as covered,
-    // so they stay in the bucket as draggable chips for manual placement.
+    // UNASSIGNED loads are surfaced in their own driver-style card (not the bucket).
     const optiCountByLabel = {};
-    let unassignedCount = 0;
     state.lastResult.assignments.forEach(a => {
-      if ((a.override || a.autoDriver) === 'UNASSIGNED') { unassignedCount++; return; }
       optiCountByLabel[a.phase] = (optiCountByLabel[a.phase] || 0) + 1;
     });
     // Count bucket pre-assignments per phase (including explicit external-carrier assignments)
@@ -5674,13 +5711,13 @@ function renderLoadBucket() {
       }
     });
 
-    const optiCount = state.lastResult.assignments.length - unassignedCount;
+    const optiCount = state.lastResult.assignments.length;
     const hasNew = newItems.length > 0;
     if (titleEl) titleEl.textContent = hasNew
-      ? `📦 ${newItems.length} load${newItems.length !== 1 ? 's' : ''} need a driver — drag onto a driver card, click to assign, or Re-run Generate`
+      ? `📦 ${newItems.length} new load${newItems.length !== 1 ? 's' : ''} added after generate — assign manually or Re-run Generate`
       : '📦 Manual Assignments — Click ✕ to un-assign (will clear result)';
     panel.classList.toggle('has-items', validBkt.length > 0 || hasNew);
-    countEl.textContent = `${validBkt.length} manual · ${optiCount} optimizer${hasNew ? ` · ${newItems.length} unassigned` : ''}`;
+    countEl.textContent = `${validBkt.length} manual · ${optiCount} optimizer${hasNew ? ` · ${newItems.length} new` : ''}`;
     if (clearBtn) clearBtn.style.display = validBkt.length > 1 ? '' : 'none';
     if (rerunBtn) rerunBtn.style.display = hasNew ? '' : 'none';
 
@@ -5713,7 +5750,7 @@ function renderLoadBucket() {
         onclick="openNewLoadPickModal('${encodeURIComponent(payload)}')"
         ondragstart="handleBucketDragStart(event,'${encodeURIComponent(payload)}')"
         ondragend="this.classList.remove('dragging')"
-        title="${item.phase} — ${item.hrs.toFixed(2)}h · ${item.dispatchTime} dispatch&#10;Unassigned · Click to assign · Drag to driver card · Or Re-run Generate">
+        title="${item.phase} — ${item.hrs.toFixed(2)}h · ${item.dispatchTime} dispatch&#10;New load · Click to assign · Drag to driver card · Or Re-run Generate">
         <span class="tag ${tagCls}" style="font-size:8px;">${item.dest}</span>
         <span>${sub}</span>
         <span class="chip-hrs">${item.hrs.toFixed(1)}h</span>
