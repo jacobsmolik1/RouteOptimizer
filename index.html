@@ -5650,8 +5650,12 @@ function renderLoadBucket() {
 
     // Count how many loads per phase the optimizer already covers.
     // homeReturn loads ARE reserved slots (counts[] was decremented for them), so include them.
+    // UNASSIGNED loads (optimizer found no eligible driver) are NOT counted as covered,
+    // so they stay in the bucket as draggable chips for manual placement.
     const optiCountByLabel = {};
+    let unassignedCount = 0;
     state.lastResult.assignments.forEach(a => {
+      if ((a.override || a.autoDriver) === 'UNASSIGNED') { unassignedCount++; return; }
       optiCountByLabel[a.phase] = (optiCountByLabel[a.phase] || 0) + 1;
     });
     // Count bucket pre-assignments per phase (including explicit external-carrier assignments)
@@ -5670,13 +5674,13 @@ function renderLoadBucket() {
       }
     });
 
-    const optiCount = state.lastResult.assignments.length;
+    const optiCount = state.lastResult.assignments.length - unassignedCount;
     const hasNew = newItems.length > 0;
     if (titleEl) titleEl.textContent = hasNew
-      ? `📦 ${newItems.length} new load${newItems.length !== 1 ? 's' : ''} added after generate — assign manually or Re-run Generate`
+      ? `📦 ${newItems.length} load${newItems.length !== 1 ? 's' : ''} need a driver — drag onto a driver card, click to assign, or Re-run Generate`
       : '📦 Manual Assignments — Click ✕ to un-assign (will clear result)';
     panel.classList.toggle('has-items', validBkt.length > 0 || hasNew);
-    countEl.textContent = `${validBkt.length} manual · ${optiCount} optimizer${hasNew ? ` · ${newItems.length} new` : ''}`;
+    countEl.textContent = `${validBkt.length} manual · ${optiCount} optimizer${hasNew ? ` · ${newItems.length} unassigned` : ''}`;
     if (clearBtn) clearBtn.style.display = validBkt.length > 1 ? '' : 'none';
     if (rerunBtn) rerunBtn.style.display = hasNew ? '' : 'none';
 
@@ -5709,7 +5713,7 @@ function renderLoadBucket() {
         onclick="openNewLoadPickModal('${encodeURIComponent(payload)}')"
         ondragstart="handleBucketDragStart(event,'${encodeURIComponent(payload)}')"
         ondragend="this.classList.remove('dragging')"
-        title="${item.phase} — ${item.hrs.toFixed(2)}h · ${item.dispatchTime} dispatch&#10;New load · Click to assign · Drag to driver card · Or Re-run Generate">
+        title="${item.phase} — ${item.hrs.toFixed(2)}h · ${item.dispatchTime} dispatch&#10;Unassigned · Click to assign · Drag to driver card · Or Re-run Generate">
         <span class="tag ${tagCls}" style="font-size:8px;">${item.dest}</span>
         <span>${sub}</span>
         <span class="chip-hrs">${item.hrs.toFixed(1)}h</span>
