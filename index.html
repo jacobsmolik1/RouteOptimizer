@@ -4003,10 +4003,13 @@ function renderDriverCards(result) {
           ? `<span style="display:inline-block;margin-left:4px;font-size:9px;font-weight:700;color:var(--green);background:var(--green-bg);border-radius:3px;padding:1px 4px;">← Home</span>`
           : '';
         const isStamped = !!r.actualOutTime;
-        const schedBack = r.homeReturn ? null : fmtReturnTime(actualStartStr, r.hrs);
+        // driveHrs is one-way for a home-return leg (arrival at the driver's domicile) and
+        // full round-trip otherwise (arrival back at the DC), so it works for both ETAs.
+        const schedBack = fmtReturnTime(actualStartStr, driveHrs);
+        const backLabel = r.homeReturn ? 'Arrive' : 'Back';
         const timeInfo = isStamped
           ? `<span class="run-eta-actual">⏱ Out ${fmtActualTime(r.actualOutTime)} · ETA ${calcActualEta(r.actualOutTime, driveHrs)}</span>`
-          : (schedBack ? `<span style="display:block;font-size:9px;color:var(--gray-400);font-weight:400;">Back ~${schedBack}</span>` : '');
+          : (schedBack ? `<span style="display:block;font-size:9px;color:var(--gray-400);font-weight:400;">${backLabel} ~${schedBack}</span>` : '');
         const outBtn = `<button class="out-btn ${isStamped?'stamped':''}" onclick="event.stopPropagation();stampOut(${loadIdx})" title="${isStamped?'Click to clear timestamp':'Record actual departure time'}">${isStamped ? '✓ Out' : '⏱ Out'}</button>`;
         return `<div class="run-row" draggable="true"
           onclick="openReassignModal(${loadIdx})"
