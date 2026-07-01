@@ -3484,13 +3484,22 @@ function getDestinationDeliveryWindowWarnings(result) {
     const sorted = times.slice().sort((a, b) => a - b);
     const destCfg = state.destinations.find(d => d.code === dest) || DC_CONFIG.destinations.find(d => d.code === dest) || {};
     const destName = destCfg.name?.split(',')[0] || dest;
-    const windowHours = destCfg.deliveryWindowHours || defaultWindowHours;
+    // Prefer the receiver window the user configured (its open→close span) as this
+    // destination's window target; fall back to a per-dest override, then the global default.
+    const rw = (state.settings.receiverWindows || {})[dest]
+            || (destCfg.windowOpen && destCfg.windowClose ? { open: destCfg.windowOpen, close: destCfg.windowClose } : null);
+    let windowHours = destCfg.deliveryWindowHours || defaultWindowHours;
+    if (rw?.open && rw?.close) {
+      const spanH = (toMinutes(rw.close) - toMinutes(rw.open)) / 60;
+      if (spanH > 0) windowHours = spanH;
+    }
+    const windowLabel = +windowHours.toFixed(1);
     const maxWindowMins = Math.round(windowHours * 60);
     const span = sorted[sorted.length - 1] - sorted[0];
     if (span <= maxWindowMins) return [];
     return [{
       type: 'gap',
-      text: `${destName} delivery spread ${Math.ceil(span / 60 * 10) / 10}h (${minutesToHHMM(sorted[0] % 1440)}–${minutesToHHMM(sorted[sorted.length - 1] % 1440)}) exceeds ${windowHours}h window target`,
+      text: `${destName} delivery spread ${Math.ceil(span / 60 * 10) / 10}h (${minutesToHHMM(sorted[0] % 1440)}–${minutesToHHMM(sorted[sorted.length - 1] % 1440)}) exceeds ${windowLabel}h window target`,
     }];
   });
 }
