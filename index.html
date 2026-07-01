@@ -1831,6 +1831,11 @@ function rebuildDestMaps() {
 }
 rebuildDestMaps();
 
+// Flat 30-min DOT rest break folded into every working driver's DISPLAYED total time
+// and workload bar (all DCs). Display-only: the optimizer's load assignments are
+// unchanged. Adjust here to tune the break length.
+const BREAK_HRS = 0.5;
+
 // Effective restriction list = DC-configured restrictions whose destination still
 // exists, plus an auto-generated "{CODE} ONLY" for every destination not already
 // covered by a configured 'only' rule. Used by the driver dropdowns and rules panel.
@@ -3221,7 +3226,8 @@ function renderMetrics(result) {
   const total    = result.assignments.length;
   const internal = result.assignments.filter(a => a.internal).length;
   const shore    = result.assignments.filter(a => (a.override || a.autoDriver) === DC_CONFIG.externalCarrier).length;
-  const dotOver  = result.workload.filter(w => w.status === 'over').length;
+  // Over-DOT count reflects the 30-min break folded into each working driver's total.
+  const dotOver  = result.workload.filter(w => (w.hours + (w.loads > 0 ? BREAK_HRS : 0)) > w.dotMax).length;
   const dotOk    = result.workload.length - dotOver;
 
   const driversUsed = result.workload.filter(w=>w.loads>0).length;
@@ -3249,7 +3255,10 @@ function renderWorkload(result) {
   const el = document.getElementById('workload-list');
   const ds = document.getElementById('dot-status-summary');
   if (!result) { el.innerHTML = '<div class="empty-state" style="padding:16px;">Run optimizer to see workload</div>'; return; }
-  const overCount = result.workload.filter(w => w.status==='over').length;
+  // Fold the flat 30-min break into each working driver's displayed hours/status.
+  const brkHours = w => w.hours + (w.loads > 0 ? BREAK_HRS : 0);
+  const brkStatus = w => { const h = brkHours(w); return h > w.dotMax ? 'over' : h > w.dotMax * 0.9 ? 'warn' : 'ok'; };
+  const overCount = result.workload.filter(w => brkStatus(w)==='over').length;
   ds.innerHTML = overCount > 0
     ? `<span class="badge badge-over">⚠️ ${overCount} Over Limit</span>`
     : `<span class="badge badge-ok">✓ All DOT Compliant</span>`;
@@ -3264,11 +3273,13 @@ function renderWorkload(result) {
        </div>`
     : '';
 
-  el.innerHTML = banner + result.workload.sort((a,b) => b.hours-a.hours).map(w => {
+  el.innerHTML = banner + result.workload.slice().sort((a,b) => brkHours(b)-brkHours(a)).map(w => {
     const drv = state.drivers.find(d => d.id === w.id);
-    const pct = Math.min(100,(w.hours/w.dotMax)*100);
-    const lbl = w.status==='over' ? `<span class="dot-over">⚠ OVER DOT</span>`
-              : w.status==='warn' ? `<span style="color:var(--amber);font-weight:700;">⚡ Near</span>`
+    const dispHours = brkHours(w);
+    const st = brkStatus(w);
+    const pct = Math.min(100,(dispHours/w.dotMax)*100);
+    const lbl = st==='over' ? `<span class="dot-over">⚠ OVER DOT</span>`
+              : st==='warn' ? `<span style="color:var(--amber);font-weight:700;">⚡ Near</span>`
               : `<span class="dot-ok">✓</span>`;
     const isReturned = !!state.returned[w.id];
     const retBtn = w.loads > 0
@@ -3276,8 +3287,8 @@ function renderWorkload(result) {
       : '';
     return `<div class="workload-row">
       <div class="workload-name" title="${w.name}">${w.name}</div>
-      <div class="workload-bar-wrap"><div class="workload-bar ${w.status}" style="width:${pct}%"></div></div>
-      <div class="workload-hrs" title="${getRollingHours(w.id).toFixed(1)}h this week">${w.hours.toFixed(1)}<span class="wk-hrs"> / ${w.dotMax}h</span> ${lbl}</div>
+      <div class="workload-bar-wrap"><div class="workload-bar ${st}" style="width:${pct}%"></div></div>
+      <div class="workload-hrs" title="${getRollingHours(w.id).toFixed(1)}h this week${w.loads>0?' · incl 30-min break':''}">${dispHours.toFixed(1)}<span class="wk-hrs"> / ${w.dotMax}h</span> ${lbl}</div>
       ${retBtn}
     </div>`;
   }).join('');
@@ -3939,9 +3950,13 @@ function renderDriverCards(result) {
     }
     // When result exists, autoHrs (we.hours) already includes deadhead + bucket hrs via preLoads.
     // Only add adhocHrs on top since those aren't run through the optimizer.
-    const totalHrs = result
+    // Every working driver gets a flat 30-min DOT break folded into their total time.
+    // This is display-only — the optimizer's assignment math is unchanged (see BREAK_HRS).
+    const loadCount = autoRuns.length + bktRuns.length + adhRuns.length;
+    const breakHrs  = loadCount > 0 ? BREAK_HRS : 0;
+    const totalHrs = (result
       ? autoHrs + adhocHrs
-      : deadheadHrs + bucketHrs + adhocHrs;
+      : deadheadHrs + bucketHrs + adhocHrs) + breakHrs;
 
     const status = totalHrs > dotMax ? 'over' : totalHrs > dotMax * 0.9 ? 'warn' : 'ok';
     const statusHTML = status==='over'
@@ -4060,7 +4075,7 @@ function renderDriverCards(result) {
       <div class="driver-card-runs">${bktHTML}${adhHTML}${autoHTML}${dropHint}</div>
       ${wiPanel}
       <div class="driver-card-footer">
-        <span class="card-total-hrs">${totalHrs.toFixed(2)} hrs</span>
+        <span class="card-total-hrs"${breakHrs?' title="Includes a 30-min DOT break"':''}>${totalHrs.toFixed(2)} hrs${breakHrs?'<span style="font-weight:400;color:var(--gray-400);font-size:9px;"> ·incl 30m break</span>':''}</span>
         ${deadheadNote || statusHTML}
         ${deadheadNote ? statusHTML : ''}
       </div>
