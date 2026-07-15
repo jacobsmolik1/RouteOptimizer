@@ -1439,6 +1439,13 @@ const ALL_DC_CONFIGS = {
       { code:'DOT', name:'Dothan, AL',      address:'3936 Napier Field Road, Dothan, AL 36303',     miles1Way:104, carrier:'Internal Only' },
       { code:'EVG', name:'Evergreen, AL',   address:'14230 U.S. Highway 84, Evergreen, AL 36460',   miles1Way:78,  carrier:'Internal Only' },
       { code:'AUB', name:'Auburn, AL',      address:'511 W Veterans Blvd, Auburn, AL 36832',         miles1Way:55,  carrier:'Internal Only' },
+      // ── Mobile / Gulf-coast contingency set (disabled by default; toggle On in Settings → Destinations) ──
+      // Miles derived from the round-trip hours captured in live dispatch drafts; addresses TBD — confirm & fill in.
+      { code:'MOB', name:'Mobile, AL',      address:'',  miles1Way:170, carrier:'Internal/Shoreline', disabled:true },
+      { code:'LRY', name:'Leroy, AL',       address:'',  miles1Way:152, carrier:'Internal/Shoreline', disabled:true },
+      { code:'VAL', name:'Valparaiso, FL',  address:'',  miles1Way:160, carrier:'Internal/Shoreline', disabled:true },
+      { code:'ROB', name:'Robertsdale, AL', address:'',  miles1Way:160, carrier:'Internal/Shoreline', disabled:true },
+      { code:'PEN', name:'Pensacola, FL',   address:'',  miles1Way:166, carrier:'Internal/Shoreline', disabled:true },
     ],
 
     phases: [
@@ -1452,6 +1459,12 @@ const ALL_DC_CONFIGS = {
       { label:'Auburn (Bulk)',             dest:'AUB', dispatchTime:'08:30' },
       { label:'Evergreen (OFS)',           dest:'EVG', dispatchTime:'09:00' },
       { label:'Evergreen (Bulk)',          dest:'EVG', dispatchTime:'09:00' },
+      // ── Mobile / Gulf-coast contingency phases (dests disabled by default; enable to activate) ──
+      { label:'Mobile',                    dest:'MOB', dispatchTime:'07:00' },
+      { label:'Leroy',                     dest:'LRY', dispatchTime:'07:00' },
+      { label:'Valparaiso',                dest:'VAL', dispatchTime:'07:00' },
+      { label:'Robertsdale',               dest:'ROB', dispatchTime:'07:00' },
+      { label:'Pensacola',                 dest:'PEN', dispatchTime:'07:00' },
     ],
 
     restrictions: [
