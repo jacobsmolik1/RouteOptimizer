@@ -1863,6 +1863,15 @@ function destCanExternal(destCode) {
   if (!DC_CONFIG.externalCarrier || !d?.carrier) return false;
   return d.carrier.toLowerCase().includes(DC_CONFIG.externalCarrier.toLowerCase());
 }
+// Is this destination run ONLY by the outside carrier (no internal drivers)?
+// True when the carrier names the external carrier but not "internal"
+// (e.g. "Shoreline Only" / "Cowan Only"), as opposed to "Internal/Shoreline".
+function destIsExternalOnly(destCode) {
+  if (!destCanExternal(destCode)) return false;
+  const d = (typeof state !== 'undefined' && state.destinations?.find(x => x.code === destCode))
+            || DC_CONFIG.destinations.find(x => x.code === destCode);
+  return !(d?.carrier || '').toLowerCase().includes('internal');
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 //  MODULE: StateManager
@@ -2957,6 +2966,8 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
   const homePassQueue = [];
   available.forEach(d => {
     if (!d.domicileDest || d.homeFirst) return;
+    // External-only destinations never use internal drivers — don't reserve a home slot.
+    if (destIsExternalOnly(d.domicileDest)) return;
     // Exclusive-route (only) drivers always run their home destination via findExclusive
     // in the main loop — no reservation needed, and grabbing one here would decrement
     // the count without a guaranteed home-pass assignment (DOT overflow).
@@ -3037,12 +3048,13 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
       const onlyDef   = DC_CONFIG.restrictions.find(r => r.type === 'only'   && r.destCode === phase.dest);
       const assistDef = DC_CONFIG.restrictions.find(r => r.type === 'assist' && r.destCode === phase.dest);
       const canExt    = destCanExternal(phase.dest);
+      const extOnly   = destIsExternalOnly(phase.dest);   // outside carrier runs all of these
       const phaseCapRule = getExclusivePhaseCapRule(phase);
       const phaseCapKey = phaseCapRule
         ? [phaseCapRule.type, phaseCapRule.destCode || phase.dest, phaseCapRule.phaseLabelIncludes || phase.label].join(':')
         : null;
 
-      if (onlyDef) {
+      if (onlyDef && !extOnly) {
         if (phaseCapRule) {
           const maxPhaseLoads = phaseCapRule.maxLoadsPerDriver ?? 1;
           drv = available
@@ -3067,9 +3079,9 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
           drv = findExclusive(onlyDef.value, hrs, phase.dest);
         }
       }
-      if (!drv && assistDef) drv = findAssist(assistDef, hrs);
-      if (!drv && (!canExt || DC_CONFIG.optimizer?.assignExternalEligibleToInternal)) drv = findGeneral(hrs, phase.dest);
-      if (!drv && (!canExt || DC_CONFIG.optimizer?.assignExternalEligibleToInternal)) drv = findAnyAvailable(hrs, phase.dest);
+      if (!drv && assistDef && !extOnly) drv = findAssist(assistDef, hrs);
+      if (!drv && !extOnly && (!canExt || DC_CONFIG.optimizer?.assignExternalEligibleToInternal)) drv = findGeneral(hrs, phase.dest);
+      if (!drv && !extOnly && (!canExt || DC_CONFIG.optimizer?.assignExternalEligibleToInternal)) drv = findAnyAvailable(hrs, phase.dest);
 
       if (drv) {
         ds[drv.id].hours += hrs;
@@ -3092,7 +3104,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         buildDay: phase.buildDay || 'same',
         dispatchTime: phase.dispatchTime,
         autoDriver: drv ? drv.name : (canExt ? DC_CONFIG.externalCarrier : 'UNASSIGNED'),
-        externalReason: drv ? '' : getExternalReason(phase.dest, hrs, ds, available),
+        externalReason: drv ? '' : (extOnly ? 'carrier_only' : getExternalReason(phase.dest, hrs, ds, available)),
         driverLoadNum: drv ? ds[drv.id].loadCount : null,
         override: '', status: 'Pending', notes: '', trailerNum: '', carrierDriver: '',
         internal: !!drv,
@@ -4001,13 +4013,17 @@ function getPlanQualityWarnings(result) {
     const byReason = {};
     externalLoads.forEach(a => { const r = a.externalReason || 'other'; byReason[r] = (byReason[r]||0)+1; });
     const parts = [];
-    if (byReason.dot_limit)   parts.push(`${byReason.dot_limit} DOT limit`);
-    if (byReason.restriction) parts.push(`${byReason.restriction} restriction`);
-    if (byReason.schedule)    parts.push(`${byReason.schedule} schedule/reserved`);
-    if (byReason.other)       parts.push(`${byReason.other} other`);
+    if (byReason.carrier_only) parts.push(`${byReason.carrier_only} carrier-only`);
+    if (byReason.dot_limit)    parts.push(`${byReason.dot_limit} DOT limit`);
+    if (byReason.restriction)  parts.push(`${byReason.restriction} restriction`);
+    if (byReason.schedule)     parts.push(`${byReason.schedule} schedule/reserved`);
+    if (byReason.other)        parts.push(`${byReason.other} other`);
     warnings.push({ type:'external', text:`${externalLoads.length} → ${DC_CONFIG.externalCarrier}${parts.length ? ' (' + parts.join(', ') + ')' : ''}` });
-    if (unusedNames.length)
-      warnings.push({ type:'gap', text:`⚡ ${DC_CONFIG.externalCarrier} loads while ${unusedNames.length > 1 ? unusedNames.length + ' drivers have' : unusedNames[0] + ' has'} no loads — check feasibility` });
+    // Carrier-only loads are external by design — only flag a feasibility gap for
+    // overflow loads (a real "drivers idle while carrier runs" signal).
+    const overflowExternal = externalLoads.filter(a => a.externalReason !== 'carrier_only').length;
+    if (unusedNames.length && overflowExternal)
+      warnings.push({ type:'gap', text:`⚡ ${overflowExternal} ${DC_CONFIG.externalCarrier} overflow load(s) while ${unusedNames.length > 1 ? unusedNames.length + ' drivers have' : unusedNames[0] + ' has'} no loads — check feasibility` });
   }
   if (unassignedLoads.length) {
     const byDest = {};
@@ -5488,11 +5504,13 @@ function saveDestinations() {
 // Carrier <option> list, tailored to this DC's external carrier. `current` is
 // preserved as an option even if it's a legacy/other value, so nothing is lost.
 function carrierOptionsHTML(current) {
-  const ext = DC_CONFIG.externalCarrier || 'External';
-  const extVal = 'Internal/' + ext.charAt(0).toUpperCase() + ext.slice(1).toLowerCase();
+  const ext     = DC_CONFIG.externalCarrier || 'External';
+  const extName = ext.charAt(0).toUpperCase() + ext.slice(1).toLowerCase();
+  const extVal  = 'Internal/' + extName;
   const opts = [
     { v: 'Internal Only', l: 'Internal Only' },
-    { v: extVal,          l: `Internal / ${extVal.split('/')[1]} (overflow)` },
+    { v: extVal,          l: `Internal / ${extName} (overflow)` },
+    { v: extName + ' Only', l: `${extName} Only (outside carrier)` },
   ];
   if (current && !opts.some(o => o.v === current)) opts.unshift({ v: current, l: current });
   return opts.map(o => `<option value="${o.v}"${o.v === current ? ' selected' : ''}>${o.l}</option>`).join('');
@@ -5547,6 +5565,8 @@ function showAddDestForm() {
   document.getElementById('new-dest-name').value    = '';
   document.getElementById('new-dest-address').value = '';
   document.getElementById('new-dest-miles').value   = '';
+  // Carrier options are DC-aware (Internal Only / Internal+overflow / carrier-only).
+  document.getElementById('new-dest-carrier').innerHTML = carrierOptionsHTML(null);
 }
 function hideAddDestForm() {
   const f = document.getElementById('add-dest-form');
