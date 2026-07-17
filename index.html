@@ -859,6 +859,7 @@ tr.phase-group-hdr td {
       <span class="hdr-user-email" id="hdr-user-email"></span>
       <span id="commit-badge" class="no-print" style="display:none">🔒 Committed</span>
       <span id="sync-indicator" class="synced" style="display:none"></span>
+      <button class="hdr-logout-btn" id="hdr-dispatchers-btn" onclick="openDispatchers()" style="display:none">👥 Dispatchers</button>
       <button class="hdr-logout-btn" id="hdr-logout-btn" onclick="handleSignOut()" style="display:none">Sign Out</button>
     </div>
     <div class="hdr-date">
@@ -1351,6 +1352,42 @@ tr.phase-group-hdr td {
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeCrossdockWizard()">Cancel</button>
       <button class="btn btn-primary" id="cd-create-btn" onclick="createCrossdock()">Create Crossdock</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MANAGE DISPATCHERS ═══════════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="dispatchers-modal">
+  <div class="modal" style="width:460px;max-width:96vw;">
+    <div class="modal-header">
+      <span>👥 Dispatchers — <span id="disp-dc-name"></span></span>
+      <button class="modal-close" onclick="closeDispatchers()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="disp-list" style="margin-bottom:16px;">
+        <div style="color:var(--gray-400);font-size:12px;">Loading…</div>
+      </div>
+      <div id="disp-admin-area" style="display:none;border-top:1px solid var(--gray-100);padding-top:14px;">
+        <div class="settings-section-title" style="margin-bottom:8px;">Invite a dispatcher</div>
+        <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">
+          They must already have a Route Optimizer account (same email they sign in with).
+        </p>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="field-group" style="flex:1;min-width:180px;margin:0;">
+            <label>Email</label>
+            <input type="email" id="disp-email" class="plain" placeholder="dispatcher@example.com">
+          </div>
+          <div class="field-group" style="margin:0;">
+            <label>Role</label>
+            <select id="disp-role" class="plain">
+              <option value="dispatcher">Dispatcher</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" id="disp-invite-btn" onclick="inviteDispatcher()">Invite</button>
+        </div>
+        <div id="disp-msg" style="display:none;margin-top:10px;padding:8px 12px;border-radius:var(--radius);font-size:12px;font-weight:600;"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2096,6 +2133,22 @@ const SupabaseSync = (() => {
     return data;
   }
 
+  // ── Dispatcher access management ─────────────────────────────────────────
+  async function listMembers(dcSlug) {
+    const { data, error } = await db.rpc('list_dc_members', { p_dc_slug: dcSlug });
+    if (error) throw error;
+    return data || [];
+  }
+  async function grantAccess(dcSlug, email, role) {
+    const { data, error } = await db.rpc('grant_dc_access', { p_dc_slug: dcSlug, p_email: email, p_role: role });
+    if (error) throw error;
+    return data;
+  }
+  async function revokeAccess(dcSlug, email) {
+    const { error } = await db.rpc('revoke_dc_access', { p_dc_slug: dcSlug, p_email: email });
+    if (error) throw error;
+  }
+
   // ── Pull today from DB on startup ────────────────────────────────────────
   // Returns true if state was updated (caller should re-render).
   async function loadDayFromDB() {
@@ -2279,7 +2332,7 @@ const SupabaseSync = (() => {
   function getUser()       { return _user; }
   function isCommitted()   { return _committed; }
 
-  return { init, signIn, signOut, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted };
+  return { init, signIn, signOut, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted };
 })();
 
 // ── Auth UI helpers ─────────────────────────────────────────────────────────
@@ -2356,13 +2409,85 @@ async function createCrossdock() {
   }
 }
 
+// ── Manage Dispatchers ────────────────────────────────────────────────────
+function openDispatchers() {
+  document.getElementById('disp-dc-name').textContent = DC_CONFIG.name;
+  document.getElementById('disp-admin-area').style.display = 'none';
+  const msg = document.getElementById('disp-msg'); if (msg) msg.style.display = 'none';
+  const em = document.getElementById('disp-email'); if (em) em.value = '';
+  document.getElementById('dispatchers-modal').classList.add('open');
+  loadDispatchers();
+}
+function closeDispatchers() {
+  document.getElementById('dispatchers-modal').classList.remove('open');
+}
+function dispMsg(text, isError) {
+  const m = document.getElementById('disp-msg');
+  m.textContent = text;
+  m.style.background = isError ? '#fdecea' : '#eafaf1';
+  m.style.color     = isError ? '#c0392b' : '#1e8449';
+  m.style.display = '';
+}
+async function loadDispatchers() {
+  const listEl = document.getElementById('disp-list');
+  try {
+    const members = await SupabaseSync.listMembers(DC_CONFIG.id);
+    const iAmAdmin = members.some(m => m.is_self && m.role === 'admin');
+    document.getElementById('disp-admin-area').style.display = iAmAdmin ? '' : 'none';
+    if (!members.length) { listEl.innerHTML = '<div style="color:var(--gray-400);font-size:12px;">No dispatchers yet.</div>'; return; }
+    listEl.innerHTML = members.map(m => {
+      const badge = m.role === 'admin'
+        ? '<span style="font-size:10px;font-weight:700;color:var(--red);background:#fff0f1;padding:2px 6px;border-radius:4px;">ADMIN</span>'
+        : '<span style="font-size:10px;font-weight:600;color:var(--gray-400);background:var(--gray-100);padding:2px 6px;border-radius:4px;">Dispatcher</span>';
+      const remove = (iAmAdmin && !m.is_self)
+        ? `<button class="btn btn-ghost btn-sm" style="color:#c0392b;padding:2px 8px;" onclick="revokeDispatcher('${m.email.replace(/'/g,"\\'")}')">Remove</button>`
+        : (m.is_self ? '<span style="font-size:11px;color:var(--gray-400);">you</span>' : '');
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+        <span style="font-size:13px;overflow:hidden;text-overflow:ellipsis;">${m.email}</span>
+        <span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">${badge}${remove}</span>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    listEl.innerHTML = `<div style="color:#c0392b;font-size:12px;">${e.message || 'Could not load dispatchers.'}</div>`;
+  }
+}
+async function inviteDispatcher() {
+  const email = document.getElementById('disp-email').value.trim();
+  const role  = document.getElementById('disp-role').value;
+  const btn   = document.getElementById('disp-invite-btn');
+  if (!email) return dispMsg('Enter an email address.', true);
+  btn.disabled = true; btn.textContent = 'Inviting…';
+  try {
+    const res = await SupabaseSync.grantAccess(DC_CONFIG.id, email, role);
+    dispMsg('✅ Access granted: ' + res, false);
+    document.getElementById('disp-email').value = '';
+    await loadDispatchers();
+  } catch (e) {
+    dispMsg(e.message || 'Could not grant access.', true);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Invite';
+  }
+}
+async function revokeDispatcher(email) {
+  if (!confirm(`Remove ${email} from ${DC_CONFIG.name}?`)) return;
+  try {
+    await SupabaseSync.revokeAccess(DC_CONFIG.id, email);
+    dispMsg('Removed ' + email, false);
+    await loadDispatchers();
+  } catch (e) {
+    dispMsg(e.message || 'Could not remove.', true);
+  }
+}
+
 function updateUserDisplay() {
   const user = SupabaseSync.getUser();
   const emailEl  = document.getElementById('hdr-user-email');
   const logoutEl = document.getElementById('hdr-logout-btn');
+  const dispEl   = document.getElementById('hdr-dispatchers-btn');
   const syncEl   = document.getElementById('sync-indicator');
   if (emailEl)  emailEl.textContent = user?.email || '';
   if (logoutEl) logoutEl.style.display = user ? '' : 'none';
+  if (dispEl)   dispEl.style.display   = user ? '' : 'none';
   if (syncEl)   syncEl.style.display   = user ? '' : 'none';
 }
 

@@ -238,3 +238,85 @@ begin
   );
 end;
 $$;
+
+-- ══════════════════════════════════════════════════════════════
+--  Dispatcher access management (invite / list / revoke)
+-- ══════════════════════════════════════════════════════════════
+-- ── List members of a DC (any member can view) ────────────────
+create or replace function public.list_dc_members(p_dc_slug text)
+returns jsonb language plpgsql security definer stable as $$
+declare v_dc_id uuid;
+begin
+  select id into v_dc_id from public.dcs where slug = p_dc_slug;
+  if v_dc_id is null then raise exception 'DC not found: %', p_dc_slug; end if;
+  if not public.user_has_dc_access(v_dc_id) then
+    raise exception 'Access denied for DC: %', p_dc_slug;
+  end if;
+  return coalesce(
+    (select json_agg(row_to_json(sub) order by sub.role, sub.email)::jsonb
+     from (
+       select u.email,
+              ua.role,
+              (ua.user_id = auth.uid()) as is_self
+       from public.user_dc_access ua
+       join auth.users u on u.id = ua.user_id
+       where ua.dc_id = v_dc_id
+     ) sub),
+    '[]'::jsonb
+  );
+end;
+$$;
+
+-- ── Grant access to an existing user by email (admin only) ────
+create or replace function public.grant_dc_access(p_dc_slug text, p_email text, p_role text default 'dispatcher')
+returns text language plpgsql security definer as $$
+declare
+  v_dc_id   uuid;
+  v_user_id uuid;
+begin
+  if p_role not in ('dispatcher','admin') then raise exception 'Invalid role: %', p_role; end if;
+  select id into v_dc_id from public.dcs where slug = p_dc_slug;
+  if v_dc_id is null then raise exception 'DC not found: %', p_dc_slug; end if;
+  if not exists (
+    select 1 from public.user_dc_access
+    where user_id = auth.uid() and dc_id = v_dc_id and role = 'admin'
+  ) then
+    raise exception 'Admin access required for DC: %', p_dc_slug;
+  end if;
+
+  select id into v_user_id from auth.users where lower(email) = lower(trim(p_email));
+  if v_user_id is null then
+    raise exception 'No account found for %. They must sign up first.', p_email;
+  end if;
+
+  insert into public.user_dc_access (user_id, dc_id, role)
+  values (v_user_id, v_dc_id, p_role)
+  on conflict (user_id, dc_id) do update set role = excluded.role;
+
+  return p_email || ' → ' || p_role;
+end;
+$$;
+
+-- ── Revoke a user's access by email (admin only; not self) ────
+create or replace function public.revoke_dc_access(p_dc_slug text, p_email text)
+returns void language plpgsql security definer as $$
+declare
+  v_dc_id   uuid;
+  v_user_id uuid;
+begin
+  select id into v_dc_id from public.dcs where slug = p_dc_slug;
+  if v_dc_id is null then raise exception 'DC not found: %', p_dc_slug; end if;
+  if not exists (
+    select 1 from public.user_dc_access
+    where user_id = auth.uid() and dc_id = v_dc_id and role = 'admin'
+  ) then
+    raise exception 'Admin access required for DC: %', p_dc_slug;
+  end if;
+
+  select id into v_user_id from auth.users where lower(email) = lower(trim(p_email));
+  if v_user_id is null then raise exception 'No account found for %', p_email; end if;
+  if v_user_id = auth.uid() then raise exception 'You cannot remove your own access.'; end if;
+
+  delete from public.user_dc_access where user_id = v_user_id and dc_id = v_dc_id;
+end;
+$$;
