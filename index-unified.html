@@ -1392,6 +1392,46 @@ tr.phase-group-hdr td {
   </div>
 </div>
 
+<!-- ═══ EDIT DESTINATION MODAL ═══════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="edit-dest-modal">
+  <div class="modal" style="width:440px;max-width:96vw;">
+    <div class="modal-header">
+      <span>✏️ Edit Destination</span>
+      <button class="modal-close" onclick="closeEditDest()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ed-idx">
+      <div class="field-group">
+        <label>Code <span style="color:var(--gray-400);font-weight:400;">(fixed — delete &amp; re-add to change)</span></label>
+        <input type="text" id="ed-code" class="plain" disabled style="opacity:0.6;">
+      </div>
+      <div class="field-group">
+        <label>Full Name</label>
+        <input type="text" id="ed-name" class="plain" placeholder="e.g. Mobile, AL">
+      </div>
+      <div class="field-group">
+        <label>Address</label>
+        <input type="text" id="ed-address" class="plain" placeholder="e.g. 123 Main St, Mobile, AL 36602">
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div class="field-group" style="flex:1;">
+          <label>Miles (one-way)</label>
+          <input type="number" id="ed-miles" class="plain" min="0">
+        </div>
+        <div class="field-group" style="flex:1.4;">
+          <label>Carrier</label>
+          <select id="ed-carrier" class="plain"></select>
+        </div>
+      </div>
+      <div id="ed-error" style="display:none;margin-top:6px;padding:8px 12px;background:#fdecea;border-radius:var(--radius);font-size:12px;font-weight:600;color:#c0392b;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeEditDest()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditDest()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ ADD/EDIT DRIVER MODAL ════════════════════════════════════════ -->
 <div class="modal-overlay driver-overlay" id="driver-modal">
   <div class="modal">
@@ -5382,7 +5422,10 @@ function renderDestinations() {
       <td class="text-center"><strong>${hrs}</strong></td>
       <td style="font-size:11px;color:var(--gray-400);">${d.carrier}</td>
       <td class="text-center">${toggleBtn}</td>
-      <td><button onclick="deleteDestination(${idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;" title="Delete destination">🗑</button></td>
+      <td style="white-space:nowrap;">
+        <button onclick="openEditDest(${idx})" style="background:none;border:none;cursor:pointer;font-size:13px;" title="Edit destination">✏️</button>
+        <button onclick="deleteDestination(${idx})" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;" title="Delete destination">🗑</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -5440,6 +5483,61 @@ function saveDestinations() {
   renderLoadBucket();
   renderAllDriverCards();
   alert('✅ Destinations saved!');
+}
+
+// Carrier <option> list, tailored to this DC's external carrier. `current` is
+// preserved as an option even if it's a legacy/other value, so nothing is lost.
+function carrierOptionsHTML(current) {
+  const ext = DC_CONFIG.externalCarrier || 'External';
+  const extVal = 'Internal/' + ext.charAt(0).toUpperCase() + ext.slice(1).toLowerCase();
+  const opts = [
+    { v: 'Internal Only', l: 'Internal Only' },
+    { v: extVal,          l: `Internal / ${extVal.split('/')[1]} (overflow)` },
+  ];
+  if (current && !opts.some(o => o.v === current)) opts.unshift({ v: current, l: current });
+  return opts.map(o => `<option value="${o.v}"${o.v === current ? ' selected' : ''}>${o.l}</option>`).join('');
+}
+
+// ── Edit an existing destination (name / address / miles / carrier) ────────
+function openEditDest(idx) {
+  const d = state.destinations[idx];
+  if (!d) return;
+  document.getElementById('ed-idx').value      = idx;
+  document.getElementById('ed-code').value     = d.code;
+  document.getElementById('ed-name').value     = d.name || '';
+  document.getElementById('ed-address').value  = d.address || '';
+  document.getElementById('ed-miles').value    = d.miles1Way || 0;
+  document.getElementById('ed-carrier').innerHTML = carrierOptionsHTML(d.carrier);
+  const err = document.getElementById('ed-error'); if (err) err.style.display = 'none';
+  document.getElementById('edit-dest-modal').classList.add('open');
+}
+function closeEditDest() {
+  document.getElementById('edit-dest-modal').classList.remove('open');
+}
+function saveEditDest() {
+  const idx  = parseInt(document.getElementById('ed-idx').value, 10);
+  const d    = state.destinations[idx];
+  const err  = document.getElementById('ed-error');
+  const showErr = m => { err.textContent = m; err.style.display = ''; };
+  if (!d) return closeEditDest();
+  const name    = document.getElementById('ed-name').value.trim();
+  const address = document.getElementById('ed-address').value.trim();
+  const miles   = parseFloat(document.getElementById('ed-miles').value) || 0;
+  const carrier = document.getElementById('ed-carrier').value;
+  if (!name)      return showErr('Name is required.');
+  if (!(miles>0)) return showErr('Enter a valid one-way mileage.');
+
+  d.name = name; d.address = address; d.miles1Way = miles; d.carrier = carrier;
+  // Miles/carrier affect computed hours — refresh bucket chip hours too.
+  state.bucketAsgn = (state.bucketAsgn || []).map(b => ({ ...b, hrs: getHrsForDest(b.dest) }));
+  saveDests(); saveBucketAsgn();
+  rebuildDestMaps();
+  renderDestinations();
+  renderPhaseMgmtList();
+  renderPhaseInputs();
+  renderLoadBucket();
+  if (typeof renderAllDriverCards === 'function') renderAllDriverCards();
+  closeEditDest();
 }
 
 // ── Destination add / delete ──────────────────────────────────────────────
