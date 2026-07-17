@@ -815,12 +815,10 @@ tr.phase-group-hdr td {
 <div id="dc-selector-screen" style="display:none;position:fixed;inset:0;background:#E61D2B;z-index:20000;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:Inter,sans-serif;">
   <div style="color:white;font-size:32px;font-weight:900;letter-spacing:-1px;">Route Optimizer</div>
   <div style="color:rgba(255,255,255,0.85);font-size:15px;margin-bottom:8px;">Select your distribution center</div>
-  <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;">
-    <button onclick="selectDC('montgomery')" style="background:white;color:#E61D2B;border:none;border-radius:10px;padding:20px 32px;font-size:16px;font-weight:700;cursor:pointer;min-width:180px;">Montgomery DC</button>
-    <button onclick="selectDC('tifton')" style="background:white;color:#E61D2B;border:none;border-radius:10px;padding:20px 32px;font-size:16px;font-weight:700;cursor:pointer;min-width:180px;">Tifton Crossdock</button>
-    <button onclick="selectDC('birmingham')" style="background:white;color:#E61D2B;border:none;border-radius:10px;padding:20px 32px;font-size:16px;font-weight:700;cursor:pointer;min-width:180px;">Birmingham DC</button>
+  <div id="dc-selector-buttons" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:720px;">
+    <!-- Populated dynamically from ALL_DC_CONFIGS (built-ins + custom crossdocks) -->
   </div>
-  <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:8px;">Your choice is remembered on this device</div>
+  <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:8px;">Your choice is remembered on this device · To add a new crossdock, open any DC and use the ⇄ menu</div>
 </div>
 <div class="test-banner no-print">🔗 UNIFIED — Select your DC below or use the ⇄ button to switch</div>
 
@@ -1314,6 +1312,49 @@ tr.phase-group-hdr td {
   </div>
 </div>
 
+<!-- ═══ NEW CROSSDOCK WIZARD ═════════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="crossdock-modal">
+  <div class="modal" style="width:480px;max-width:96vw;">
+    <div class="modal-header">
+      <span>➕ Add a New Crossdock</span>
+      <button class="modal-close" onclick="closeCrossdockWizard()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--gray-400);margin-bottom:14px;">
+        Creates a new location alongside the others. It syncs to every device you sign in on.
+        After it's created you'll build out destinations, phases, and drivers in Settings.
+      </p>
+      <div class="field-group">
+        <label>Crossdock Name</label>
+        <input type="text" id="cd-name" class="plain" placeholder="e.g. Dothan Crossdock" oninput="cdDeriveSlug()">
+      </div>
+      <div class="field-group">
+        <label>ID / Slug <span style="color:var(--gray-400);font-weight:400;">(auto — lowercase, no spaces)</span></label>
+        <input type="text" id="cd-slug" class="plain" placeholder="dothan">
+      </div>
+      <div class="field-group">
+        <label>External Carrier Name</label>
+        <input type="text" id="cd-carrier" class="plain" placeholder="e.g. COWAN or SHORELINE">
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div class="field-group" style="flex:1;">
+          <label>Avg Speed (mph)</label>
+          <input type="number" id="cd-speed" class="plain" value="50" min="20" max="80">
+        </div>
+        <div class="field-group" style="flex:1;">
+          <label>DOT Max Hours</label>
+          <input type="number" id="cd-dotmax" class="plain" value="11" min="1" max="14" step="0.5">
+        </div>
+      </div>
+      <div id="cd-error" style="display:none;margin-top:6px;padding:8px 12px;background:#fdecea;border-radius:var(--radius);font-size:12px;font-weight:600;color:#c0392b;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCrossdockWizard()">Cancel</button>
+      <button class="btn btn-primary" id="cd-create-btn" onclick="createCrossdock()">Create Crossdock</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ ADD/EDIT DRIVER MODAL ════════════════════════════════════════ -->
 <div class="modal-overlay driver-overlay" id="driver-modal">
   <div class="modal">
@@ -1676,13 +1717,27 @@ function toggleDCSwitcher(e) {
   dd.innerHTML = Object.values(ALL_DC_CONFIGS).map(cfg => `
     <button class="dc-switcher-item${cfg.id === DC_CONFIG?.id ? ' active' : ''}" onclick="selectDC('${cfg.id}')">
       <span class="dc-dot"></span>${cfg.name}
-    </button>`).join('');
+    </button>`).join('')
+    + `<button class="dc-switcher-item" style="border-top:1px solid #eee;color:var(--red);font-weight:700;" onclick="openCrossdockWizard()">
+         <span class="dc-dot" style="background:var(--red);"></span>+ Add Crossdock
+       </button>`;
   dd.classList.add('open');
 }
 document.addEventListener('click', () => {
   const dd = document.getElementById('dc-switcher-dropdown');
   if (dd) dd.classList.remove('open');
 });
+
+// ── Merge user-created crossdocks (synchronous, offline-safe) ────────────
+// Custom DC configs are cached in localStorage under '_custom_dcs' so they
+// are available BEFORE DC_CONFIG resolves below (auth/Supabase is async and
+// runs later). SupabaseSync.refreshDcConfigs() refreshes this cache post-auth.
+try {
+  const _customDcs = JSON.parse(localStorage.getItem('_custom_dcs') || '{}');
+  Object.values(_customDcs).forEach(cfg => {
+    if (cfg && cfg.id) { cfg._custom = true; ALL_DC_CONFIGS[cfg.id] = cfg; }
+  });
+} catch (e) { console.error('[CustomDC] cache merge failed:', e); }
 
 // ── Activate DC from localStorage ────────────────────────────────────────
 const _activeDcId = localStorage.getItem('_active_dc') || '';
@@ -1695,6 +1750,13 @@ if (!DC_CONFIG) {
     if (s) s.style.display = 'flex';
     const g = document.getElementById('auth-gate');
     if (g) g.style.display = 'none';
+    // Render a button per accessible DC (built-in + custom crossdocks from cache).
+    const wrap = document.getElementById('dc-selector-buttons');
+    if (wrap) {
+      wrap.innerHTML = Object.values(ALL_DC_CONFIGS).map(cfg =>
+        `<button onclick="selectDC('${cfg.id}')" style="background:white;color:#E61D2B;border:none;border-radius:10px;padding:20px 32px;font-size:16px;font-weight:700;cursor:pointer;min-width:180px;">${cfg.name}</button>`
+      ).join('');
+    }
   });
   throw new Error('RouteOptimizer: awaiting DC selection');
 }
@@ -1802,9 +1864,9 @@ function load() {
 // Close over the global `state` variable — safe because these are only
 // called after `state` is initialised below.
 function saveDrivers()    { localStorage.setItem(DC_CONFIG.storagePrefix + 'drivers',    JSON.stringify(state.drivers));    SupabaseSync.queueDriverSync(); }
-function saveDests()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'dests',      JSON.stringify(state.destinations)); }
-function saveSettings_()  { localStorage.setItem(DC_CONFIG.storagePrefix + 'settings',   JSON.stringify(state.settings));    SupabaseSync.queueSync(); }
-function savePhases()     { localStorage.setItem(DC_CONFIG.storagePrefix + 'phases',     JSON.stringify(state.phases)); }
+function saveDests()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'dests',      JSON.stringify(state.destinations)); SupabaseSync.queueConfigSync(); }
+function saveSettings_()  { localStorage.setItem(DC_CONFIG.storagePrefix + 'settings',   JSON.stringify(state.settings));    SupabaseSync.queueSync(); SupabaseSync.queueConfigSync(); }
+function savePhases()     { localStorage.setItem(DC_CONFIG.storagePrefix + 'phases',     JSON.stringify(state.phases));      SupabaseSync.queueConfigSync(); }
 function saveLoads()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'loads',      JSON.stringify(state.loads));       SupabaseSync.queueSync(); }
 function saveResult()     { localStorage.setItem(DC_CONFIG.storagePrefix + 'lastresult', JSON.stringify(state.lastResult));  SupabaseSync.queueSync(); }
 function saveReturned()   { localStorage.setItem(DC_CONFIG.storagePrefix + 'returned',   JSON.stringify(state.returned));    SupabaseSync.queueSync(); }
@@ -1873,6 +1935,7 @@ const SupabaseSync = (() => {
   let _committed   = false;
   let _dayTimer    = null;
   let _driverTimer = null;
+  let _configTimer = null;
 
   // ── Auth ────────────────────────────────────────────────────────────────
   async function init() {
@@ -1933,6 +1996,104 @@ const SupabaseSync = (() => {
       console.error('[SupabaseSync] _syncDay failed:', e);
       _setSyncIndicator('offline');
     }
+  }
+
+  // ── DC config sync (custom DCs only, debounced 2 s) ──────────────────────
+  // Built-in DCs keep their config in code; only user-created (_custom) DCs
+  // push their structural config (dests/phases/settings/restrictions) so it
+  // survives resets and reaches every device — the fix for the localStorage trap.
+  function buildLiveConfig() {
+    return {
+      id:              DC_CONFIG.id,
+      name:            DC_CONFIG.name,
+      city:            DC_CONFIG.city || '',
+      storagePrefix:   DC_CONFIG.storagePrefix,
+      externalCarrier: DC_CONFIG.externalCarrier,
+      optimizer:       DC_CONFIG.optimizer,
+      restrictions:    DC_CONFIG.restrictions,
+      settings:        state.settings,
+      destinations:    state.destinations,
+      phases:          state.phases,
+      _custom:         true,
+    };
+  }
+
+  function queueConfigSync() {
+    if (!DC_CONFIG || !DC_CONFIG._custom) return;   // built-in DCs live in code
+    clearTimeout(_configTimer);
+    _configTimer = setTimeout(_syncConfig, 2000);
+  }
+
+  async function _syncConfig() {
+    if (!db || !_user || !DC_CONFIG || !DC_CONFIG._custom) return;
+    try {
+      const cfg = buildLiveConfig();
+      const { error } = await db.rpc('save_dc_config', {
+        p_dc_slug: DC_CONFIG.id,
+        p_config:  cfg,
+      });
+      if (error) throw error;
+      // Keep the local cache and the in-memory config in step.
+      const cache = JSON.parse(localStorage.getItem('_custom_dcs') || '{}');
+      cache[DC_CONFIG.id] = cfg;
+      localStorage.setItem('_custom_dcs', JSON.stringify(cache));
+      localStorage.setItem(DC_CONFIG.storagePrefix + '_cfgsync', Date.now().toString());
+    } catch(e) {
+      console.error('[SupabaseSync] _syncConfig failed:', e);
+    }
+  }
+
+  // ── Refresh the custom-DC cache from the DB (post-auth) ──────────────────
+  // Returns true if the ACTIVE custom DC's config was newer in the DB and was
+  // applied (caller should reload so structural changes take effect cleanly).
+  async function refreshDcConfigs() {
+    if (!db || !_user) return false;
+    try {
+      const { data, error } = await db.rpc('list_accessible_dcs');
+      if (error) throw error;
+      const rows = data || [];
+      const cache = {};
+      let activeChanged = false;
+      rows.forEach(r => {
+        if (!r.config) return;                       // built-in DC — lives in code
+        const cfg = r.config; cfg._custom = true; cfg.id = cfg.id || r.slug;
+        cache[r.slug] = cfg;
+        if (r.slug === _activeDcId) {
+          const P = cfg.storagePrefix || (r.slug + '_');
+          const dbTs    = new Date(r.config_updated_at).getTime();
+          const localTs = parseInt(localStorage.getItem(P + '_cfgsync') || '0');
+          if (dbTs > localTs) {
+            // DB wins — overwrite the active DC's cached structural state.
+            if (cfg.destinations) localStorage.setItem(P + 'dests',    JSON.stringify(cfg.destinations));
+            if (cfg.phases)       localStorage.setItem(P + 'phases',   JSON.stringify(cfg.phases));
+            if (cfg.settings)     localStorage.setItem(P + 'settings', JSON.stringify(cfg.settings));
+            localStorage.setItem(P + '_cfgsync', dbTs.toString());
+            activeChanged = true;
+          }
+        }
+      });
+      localStorage.setItem('_custom_dcs', JSON.stringify(cache));
+      return activeChanged;
+    } catch(e) {
+      console.error('[SupabaseSync] refreshDcConfigs failed:', e);
+      return false;
+    }
+  }
+
+  // ── Create a new crossdock (self-service) ────────────────────────────────
+  async function createDc(slug, name, config) {
+    if (!db || !_user) throw new Error('You must be signed in to create a crossdock.');
+    const { data, error } = await db.rpc('create_dc', {
+      p_slug:   slug,
+      p_name:   name,
+      p_config: config,
+    });
+    if (error) throw error;
+    const cache = JSON.parse(localStorage.getItem('_custom_dcs') || '{}');
+    cache[slug] = config;
+    localStorage.setItem('_custom_dcs', JSON.stringify(cache));
+    localStorage.setItem((config.storagePrefix || slug + '_') + '_cfgsync', Date.now().toString());
+    return data;
   }
 
   // ── Pull today from DB on startup ────────────────────────────────────────
@@ -2118,10 +2279,83 @@ const SupabaseSync = (() => {
   function getUser()       { return _user; }
   function isCommitted()   { return _committed; }
 
-  return { init, signIn, signOut, queueSync, queueDriverSync, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted };
+  return { init, signIn, signOut, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted };
 })();
 
 // ── Auth UI helpers ─────────────────────────────────────────────────────────
+// ── New Crossdock wizard ──────────────────────────────────────────────────
+function openCrossdockWizard() {
+  const dd = document.getElementById('dc-switcher-dropdown');
+  if (dd) dd.classList.remove('open');
+  ['cd-name','cd-slug','cd-carrier'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('cd-speed').value  = 50;
+  document.getElementById('cd-dotmax').value = 11;
+  const err = document.getElementById('cd-error'); if (err) err.style.display = 'none';
+  document.getElementById('crossdock-modal').classList.add('open');
+}
+function closeCrossdockWizard() {
+  document.getElementById('crossdock-modal').classList.remove('open');
+}
+function cdSlugify(s) {
+  return (s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+function cdDeriveSlug() {
+  const slugEl = document.getElementById('cd-slug');
+  if (slugEl.dataset.edited) return;             // stop auto-deriving once user types their own
+  slugEl.value = cdSlugify(document.getElementById('cd-name').value);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const slugEl = document.getElementById('cd-slug');
+  if (slugEl) slugEl.addEventListener('input', () => { slugEl.dataset.edited = '1'; });
+});
+
+async function createCrossdock() {
+  const err  = document.getElementById('cd-error');
+  const btn  = document.getElementById('cd-create-btn');
+  const showErr = m => { err.textContent = m; err.style.display = ''; };
+  err.style.display = 'none';
+
+  const name    = document.getElementById('cd-name').value.trim();
+  const slug    = cdSlugify(document.getElementById('cd-slug').value);
+  const carrier = document.getElementById('cd-carrier').value.trim().toUpperCase();
+  const speed   = parseFloat(document.getElementById('cd-speed').value);
+  const dotMax  = parseFloat(document.getElementById('cd-dotmax').value);
+
+  if (!name)                       return showErr('Enter a crossdock name.');
+  if (!slug)                       return showErr('Enter a valid ID/slug (letters and numbers).');
+  if (ALL_DC_CONFIGS[slug])        return showErr(`A DC with ID "${slug}" already exists.`);
+  if (!carrier)                    return showErr('Enter an external carrier name.');
+  if (!(speed > 0))                return showErr('Enter a valid average speed.');
+  if (!(dotMax > 0))               return showErr('Enter a valid DOT max hours.');
+
+  // Complete blank config — clone Montgomery's optimizer shape so the engine
+  // never hits an undefined field, with empty dests/phases to fill in live.
+  const base = ALL_DC_CONFIGS.montgomery;
+  const config = {
+    id:              slug,
+    name:            name,
+    city:            '',
+    storagePrefix:   slug + '_',
+    externalCarrier: carrier,
+    optimizer:       JSON.parse(JSON.stringify(base.optimizer)),
+    settings:        { avgSpeed: speed, dotMaxHours: dotMax },
+    destinations:    [],
+    phases:          [],
+    restrictions:    [{ value: 'Any', type: 'any' }],
+    _custom:         true,
+  };
+
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    await SupabaseSync.createDc(slug, name, config);
+    ALL_DC_CONFIGS[slug] = config;
+    selectDC(slug);   // reloads into the new DC
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Create Crossdock';
+    showErr(e.message || 'Could not create crossdock. Are you signed in?');
+  }
+}
+
 function updateUserDisplay() {
   const user = SupabaseSync.getUser();
   const emailEl  = document.getElementById('hdr-user-email');
@@ -2144,6 +2378,9 @@ async function handleSignIn(e) {
     await SupabaseSync.signIn(email, password);
     document.getElementById('auth-gate').style.display = 'none';
     updateUserDisplay();
+    // Pull custom-DC configs first; if the active DC's config changed, reload
+    // so structural changes (dests/phases) re-init cleanly.
+    if (await SupabaseSync.refreshDcConfigs()) { location.reload(); return; }
     state = StateManager.load();
     const dbChanged = await SupabaseSync.loadDayFromDB();
     const driversChanged = await SupabaseSync.syncDriversFromDB();
@@ -2171,7 +2408,9 @@ async function startupAuth() {
     card.style.display = '';
     return;
   }
-  // Logged in — pull today from DB, re-render if changed
+  // Logged in — refresh custom-DC configs; reload if the active DC changed.
+  if (await SupabaseSync.refreshDcConfigs()) { location.reload(); return; }
+  // Pull today from DB, re-render if changed
   const dbChanged      = await SupabaseSync.loadDayFromDB();
   const driversChanged = await SupabaseSync.syncDriversFromDB();
   document.getElementById('auth-gate').style.display = 'none';

@@ -29,6 +29,12 @@ insert into public.dcs (slug, name)
 values ('birmingham', 'Birmingham DC')
 on conflict (slug) do nothing;
 
+-- Config storage for self-service (user-created) DCs. Built-in DCs keep
+-- config = null and live in code (ALL_DC_CONFIGS); user-created crossdocks
+-- store their full config blob here so it syncs across devices/dispatchers.
+alter table public.dcs add column if not exists config             jsonb;
+alter table public.dcs add column if not exists config_updated_at  timestamptz default now();
+
 -- ── Profiles ──────────────────────────────────────────────────
 -- Extends auth.users — created automatically on signup via trigger.
 create table if not exists public.profiles (
