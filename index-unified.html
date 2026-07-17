@@ -2002,7 +2002,9 @@ const BREAK_HRS = 0.5;
 // covered by a configured 'only' rule. Used by the driver dropdowns and rules panel.
 function getEffectiveRestrictions() {
   const destCodes = new Set((state.destinations || []).map(d => d.code));
-  const configured = DC_CONFIG.restrictions.filter(r => !r.destCode || destCodes.has(r.destCode));
+  const configured = DC_CONFIG.restrictions.filter(r =>
+    (!r.destCode  || destCodes.has(r.destCode)) &&
+    (!r.destCodes || r.destCodes.some(c => destCodes.has(c))));   // keep a group if any of its dests still exists
   const covered = new Set(configured.filter(r => r.type === 'only').map(r => r.destCode));
   const synthesized = (state.destinations || [])
     .filter(d => !covered.has(d.code))
@@ -2692,7 +2694,8 @@ function nextId() {
 }
 function driverCanTakeDest(driver, destCode) {
   const def = getResDef(driver.restriction);
-  if (def.type === 'only') return def.destCode === destCode;
+  if (def.type === 'only')      return def.destCode === destCode;
+  if (def.type === 'onlyGroup') return (def.destCodes || []).includes(destCode);
   return true; // any, assist, first — no hard destination block
 }
   return { getHrsForDest, getAvailableDrivers, nextId, driverCanTakeDest };
@@ -2850,6 +2853,8 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
       .filter(d => {
         const def = getResDef(d.restriction);
         if (def.type === 'only') return false; // exclusive drivers never enter the general pool
+        // Group-restricted drivers compete in the pool but only for their allowed dests.
+        if (def.type === 'onlyGroup' && !(def.destCodes || []).includes(destCode)) return false;
         if (blockAubFirst && def.type === 'first' && ds[d.id].loadCount === 0 && destCode !== def.destCode) return false;
         if (!allowExtraHome && reservedForHome.has(d.id) && d.domicileDest === destCode) return false;
         if ((ds[d.id].hours + hrs + ds[d.id].homeHrs) > dotMax) return false;
@@ -2892,6 +2897,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         const def = getResDef(d.restriction);
         // Exclusive drivers can only appear via findExclusive — block all that don't match this dest.
         if (def.type === 'only' && def.destCode !== destCode) return false;
+        if (def.type === 'onlyGroup' && !(def.destCodes || []).includes(destCode)) return false;
         if (blockAubFirst) {
           const fdef = getResDef(d.restriction);
           if (fdef.type === 'first' && ds[d.id].loadCount === 0 && destCode !== fdef.destCode) return false;
@@ -2971,7 +2977,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
     // Exclusive-route (only) drivers always run their home destination via findExclusive
     // in the main loop — no reservation needed, and grabbing one here would decrement
     // the count without a guaranteed home-pass assignment (DOT overflow).
-    if (getResDef(d.restriction).type === 'only') return;
+    if (['only', 'onlyGroup'].includes(getResDef(d.restriction).type)) return;
     const pi = state.phases.findIndex((p, i) => p.dest === d.domicileDest && counts[i] > 0);
     if (pi === -1) return;
     counts[pi]--;
@@ -3777,7 +3783,8 @@ function reassignShorelineToReturned() {
       // Internal drivers can take this load if the destination allows internal carriers
       // OR an explicit assist rule exists. External-only routes (no 'Internal' in carrier) stay with carrier.
       const internalOk = !!destObj?.carrier?.toLowerCase().includes('internal') || !!aAssistDef;
-      if (def.type === 'only')   return def.destCode === a.dest;
+      if (def.type === 'only')      return def.destCode === a.dest;
+      if (def.type === 'onlyGroup') return (def.destCodes || []).includes(a.dest) && internalOk;
       if (def.type === 'assist') {
         if (def.destCode === a.dest && (colCounts[d.id] || 0) >= (def.cap ?? 1)) return false;
         return internalOk;
@@ -5025,9 +5032,10 @@ function renderFleetTable() {
   const tbody = document.getElementById('fleet-tbody');
   tbody.innerHTML = state.drivers.map(d => {
     const rDef = getResDef(d.restriction);
-    const resBadge = rDef.type === 'only'   ? `<span class="badge badge-col" style="background:var(--blue-bg);color:var(--blue);">🚛 ${d.restriction}</span>`
-                   : rDef.type === 'assist' ? `<span class="badge badge-col" style="background:#E3F2FD;color:#1565C0;border:1px solid #BBDEFB;">⚓ ${d.restriction}</span>`
-                   : rDef.type === 'first'  ? `<span class="badge" style="background:#FEF9C3;color:#854D0E;border:1px solid #FDE68A;">⭐ ${d.restriction}</span>`
+    const resBadge = rDef.type === 'only'      ? `<span class="badge badge-col" style="background:var(--blue-bg);color:var(--blue);">🚛 ${d.restriction}</span>`
+                   : rDef.type === 'onlyGroup' ? `<span class="badge badge-col" style="background:var(--blue-bg);color:var(--blue);">🚛 ${d.restriction}</span>`
+                   : rDef.type === 'assist'    ? `<span class="badge badge-col" style="background:#E3F2FD;color:#1565C0;border:1px solid #BBDEFB;">⚓ ${d.restriction}</span>`
+                   : rDef.type === 'first'     ? `<span class="badge" style="background:#FEF9C3;color:#854D0E;border:1px solid #FDE68A;">⭐ ${d.restriction}</span>`
                    : `<span class="badge badge-any">Any Route</span>`;
     const statusBadge = d.onVacation
       ? `<span class="badge badge-vac">☀️ Vacation</span>`
@@ -5809,6 +5817,11 @@ function renderDriverRules() {
       const destName = destNameOf(rDef.destCode);
       if (drivers.length) rules.push(`⭐ <strong>${drivers.map(d=>d.name).join(', ')}</strong> → ${destName} first, then any route`);
     }
+
+    if (rDef.type === 'onlyGroup' && drivers.length) {
+      const names = (rDef.destCodes || []).map(destNameOf).join(', ');
+      rules.push(`🚛 <strong>${drivers.map(d=>d.name).join(', ')}</strong> → ${names} ONLY`);
+    }
   });
 
   el.innerHTML = rules.map(r=>`<div style="padding:3px 0;border-bottom:1px solid var(--gray-100);">${r}</div>`).join('');
@@ -6544,10 +6557,14 @@ function populateRestrictionDropdowns() {
   if (resEl) {
     resEl.innerHTML = getEffectiveRestrictions().map(r => {
       const destName = (state.destinations.find(d => d.code === r.destCode)?.name || r.destCode || '').split(',')[0];
-      const label = r.type === 'any'    ? `${r.value} — Any route`
-                  : r.type === 'assist' ? `${r.value} — Any route + ${r.destCode} assist (cap ${r.cap ?? 1})`
-                  : r.type === 'first'  ? `${r.value} — ${r.destCode} first, then any`
-                  : r.type === 'only'   ? `${r.value} — ${destName} only`
+      const groupNames = (r.destCodes || [])
+        .map(c => (state.destinations.find(d => d.code === c)?.name || c).split(',')[0])
+        .join(' / ');
+      const label = r.type === 'any'       ? `${r.value} — Any route`
+                  : r.type === 'assist'    ? `${r.value} — Any route + ${r.destCode} assist (cap ${r.cap ?? 1})`
+                  : r.type === 'first'     ? `${r.value} — ${r.destCode} first, then any`
+                  : r.type === 'only'      ? `${r.value} — ${destName} only`
+                  : r.type === 'onlyGroup' ? `${r.value} — ${groupNames} only`
                   : r.value;
       return `<option value="${r.value}">${label}</option>`;
     }).join('');
