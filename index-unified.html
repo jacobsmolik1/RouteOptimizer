@@ -972,6 +972,18 @@ tr.phase-group-hdr td {
         <span style="font-size:11px;color:var(--gray-400);">Fill overflow trucks one at a time (reveals fewest needed). Off = spread across all.</span>
       </div>
 
+      <!-- Protect delivery windows over internal packing -->
+      <div class="no-print" style="display:flex;align-items:center;gap:12px;padding:6px 2px;">
+        <div class="toggle-wrap">
+          <label class="toggle" title="When a higher-priority driver would deliver a load after its receiver window closes, let a lower-priority (overflow) truck take it if that truck delivers in-window. Only acts when it changes on-time status.">
+            <input type="checkbox" id="window-protect-toggle" onchange="toggleWindowProtect(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Protect Windows</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);">Let an in-window truck beat a higher-priority late one. Keeps internal first whenever it still hits the window.</span>
+      </div>
+
       <!-- Generate Button -->
       <button class="btn-generate no-print" onclick="generateAssignments()">⚡ Generate Load Assignments</button>
 
@@ -1910,6 +1922,7 @@ const DEFAULT_SETTINGS = {
   deliveryWindowHours: DC_CONFIG.optimizer?.deliveryWindowHours ?? 5,
   receiverWindows:     {},
   packOverflow:        false,   // pack overflow-tier drivers onto fewest trucks (opt-in, per DC)
+  windowProtect:       false,   // let an in-window truck beat a higher-priority late one (opt-in, per DC)
 };
 
 // Dest → CSS class maps — index-based so any DC's dest codes work without CSS changes.
@@ -2622,6 +2635,8 @@ function renderAll() {
   if (mst) mst.checked = !!state.settings.minimizeShoreline;
   const pot = document.getElementById('pack-overflow-toggle');
   if (pot) pot.checked = !!state.settings.packOverflow;
+  const wpt = document.getElementById('window-protect-toggle');
+  if (wpt) wpt.checked = !!state.settings.windowProtect;
   renderDriverRules();
   updateMetricsAvail();
   renderMetrics(state.lastResult);
@@ -2743,6 +2758,12 @@ function toggleMinimizeShoreline(checked) {
 
 function togglePackOverflow(checked) {
   state.settings.packOverflow = checked;
+  saveSettings_();
+  markResultStale();
+}
+
+function toggleWindowProtect(checked) {
+  state.settings.windowProtect = checked;
   saveSettings_();
   markResultStale();
 }
@@ -2892,6 +2913,14 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         return candidateTimingAllowed(d, hrs);
       })
       .sort((a, b) => {
+        // Window protection (opt-in): an on-time truck beats a would-be-late one even if
+        // the late one is higher priority — but only when they actually differ on window fit.
+        // Inert unless the toggle is on AND a receiver window is configured for this dest.
+        if (state.settings.windowProtect) {
+          const aFit = !wouldMissReceiverWindow(a, destCode, hrs);
+          const bFit = !wouldMissReceiverWindow(b, destCode, hrs);
+          if (aFit !== bFit) return aFit ? -1 : 1;
+        }
         // Dispatch-priority tier dominates: lower number (e.g. internal) fills before
         // higher (e.g. overflow carriers). Inert when all drivers share a tier.
         const priCmp = driverPriority(a) - driverPriority(b);
@@ -2949,6 +2978,11 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         return candidateTimingAllowed(d, hrs);
       })
       .sort((a, b) => {
+        if (state.settings.windowProtect) {
+          const aFit = !wouldMissReceiverWindow(a, destCode, hrs);
+          const bFit = !wouldMissReceiverWindow(b, destCode, hrs);
+          if (aFit !== bFit) return aFit ? -1 : 1;
+        }
         const priCmp = driverPriority(a) - driverPriority(b);
         if (priCmp !== 0) return priCmp;
         if (state.settings.packOverflow && driverPriority(a) > 1 && driverPriority(b) > 1) {
@@ -6658,6 +6692,8 @@ function init() {
   if (mst) mst.checked = !!state.settings.minimizeShoreline;
   const pot = document.getElementById('pack-overflow-toggle');
   if (pot) pot.checked = !!state.settings.packOverflow;
+  const wpt = document.getElementById('window-protect-toggle');
+  if (wpt) wpt.checked = !!state.settings.windowProtect;
   renderDriverRules();
   updateMetricsAvail();
   renderMetrics(state.lastResult);
