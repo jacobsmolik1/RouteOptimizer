@@ -145,7 +145,7 @@ begin
   for v_d in select * from jsonb_array_elements(p_drivers) loop
     insert into public.drivers
       (id, dc_id, name, home_base, restriction, max_loads,
-       deadhead_miles, domicile_dest, on_vacation, arrival_time, notes, active)
+       deadhead_miles, domicile_dest, on_vacation, arrival_time, priority, notes, active)
     values (
       v_d->>'id', v_dc_id, v_d->>'name', v_d->>'home_base',
       v_d->>'restriction',
@@ -154,6 +154,7 @@ begin
       v_d->>'domicile_dest',
       (v_d->>'on_vacation')::boolean,
       v_d->>'arrival_time',
+      coalesce((v_d->>'priority')::int, 1),
       v_d->>'notes',
       true
     )
@@ -166,6 +167,7 @@ begin
       domicile_dest  = excluded.domicile_dest,
       on_vacation    = excluded.on_vacation,
       arrival_time   = excluded.arrival_time,
+      priority       = excluded.priority,
       notes          = excluded.notes,
       updated_at     = now();
   end loop;

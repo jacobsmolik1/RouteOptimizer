@@ -82,11 +82,15 @@ create table if not exists public.drivers (
   domicile_dest   text,
   on_vacation     boolean     default false,
   arrival_time    text,
+  priority        int         not null default 1,   -- dispatch tier: 1 = fill first, higher = overflow
   notes           text,
   active          boolean     default true,
   created_at      timestamptz default now(),
   updated_at      timestamptz default now()
 );
+
+-- Backfill for existing databases (safe to re-run).
+alter table public.drivers add column if not exists priority int not null default 1;
 
 -- ── Dispatch days ─────────────────────────────────────────────
 -- One row per DC per calendar date. Working state stored as JSONB

@@ -960,6 +960,18 @@ tr.phase-group-hdr td {
         <span style="font-size:11px;color:var(--gray-400);">General pool drivers cover PAN/COL before falling back to outside carrier</span>
       </div>
 
+      <!-- Pack overflow-tier drivers onto fewest trucks -->
+      <div class="no-print" style="display:flex;align-items:center;gap:12px;padding:6px 2px;">
+        <div class="toggle-wrap">
+          <label class="toggle" title="Concentrate overflow/outside-carrier loads onto as few trucks as legally fit (shows minimum trucks needed). Internal drivers stay balanced.">
+            <input type="checkbox" id="pack-overflow-toggle" onchange="togglePackOverflow(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Pack Overflow</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);">Fill overflow trucks one at a time (reveals fewest needed). Off = spread across all.</span>
+      </div>
+
       <!-- Generate Button -->
       <button class="btn-generate no-print" onclick="generateAssignments()">⚡ Generate Load Assignments</button>
 
@@ -1470,6 +1482,10 @@ tr.phase-group-hdr td {
         </select>
       </div>
       <div class="field-group">
+        <label>Dispatch Priority <span style="color:var(--gray-400);font-weight:400;">(1 = fill first; higher = overflow/outside carrier)</span></label>
+        <input type="number" class="plain" id="drv-priority" value="1" min="1" step="1" placeholder="1">
+      </div>
+      <div class="field-group">
         <label>On Vacation?</label>
         <select id="drv-vacation">
           <option value="false">No — Available</option>
@@ -1893,6 +1909,7 @@ const DEFAULT_SETTINGS = {
   minimizeShoreline:   DC_CONFIG.optimizer?.minimizeExternalCarrierDefault ?? false,
   deliveryWindowHours: DC_CONFIG.optimizer?.deliveryWindowHours ?? 5,
   receiverWindows:     {},
+  packOverflow:        false,   // pack overflow-tier drivers onto fewest trucks (opt-in, per DC)
 };
 
 // Dest → CSS class maps — index-based so any DC's dest codes work without CSS changes.
@@ -2261,6 +2278,7 @@ const SupabaseSync = (() => {
         domicile_dest:  d.domicileDest,
         on_vacation:    d.onVacation,
         arrival_time:   d.arrivalTime,
+        priority:       d.priority ?? 1,
         notes:          d.notes,
         active:         true,
       }));
@@ -2293,6 +2311,7 @@ const SupabaseSync = (() => {
         domicileDest:  d.domicile_dest  || '',
         onVacation:    d.on_vacation    || false,
         arrivalTime:   d.arrival_time   || '',
+        priority:      d.priority       || 1,
         notes:         d.notes          || '',
       }));
       localStorage.setItem(DC_CONFIG.storagePrefix + 'drivers', JSON.stringify(state.drivers));
@@ -2601,6 +2620,8 @@ function renderAll() {
   renderTemplateDays();
   const mst = document.getElementById('minimize-shore-toggle');
   if (mst) mst.checked = !!state.settings.minimizeShoreline;
+  const pot = document.getElementById('pack-overflow-toggle');
+  if (pot) pot.checked = !!state.settings.packOverflow;
   renderDriverRules();
   updateMetricsAvail();
   renderMetrics(state.lastResult);
@@ -2703,6 +2724,10 @@ function driverCanTakeDest(driver, destCode) {
 // Re-export to global scope — call sites remain unchanged during incremental migration.
 const { getHrsForDest, getAvailableDrivers, nextId, driverCanTakeDest } = DcConfig;
 
+// Dispatch-priority tier for a driver (1 = highest / used first). Defaults to 1
+// so a roster with no tiers set behaves exactly as before (all-equal = inert).
+function driverPriority(d) { return (d && Number.isFinite(d.priority)) ? d.priority : 1; }
+
 // ════════════════════════════════════════════════════════════════════════════
 //  MODULE: Optimizer
 //  Core assignment algorithm: runOptimizer, minimizeShoreline post-pass.
@@ -2712,6 +2737,12 @@ const { getHrsForDest, getAvailableDrivers, nextId, driverCanTakeDest } = DcConf
 const Optimizer = (() => {
 function toggleMinimizeShoreline(checked) {
   state.settings.minimizeShoreline = checked;
+  saveSettings_();
+  markResultStale();
+}
+
+function togglePackOverflow(checked) {
+  state.settings.packOverflow = checked;
   saveSettings_();
   markResultStale();
 }
@@ -2861,6 +2892,17 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         return candidateTimingAllowed(d, hrs);
       })
       .sort((a, b) => {
+        // Dispatch-priority tier dominates: lower number (e.g. internal) fills before
+        // higher (e.g. overflow carriers). Inert when all drivers share a tier.
+        const priCmp = driverPriority(a) - driverPriority(b);
+        if (priCmp !== 0) return priCmp;
+        // Pack mode (opt-in, per-DC): once we're placing overflow-tier trucks, fill an
+        // already-used truck before opening a new one — reveals the minimum trucks needed.
+        if (state.settings.packOverflow && driverPriority(a) > 1 && driverPriority(b) > 1) {
+          const aStarted = ds[a.id].loadCount > 0, bStarted = ds[b.id].loadCount > 0;
+          if (aStarted !== bStarted) return aStarted ? -1 : 1;
+          if (ds[a.id].loadCount !== ds[b.id].loadCount) return ds[b.id].loadCount - ds[a.id].loadCount;
+        }
         const availabilityCmp = compareAvailability(a, b, hrs);
         if (availabilityCmp !== 0) return availabilityCmp;
         const winFirst = !!DC_CONFIG.optimizer?.windowPriorityOverPackShort;
@@ -2907,6 +2949,13 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         return candidateTimingAllowed(d, hrs);
       })
       .sort((a, b) => {
+        const priCmp = driverPriority(a) - driverPriority(b);
+        if (priCmp !== 0) return priCmp;
+        if (state.settings.packOverflow && driverPriority(a) > 1 && driverPriority(b) > 1) {
+          const aStarted = ds[a.id].loadCount > 0, bStarted = ds[b.id].loadCount > 0;
+          if (aStarted !== bStarted) return aStarted ? -1 : 1;
+          if (ds[a.id].loadCount !== ds[b.id].loadCount) return ds[b.id].loadCount - ds[a.id].loadCount;
+        }
         const availabilityCmp = compareAvailability(a, b, hrs);
         if (availabilityCmp !== 0) return availabilityCmp;
         const winFirst = !!DC_CONFIG.optimizer?.windowPriorityOverPackShort;
@@ -3994,6 +4043,16 @@ function getPlanQualityWarnings(result) {
   const dotMax   = state.settings.dotMaxHours;
   const active   = getAvailableDrivers();
   const warnings = [];
+  // Overflow-tier utilization readout: how many overflow trucks were actually
+  // needed vs available (only shown when overflow-tier drivers exist).
+  const overflowDrivers = active.filter(d => driverPriority(d) > 1);
+  if (overflowDrivers.length) {
+    const usedCount = overflowDrivers.filter(d => {
+      const w = result.workload.find(x => x.id === d.id);
+      return w && w.loads > 0;
+    }).length;
+    warnings.push({ type:'info', text:`Overflow trucks used: ${usedCount} / ${overflowDrivers.length}` });
+  }
   const externalLoads  = result.assignments.filter(a => !a.override && a.autoDriver === DC_CONFIG.externalCarrier);
   const unassignedLoads = result.assignments.filter(a => !a.override && a.autoDriver === 'UNASSIGNED');
   const unusedNames = [];
@@ -5091,6 +5150,7 @@ function openAddDriver() {
   document.getElementById('drv-domiciledest').value = '';
   document.getElementById('drv-homefirst').value    = 'false';
   document.getElementById('drv-homefirst-group').style.display = 'none';
+  document.getElementById('drv-priority').value     = '1';
   document.getElementById('drv-vacation').value     = 'false';
   document.getElementById('drv-notes').value        = '';
   document.getElementById('modal-error').style.display = 'none';
@@ -5110,6 +5170,7 @@ function openEditDriver(id) {
   document.getElementById('drv-domiciledest').value = d.domicileDest || '';
   document.getElementById('drv-homefirst').value    = d.homeFirst ? 'true' : 'false';
   document.getElementById('drv-homefirst-group').style.display = d.domicileDest ? '' : 'none';
+  document.getElementById('drv-priority').value     = d.priority || 1;
   document.getElementById('drv-vacation').value     = d.onVacation ? 'true' : 'false';
   document.getElementById('drv-notes').value        = d.notes || '';
   document.getElementById('modal-error').style.display = 'none';
@@ -5131,6 +5192,7 @@ function saveDriver() {
     deadheadMiles: parseInt(document.getElementById('drv-deadhead').value) || 0,
     domicileDest: document.getElementById('drv-domiciledest').value,
     homeFirst: document.getElementById('drv-homefirst').value === 'true',
+    priority: Math.max(1, parseInt(document.getElementById('drv-priority').value) || 1),
     onVacation: document.getElementById('drv-vacation').value==='true',
     notes: document.getElementById('drv-notes').value.trim(),
   };
@@ -6594,6 +6656,8 @@ function init() {
   renderTemplateDays();
   const mst = document.getElementById('minimize-shore-toggle');
   if (mst) mst.checked = !!state.settings.minimizeShoreline;
+  const pot = document.getElementById('pack-overflow-toggle');
+  if (pot) pot.checked = !!state.settings.packOverflow;
   renderDriverRules();
   updateMetricsAvail();
   renderMetrics(state.lastResult);
