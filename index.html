@@ -2826,7 +2826,10 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
     const w = getReceiverWindow(destCode);
     if (!w) return false;
     const { deliveryMins } = getCandidateTiming(driver, hrs);
-    return deliveryMins < toMinutes(w.open) || deliveryMins > toMinutes(w.close);
+    // Only LATE (after close) is a true miss — a truck that arrives before the
+    // window opens simply waits, so an early ETA must NOT disqualify a fresh truck
+    // (doing so stacks loads onto later-returning trucks and pushes them late).
+    return deliveryMins > toMinutes(w.close);
   }
 
   function wouldExceedWindow(driver, destCode, hrs) {
@@ -3072,10 +3075,11 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
     if (!d.domicileDest || d.homeFirst) return;
     // External-only destinations never use internal drivers — don't reserve a home slot.
     if (destIsExternalOnly(d.domicileDest)) return;
-    // Exclusive-route (only) drivers always run their home destination via findExclusive
-    // in the main loop — no reservation needed, and grabbing one here would decrement
-    // the count without a guaranteed home-pass assignment (DOT overflow).
-    if (['only', 'onlyGroup'].includes(getResDef(d.restriction).type)) return;
+    // Single-dest exclusive ('only') drivers always run their home destination via
+    // findExclusive in the main loop — no reservation needed. Group-restricted
+    // ('onlyGroup') drivers go through the general pool, so they DO need a reserved
+    // home slot like any domiciled driver (e.g. a Robertsdale-based group driver).
+    if (getResDef(d.restriction).type === 'only') return;
     const pi = state.phases.findIndex((p, i) => p.dest === d.domicileDest && counts[i] > 0);
     if (pi === -1) return;
     counts[pi]--;
@@ -4075,14 +4079,24 @@ function getReceiverWindowWarnings(result) {
     if (!w) return;
     const openMins  = toMinutes(w.open);
     const closeMins = toMinutes(w.close);
-    const outside = times.filter(t => t < openMins || t > closeMins);
-    if (!outside.length) return;
+    // Only LATE (after close) is a real miss. Early arrivals wait for the dock to
+    // open, so they aren't flagged as violations (shown separately as a soft note).
+    const late  = times.filter(t => t > closeMins);
+    const early = times.filter(t => t < openMins);
     const destCfg = state.destinations.find(d => d.code === dest) || DC_CONFIG.destinations.find(d => d.code === dest) || {};
     const destName = destCfg.name?.split(',')[0] || dest;
-    warnings.push({
-      type: 'gap',
-      text: `${destName} has ${outside.length} ${outside.length > 1 ? 'deliveries' : 'delivery'} outside receiver window ${w.open}–${w.close} (plan range ${minutesToHHMM(Math.min(...times) % 1440)}–${minutesToHHMM(Math.max(...times) % 1440)})`,
-    });
+    if (late.length) {
+      warnings.push({
+        type: 'gap',
+        text: `${destName} has ${late.length} ${late.length > 1 ? 'deliveries' : 'delivery'} outside receiver window ${w.open}–${w.close} (plan range ${minutesToHHMM(Math.min(...times) % 1440)}–${minutesToHHMM(Math.max(...times) % 1440)})`,
+      });
+    }
+    if (early.length) {
+      warnings.push({
+        type: 'info',
+        text: `${destName}: ${early.length} ${early.length > 1 ? 'deliveries arrive' : 'delivery arrives'} before ${w.open} (truck waits for dock)`,
+      });
+    }
   });
   return warnings;
 }
