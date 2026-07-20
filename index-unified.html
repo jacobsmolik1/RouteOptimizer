@@ -4494,9 +4494,18 @@ function renderDriverCards(result) {
 
   function buildCard(d) {
     const bktRuns  = byBucket[d.name] || [];
+    // Default display is chronological (by dispatch time). But once the dispatcher
+    // manually reorders a driver's runs (▲/▼), honor that explicit sequence
+    // (driverLoadNum) instead — otherwise the card would re-sort right back.
+    const manualSeq = (byAuto[d.name] || []).some(r => r && r.manualSeq);
     const autoRuns = (byAuto[d.name] || []).sort((a,b) => {
       if (a.homeReturn && !b.homeReturn) return 1;
       if (!a.homeReturn && b.homeReturn) return -1;
+      if (manualSeq) {
+        const numDiff = (a.driverLoadNum||0) - (b.driverLoadNum||0);
+        if (numDiff !== 0) return numDiff;
+        return toMinutes(a.dispatchTime) - toMinutes(b.dispatchTime);
+      }
       const dispDiff = toMinutes(a.dispatchTime) - toMinutes(b.dispatchTime);
       if (dispDiff !== 0) return dispDiff;
       return (a.driverLoadNum||0) - (b.driverLoadNum||0);
@@ -6178,6 +6187,10 @@ function handleRunDrop(e, targetLoadIdx) {
   const tgtDriver = tgt.override || tgt.autoDriver;
   if (srcDriver === tgtDriver) {
     [src.driverLoadNum, tgt.driverLoadNum] = [tgt.driverLoadNum, src.driverLoadNum];
+    // Honor the manual sequence on the card (see moveRun / buildCard).
+    state.lastResult.assignments.forEach(a => {
+      if ((a.override || a.autoDriver) === srcDriver) a.manualSeq = true;
+    });
     // Recompute homeReturn for both based on whether the dest matches driver domicile.
     // Swapping the homeReturn flags blindly would give OW hours to the wrong leg.
     recalcDomicileDriver(srcDriver);
@@ -6206,6 +6219,8 @@ function moveRun(loadIdx, dir) {
   if (pos < 0 || swapPos < 0 || swapPos >= runs.length) return;   // at an edge — nothing to do
   const cur = runs[pos].x, nb = runs[swapPos].x;
   [cur.driverLoadNum, nb.driverLoadNum] = [nb.driverLoadNum, cur.driverLoadNum];
+  // Mark this driver's runs as manually sequenced so the card honors the order.
+  runs.forEach(o => { o.x.manualSeq = true; });
   recalcDomicileDriver(driver);
   saveResult();
   renderDriverCards(state.lastResult);
