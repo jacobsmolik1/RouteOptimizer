@@ -691,6 +691,10 @@ tr.phase-group-hdr td {
 .run-row.drag-over { box-shadow: inset 0 -2px 0 var(--red); background: #fff5f5 !important; }
 .driver-card.drag-target { box-shadow: 0 0 0 2px var(--red), var(--shadow-md); }
 .drag-handle { color: var(--gray-300); font-size: 13px; cursor: grab; flex-shrink: 0; line-height: 1; padding: 0 3px 0 0; }
+.run-reorder { display: inline-flex; flex-direction: column; flex-shrink: 0; gap: 1px; }
+.run-move { border: 1px solid var(--gray-200); background: var(--gray-50); color: var(--gray-500); font-size: 8px; line-height: 1; width: 18px; height: 12px; padding: 0; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.run-move:hover { background: var(--red); color: #fff; border-color: var(--red); }
+.run-move:active { transform: scale(0.9); }
 
 /* ── OUT TIMESTAMP ───────────────────────────────────────────────────── */
 .out-btn {
@@ -4589,8 +4593,11 @@ function renderDriverCards(result) {
           ondragover="event.preventDefault();event.stopPropagation();this.classList.add('drag-over')"
           ondragleave="this.classList.remove('drag-over')"
           ondrop="handleRunDrop(event,${loadIdx})"
-          title="Drag to reorder · Click to reassign to another driver">
-          <span class="drag-handle">⠿</span>
+          title="▲▼ reorder runs · Click row to reassign to another driver">
+          <span class="run-reorder">
+            <button class="run-move" title="Move earlier" onclick="event.stopPropagation();moveRun(${loadIdx},-1)">▲</button>
+            <button class="run-move" title="Move later" onclick="event.stopPropagation();moveRun(${loadIdx},1)">▼</button>
+          </span>
           <span class="run-label ${runColors[i] || 'run3'}">${runLabels[i]}</span>
           <span class="run-phase">${r.phase}${homeTag}<span style="display:block;">${timeInfo}</span></span>
           <span class="run-hrs">${driveHrs.toFixed(2)}h</span>
@@ -4598,7 +4605,7 @@ function renderDriverCards(result) {
         </div>`;
       } else {
         return `<div class="run-row">
-          <span class="drag-handle" style="visibility:hidden;">⠿</span>
+          <span class="run-reorder" style="visibility:hidden;"><button class="run-move">▲</button></span>
           <span class="run-label empty">${runLabels[i]}</span>
           <span class="run-phase empty">—</span>
           <span class="run-hrs empty">—</span>
@@ -6180,6 +6187,29 @@ function handleRunDrop(e, targetLoadIdx) {
   } else {
     reassignLoadTo(sourceIdx, tgtDriver);
   }
+}
+
+// Reliable run reorder via ▲/▼ buttons (no drag). dir = -1 up, +1 down.
+// Moves the run one position within its own driver's sequence and persists.
+function moveRun(loadIdx, dir) {
+  if (!state.lastResult) return;
+  const A = state.lastResult.assignments;
+  const a = A[loadIdx];
+  if (!a) return;
+  const driver = a.override || a.autoDriver;
+  const runs = A
+    .map((x, i) => ({ x, i }))
+    .filter(o => (o.x.override || o.x.autoDriver) === driver && o.x.driverLoadNum != null)
+    .sort((p, q) => (p.x.driverLoadNum || 0) - (q.x.driverLoadNum || 0));
+  const pos = runs.findIndex(o => o.i === loadIdx);
+  const swapPos = pos + dir;
+  if (pos < 0 || swapPos < 0 || swapPos >= runs.length) return;   // at an edge — nothing to do
+  const cur = runs[pos].x, nb = runs[swapPos].x;
+  [cur.driverLoadNum, nb.driverLoadNum] = [nb.driverLoadNum, cur.driverLoadNum];
+  recalcDomicileDriver(driver);
+  saveResult();
+  renderDriverCards(state.lastResult);
+  renderAssignmentsTable(state.lastResult);
 }
 
 function handleCardDragOver(e, card) {
