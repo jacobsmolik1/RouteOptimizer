@@ -2750,22 +2750,37 @@ function driverPriority(d) { return (d && Number.isFinite(d.priority)) ? d.prior
 //  Calls: TimeUtils.toMinutes, DcConfig.getAvailableDrivers/getHrsForDest
 // ════════════════════════════════════════════════════════════════════════════
 const Optimizer = (() => {
+// A settings toggle that affects the optimizer: re-run immediately so the change
+// is visible, UNLESS the dispatcher has manual work that a regen would discard —
+// then just flag the plan stale so they can regenerate on their own terms.
+function applyOptimizerToggle() {
+  if (!state.lastResult) return;
+  const hasManual = state.lastResult.assignments.some(a => a.override)
+                 || (state.bucketAsgn || []).length
+                 || (state.adhocMoves || []).length;
+  if (hasManual) {
+    markResultStale('Setting changed', 'Click Generate to apply — your manual assignments will be recalculated.');
+  } else {
+    generateAssignments();
+  }
+}
+
 function toggleMinimizeShoreline(checked) {
   state.settings.minimizeShoreline = checked;
   saveSettings_();
-  markResultStale();
+  applyOptimizerToggle();
 }
 
 function togglePackOverflow(checked) {
   state.settings.packOverflow = checked;
   saveSettings_();
-  markResultStale();
+  applyOptimizerToggle();
 }
 
 function toggleWindowProtect(checked) {
   state.settings.windowProtect = checked;
   saveSettings_();
-  markResultStale();
+  applyOptimizerToggle();
 }
 
 function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
@@ -3360,10 +3375,10 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
 
   return {assignments, workload};
 }
-  return { toggleMinimizeShoreline, runOptimizer };
+  return { toggleMinimizeShoreline, togglePackOverflow, toggleWindowProtect, runOptimizer };
 })();
 // Re-export to global scope — call sites remain unchanged during incremental migration.
-const { toggleMinimizeShoreline, runOptimizer } = Optimizer;
+const { toggleMinimizeShoreline, togglePackOverflow, toggleWindowProtect, runOptimizer } = Optimizer;
 
 // ════════════════════════════════════════════════════════════════════════════
 //  MODULE: TemplatesAndHistory
