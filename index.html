@@ -1118,7 +1118,8 @@ th.sortable:hover { background: var(--gray-100); }
                 <th class="tbl-num">#</th>
                 <th>Build Phase</th>
                 <th>Destination</th>
-                <th>Dispatch</th>
+                <th title="When the truck actually leaves the DC for this run (accounts for the driver's arrival and prior runs)">Depart</th>
+                <th title="Estimated arrival at the receiver">ETA</th>
                 <th>Miles</th>
                 <th>Hrs</th>
                 <th>Driver</th>
@@ -4847,8 +4848,41 @@ function renderDriverCards(result) {
 // ════════════════════════════════════════════════════════════════════════════
 //  RENDER: ASSIGNMENTS TABLE
 // ════════════════════════════════════════════════════════════════════════════
+// Per-load timeline: true departure (when the truck actually leaves the DC for
+// this run) and receiver ETA. Mirrors the driver-card timing exactly.
+function computeRunTimings(result) {
+  const map = new Map();
+  const byDriver = {};
+  result.assignments.forEach(a => {
+    const n = a.override || a.autoDriver;
+    if (!n || n === DC_CONFIG.externalCarrier || n === 'UNASSIGNED') return;
+    (byDriver[n] = byDriver[n] || []).push(a);
+  });
+  Object.entries(byDriver).forEach(([name, loads]) => {
+    const drv = state.drivers.find(d => d.name === name);
+    const manualSeq = loads.some(r => r && r.manualSeq);
+    const ordered = loads.slice().sort((a, b) => {
+      if (manualSeq) { const n = (a.driverLoadNum||0)-(b.driverLoadNum||0); return n !== 0 ? n : toMinutes(a.dispatchTime)-toMinutes(b.dispatchTime); }
+      if (a.homeReturn && !b.homeReturn) return 1;
+      if (!a.homeReturn && b.homeReturn) return -1;
+      const d = toMinutes(a.dispatchTime)-toMinutes(b.dispatchTime);
+      return d !== 0 ? d : (a.driverLoadNum||0)-(b.driverLoadNum||0);
+    });
+    let ret = drv && drv.arrivalTime ? toMinutes(drv.arrivalTime) : null;
+    ordered.forEach(a => {
+      const disp  = toMinutes(a.dispatchTime);
+      const start = ret !== null ? Math.max(disp, ret) : disp;
+      const eta   = start + Math.round((a.hrs / 2) * 60);
+      ret = start + Math.round(a.hrs * 60);
+      map.set(a, { start, eta });
+    });
+  });
+  return map;
+}
+
 function renderAssignmentsTable(result) {
   const tbody = document.getElementById('assignments-tbody');
+  const timings = computeRunTimings(result);
   const allDriverOptions = [...state.drivers.filter(d=>!d.onVacation).map(d=>d.name), DC_CONFIG.externalCarrier]
     .map(n=>`<option value="${n}">${n}</option>`).join('');
   const statusOptions = ['Pending','Assigned','In Transit','Delivered','Complete']
@@ -4886,7 +4920,7 @@ function renderAssignmentsTable(result) {
       const priorBadge = a.buildDay === 'prior'
         ? `<span style="font-size:10px;font-weight:700;background:#EDE7F6;color:#5C35A8;border-radius:3px;padding:1px 6px;margin-left:8px;vertical-align:middle;">◑ Prior Night</span>`
         : '';
-      separator = `<tr class="phase-group-hdr"><td colspan="12"><span class="tag ${DEST_TAGS[a.dest]}" style="margin-right:6px;">${a.dest}</span>${a.phase}${priorBadge}</td></tr>`;
+      separator = `<tr class="phase-group-hdr"><td colspan="13"><span class="tag ${DEST_TAGS[a.dest]}" style="margin-right:6px;">${a.dest}</span>${a.phase}${priorBadge}</td></tr>`;
       lastPhase = a.phase;
     }
 
@@ -4894,7 +4928,14 @@ function renderAssignmentsTable(result) {
       <td class="tbl-num">${a.loadNum}</td>
       <td><span class="tag ${DEST_TAGS[a.dest]}">${a.dest}</span> ${a.phase}</td>
       <td style="font-size:11px;color:var(--gray-600);">${dest?dest.name:a.dest}</td>
-      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${a.dispatchTime||'—'}</td>
+      <td class="text-center" style="font-size:11px;">${(() => {
+        const t = timings.get(a);
+        const depart = t ? minutesToHHMM(t.start) : (a.dispatchTime || '—');
+        const buildNote = (t && a.dispatchTime && minutesToHHMM(t.start) !== a.dispatchTime)
+          ? `<span style="display:block;font-size:9px;color:var(--gray-400);">build ${a.dispatchTime}</span>` : '';
+        return `<span style="font-weight:700;color:var(--gray-700);">${depart}</span>${buildNote}`;
+      })()}</td>
+      <td class="text-center" style="font-size:11px;font-weight:700;color:var(--gray-700);">${(() => { const t = timings.get(a); return t ? minutesToHHMM(t.eta) : '—'; })()}</td>
       <td class="text-center">${dest ? (a.homeReturn ? dest.miles1Way : dest.miles1Way*2) : '—'}</td>
       <td class="text-center">${(a.homeReturn ? a.hrs/2 : a.hrs).toFixed(2)}</td>
       <td>${driverCell}</td>
@@ -4917,6 +4958,7 @@ function renderAssignmentsTable(result) {
       <td><span class="tag ${DEST_TAGS[b.dest]||''}">${b.dest}</span> ${b.phase}</td>
       <td style="font-size:11px;color:var(--gray-600);">${dest?dest.name:b.dest}</td>
       <td class="text-center" style="font-size:11px;color:var(--gray-600);">${b.dispatchTime||'—'}</td>
+      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${b.dispatchTime ? minutesToHHMM(toMinutes(b.dispatchTime)+Math.round((b.hrs/2)*60)) : '—'}</td>
       <td class="text-center">${dest?dest.miles1Way*2:'—'}</td>
       <td class="text-center">${b.hrs.toFixed(2)}</td>
       <td><strong>${b.driverName}</strong> <span style="font-size:9px;color:var(--red);font-weight:700;">MANUAL</span></td>
@@ -4936,6 +4978,7 @@ function renderAssignmentsTable(result) {
       <td><span class="tag tag-dot" style="background:var(--blue);">${m.type==='bobtail-ow'?'OW':'RT'}</span> ${typeLabel}</td>
       <td style="font-size:11px;color:var(--gray-600);">${m.destName}</td>
       <td class="text-center" style="font-size:11px;color:var(--gray-600);">${m.dispatchTime||'—'}</td>
+      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${m.dispatchTime ? minutesToHHMM(toMinutes(m.dispatchTime)+Math.round((m.hrs/2)*60)) : '—'}</td>
       <td class="text-center">${m.miles||'—'}</td>
       <td class="text-center">${m.hrs.toFixed(2)}</td>
       <td><strong>${m.driverName}</strong> <span style="font-size:9px;color:var(--blue);font-weight:700;">AD HOC</span></td>
@@ -4960,7 +5003,7 @@ function renderAssignmentsTable(result) {
     const unassigned = result.assignments.filter(a => a.autoDriver === 'UNASSIGNED' && !a.override).length;
     tfoot.innerHTML = `<tr style="background:#1A1A1A;color:white;font-weight:700;font-size:11px;">
       <td class="tbl-num" style="color:white;">#</td>
-      <td colspan="5">TOTALS — ${total} load${total!==1?'s':''} this day</td>
+      <td colspan="6">TOTALS — ${total} load${total!==1?'s':''} this day</td>
       <td><span style="color:#86EFAC;">✓ ${internal} internal</span> · <span style="color:#FF8A80;">${shoreline} ${DC_CONFIG.externalCarrier}</span>${unassigned?` · <span style="color:#FF8A80;">⚠ ${unassigned} unassigned</span>`:''}</td>
       <td></td>
       <td class="col-detail"></td>
