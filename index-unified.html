@@ -4041,7 +4041,7 @@ function getDestinationDeliveryWindowWarnings(result) {
     if (span <= maxWindowMins) return [];
     return [{
       type: 'gap',
-      text: `${destName} delivery spread ${Math.ceil(span / 60 * 10) / 10}h (${minutesToHHMM(sorted[0] % 1440)}–${minutesToHHMM(sorted[sorted.length - 1] % 1440)}) exceeds ${windowLabel}h window target`,
+      text: `${destName} deliveries span ${Math.ceil(span / 60 * 10) / 10}h (${minutesToHHMM(sorted[0] % 1440)}–${minutesToHHMM(sorted[sorted.length - 1] % 1440)}), wider than the ${windowLabel}h spread target`,
     }];
   });
 }
@@ -4090,9 +4090,14 @@ function getReceiverWindowWarnings(result) {
     const destCfg = state.destinations.find(d => d.code === dest) || DC_CONFIG.destinations.find(d => d.code === dest) || {};
     const destName = destCfg.name?.split(',')[0] || dest;
     if (late.length) {
+      // Report the span of the LATE deliveries only, so the count and the times agree
+      // (early "truck waits" arrivals are reported separately and don't inflate this).
+      const lateFrom = minutesToHHMM(Math.min(...late) % 1440);
+      const lateTo   = minutesToHHMM(Math.max(...late) % 1440);
+      const span = late.length > 1 ? `${lateFrom}–${lateTo}` : lateFrom;
       warnings.push({
         type: 'gap',
-        text: `${destName} has ${late.length} ${late.length > 1 ? 'deliveries' : 'delivery'} outside receiver window ${w.open}–${w.close} (plan range ${minutesToHHMM(Math.min(...times) % 1440)}–${minutesToHHMM(Math.max(...times) % 1440)})`,
+        text: `${destName}: ${late.length} ${late.length > 1 ? 'deliveries' : 'delivery'} after window close ${w.close} (${span})`,
       });
     }
     if (early.length) {
@@ -4499,13 +4504,13 @@ function renderDriverCards(result) {
     // (driverLoadNum) instead — otherwise the card would re-sort right back.
     const manualSeq = (byAuto[d.name] || []).some(r => r && r.manualSeq);
     const autoRuns = (byAuto[d.name] || []).sort((a,b) => {
-      if (a.homeReturn && !b.homeReturn) return 1;
-      if (!a.homeReturn && b.homeReturn) return -1;
-      if (manualSeq) {
+      if (manualSeq) {   // dispatcher's explicit order wins outright
         const numDiff = (a.driverLoadNum||0) - (b.driverLoadNum||0);
         if (numDiff !== 0) return numDiff;
         return toMinutes(a.dispatchTime) - toMinutes(b.dispatchTime);
       }
+      if (a.homeReturn && !b.homeReturn) return 1;
+      if (!a.homeReturn && b.homeReturn) return -1;
       const dispDiff = toMinutes(a.dispatchTime) - toMinutes(b.dispatchTime);
       if (dispDiff !== 0) return dispDiff;
       return (a.driverLoadNum||0) - (b.driverLoadNum||0);
@@ -4949,6 +4954,12 @@ function getDriverOrderedAssignments(driverName) {
   if (!state.lastResult) return [];
   const driver = state.drivers.find(d => d.name === driverName);
   const loads = state.lastResult.assignments.filter(a => getFinalDriverName(a) === driverName);
+
+  // If the dispatcher manually sequenced this driver (▲/▼), honor that order
+  // directly — don't re-derive it from dispatch times.
+  if (loads.some(a => a.manualSeq)) {
+    return loads.slice().sort((a, b) => (a.driverLoadNum || 999) - (b.driverLoadNum || 999));
+  }
 
   // Initial sort: home-pass loads last, others by dispatch time then driverLoadNum.
   // This ensures the simulation below accumulates return times in the right order.
@@ -6195,8 +6206,10 @@ function handleRunDrop(e, targetLoadIdx) {
     // Swapping the homeReturn flags blindly would give OW hours to the wrong leg.
     recalcDomicileDriver(srcDriver);
     saveResult();
+    renderWorkload(state.lastResult);
     renderDriverCards(state.lastResult);
     renderAssignmentsTable(state.lastResult);
+    renderDomicileWarnings(state.lastResult);
   } else {
     reassignLoadTo(sourceIdx, tgtDriver);
   }
@@ -6223,8 +6236,10 @@ function moveRun(loadIdx, dir) {
   runs.forEach(o => { o.x.manualSeq = true; });
   recalcDomicileDriver(driver);
   saveResult();
+  renderWorkload(state.lastResult);
   renderDriverCards(state.lastResult);
   renderAssignmentsTable(state.lastResult);
+  renderDomicileWarnings(state.lastResult); // refreshes plan quality + domicile violations
 }
 
 function handleCardDragOver(e, card) {
