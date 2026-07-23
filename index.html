@@ -690,6 +690,9 @@ tr.phase-group-hdr td {
 .run-row.dragging { opacity: 0.35; background: var(--gray-100) !important; }
 .run-row.drag-over { box-shadow: inset 0 -2px 0 var(--red); background: #fff5f5 !important; }
 .driver-card.drag-target { box-shadow: 0 0 0 2px var(--red), var(--shadow-md); }
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover { background: var(--gray-100); }
+.sort-caret { font-size: 9px; color: var(--gray-400); }
 .drag-handle { color: var(--gray-300); font-size: 13px; cursor: grab; flex-shrink: 0; line-height: 1; padding: 0 3px 0 0; }
 .run-reorder { display: inline-flex; flex-direction: column; flex-shrink: 0; gap: 1px; }
 .run-move { border: 1px solid var(--gray-200); background: var(--gray-50); color: var(--gray-500); font-size: 8px; line-height: 1; width: 18px; height: 12px; padding: 0; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -1155,12 +1158,12 @@ tr.phase-group-hdr td {
         <table>
           <thead>
             <tr>
-              <th>Driver Name</th>
-              <th>Home Base</th>
-              <th>Restriction</th>
-              <th class="text-center">Arrives</th>
-              <th class="text-center">Vacation</th>
-              <th class="text-center">Status</th>
+              <th class="sortable" onclick="sortFleet('name')">Driver Name <span class="sort-caret" data-col="name"></span></th>
+              <th class="sortable" onclick="sortFleet('home')">Home Base <span class="sort-caret" data-col="home"></span></th>
+              <th class="sortable" onclick="sortFleet('restriction')">Restriction <span class="sort-caret" data-col="restriction"></span></th>
+              <th class="sortable text-center" onclick="sortFleet('arrives')">Arrives <span class="sort-caret" data-col="arrives"></span></th>
+              <th class="sortable text-center" onclick="sortFleet('vacation')">Vacation <span class="sort-caret" data-col="vacation"></span></th>
+              <th class="sortable text-center" onclick="sortFleet('status')">Status <span class="sort-caret" data-col="status"></span></th>
               <th class="no-print">Actions</th>
             </tr>
           </thead>
@@ -5186,9 +5189,41 @@ function generateAssignments() {
 // ════════════════════════════════════════════════════════════════════════════
 //  FLEET TABLE
 // ════════════════════════════════════════════════════════════════════════════
+// ── Drivers-tab column sorting ────────────────────────────────────────────
+let fleetSort = { col: 'name', dir: 1 };   // default: name ascending (natural)
+function fleetSortKey(d, col) {
+  switch (col) {
+    case 'name': { const m = /^(.*?)(\d+)\s*$/.exec(d.name || ''); return m ? [m[1].trim().toLowerCase(), parseInt(m[2], 10)] : [(d.name || '').toLowerCase(), 0]; }
+    case 'home':        return [(d.homeBase || '').toLowerCase()];
+    case 'restriction': return [(d.restriction || '').toLowerCase()];
+    case 'arrives':     return [d.arrivalTime ? toMinutes(d.arrivalTime) : Infinity];
+    case 'vacation':
+    case 'status':      return [d.onVacation ? 1 : 0, (d.name || '').toLowerCase()];
+    default:            return [0];
+  }
+}
+function fleetCmp(a, b) {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] ?? '', y = b[i] ?? '';
+    if (x < y) return -1; if (x > y) return 1;
+  }
+  return 0;
+}
+function sortFleet(col) {
+  if (fleetSort.col === col) fleetSort.dir *= -1;
+  else { fleetSort.col = col; fleetSort.dir = 1; }
+  renderFleetTable();
+}
+
 function renderFleetTable() {
   const tbody = document.getElementById('fleet-tbody');
-  tbody.innerHTML = state.drivers.map(d => {
+  const rows = state.drivers.slice().sort((a, b) =>
+    fleetCmp(fleetSortKey(a, fleetSort.col), fleetSortKey(b, fleetSort.col)) * fleetSort.dir);
+  // Update header carets to reflect the active sort.
+  document.querySelectorAll('.sort-caret').forEach(c => {
+    c.textContent = c.dataset.col === fleetSort.col ? (fleetSort.dir > 0 ? '▲' : '▼') : '';
+  });
+  tbody.innerHTML = rows.map(d => {
     const rDef = getResDef(d.restriction);
     const resBadge = rDef.type === 'only'      ? `<span class="badge badge-col" style="background:var(--blue-bg);color:var(--blue);">🚛 ${d.restriction}</span>`
                    : rDef.type === 'onlyGroup' ? `<span class="badge badge-col" style="background:var(--blue-bg);color:var(--blue);">🚛 ${d.restriction}</span>`
