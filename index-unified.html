@@ -4681,8 +4681,17 @@ function renderDriverCards(result) {
 
   // Order cards by driver arrival time (earliest first). Drivers without an arrival
   // time (e.g. domicile/ONLY drivers) sort to the end; roster order breaks ties.
-  const arrMins = d => d.arrivalTime ? toMinutes(d.arrivalTime) : Infinity;
-  let cardsHTML = driversToShow.slice().sort((a, b) => arrMins(a) - arrMins(b)).map(buildCard).join('');
+  // Natural sort by name: alpha prefix then trailing number, so "Driver 1..4"
+  // list before "Shoreline 1..18" and each group runs 1,2,3… not 1,10,11,2.
+  const nameKey = d => {
+    const m = /^(.*?)(\d+)\s*$/.exec(d.name || '');
+    return m ? [m[1].trim().toLowerCase(), parseInt(m[2], 10)] : [(d.name || '').toLowerCase(), 0];
+  };
+  let cardsHTML = driversToShow.slice().sort((a, b) => {
+    const [pa, na] = nameKey(a), [pb, nb] = nameKey(b);
+    if (pa !== pb) return pa < pb ? -1 : 1;
+    return na - nb;
+  }).map(buildCard).join('');
 
   // Unassigned card — loads the optimizer could not place. Modeled on the external
   // carrier card: each load is draggable onto a driver card (or click to reassign).
