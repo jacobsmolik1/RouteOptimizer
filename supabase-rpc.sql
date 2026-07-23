@@ -322,3 +322,127 @@ begin
   delete from public.user_dc_access where user_id = v_user_id and dc_id = v_dc_id;
 end;
 $$;
+
+
+-- ══════════════════════════════════════════════════════════════
+-- Pending invites: pre-authorize + auto-grant on self-signup (v81+)
+-- ══════════════════════════════════════════════════════════════
+
+create table if not exists public.pending_invites (
+  email      text        not null,
+  dc_id      uuid        not null references public.dcs on delete cascade,
+  role       text        not null default 'dispatcher' check (role in ('dispatcher','admin')),
+  invited_by uuid        references public.profiles,
+  created_at timestamptz default now(),
+  primary key (email, dc_id)
+);
+alter table public.pending_invites enable row level security;
+drop policy if exists "pending: dc admin" on public.pending_invites;
+create policy "pending: dc admin" on public.pending_invites for all using (
+  exists (select 1 from public.user_dc_access ua
+          where ua.user_id = auth.uid() and ua.dc_id = pending_invites.dc_id and ua.role = 'admin')
+);
+
+-- ── Signup handler: create profile + consume any pending invites ──
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer as $$
+begin
+  insert into public.profiles (id, full_name)
+  values (new.id, new.raw_user_meta_data->>'full_name')
+  on conflict (id) do nothing;
+
+  insert into public.user_dc_access (user_id, dc_id, role)
+  select new.id, pi.dc_id, pi.role
+  from public.pending_invites pi
+  where lower(pi.email) = lower(new.email)
+  on conflict (user_id, dc_id) do update set role = excluded.role;
+
+  delete from public.pending_invites where lower(email) = lower(new.email);
+  return new;
+end;
+$$;
+
+-- ── Grant access, or record a pending invite if no account yet ──
+create or replace function public.grant_dc_access(p_dc_slug text, p_email text, p_role text default 'dispatcher')
+returns text language plpgsql security definer as $$
+declare
+  v_dc_id   uuid;
+  v_user_id uuid;
+begin
+  if p_role not in ('dispatcher','admin') then raise exception 'Invalid role: %', p_role; end if;
+  select id into v_dc_id from public.dcs where slug = p_dc_slug;
+  if v_dc_id is null then raise exception 'DC not found: %', p_dc_slug; end if;
+  if not exists (
+    select 1 from public.user_dc_access
+    where user_id = auth.uid() and dc_id = v_dc_id and role = 'admin'
+  ) then
+    raise exception 'Admin access required for DC: %', p_dc_slug;
+  end if;
+
+  select id into v_user_id from auth.users where lower(email) = lower(trim(p_email));
+  if v_user_id is null then
+    -- No account yet — pre-authorize; access is granted automatically on signup.
+    insert into public.pending_invites (email, dc_id, role, invited_by)
+    values (lower(trim(p_email)), v_dc_id, p_role, auth.uid())
+    on conflict (email, dc_id) do update set role = excluded.role;
+    return 'pending:' || lower(trim(p_email));
+  end if;
+
+  insert into public.user_dc_access (user_id, dc_id, role)
+  values (v_user_id, v_dc_id, p_role)
+  on conflict (user_id, dc_id) do update set role = excluded.role;
+  return 'granted:' || p_email || ' → ' || p_role;
+end;
+$$;
+
+-- ── Revoke access OR cancel a pending invite (admin only) ──
+create or replace function public.revoke_dc_access(p_dc_slug text, p_email text)
+returns void language plpgsql security definer as $$
+declare
+  v_dc_id   uuid;
+  v_user_id uuid;
+begin
+  select id into v_dc_id from public.dcs where slug = p_dc_slug;
+  if v_dc_id is null then raise exception 'DC not found: %', p_dc_slug; end if;
+  if not exists (
+    select 1 from public.user_dc_access
+    where user_id = auth.uid() and dc_id = v_dc_id and role = 'admin'
+  ) then
+    raise exception 'Admin access required for DC: %', p_dc_slug;
+  end if;
+
+  -- Cancel a pending invite for this email/DC (if any).
+  delete from public.pending_invites where lower(email) = lower(trim(p_email)) and dc_id = v_dc_id;
+
+  select id into v_user_id from auth.users where lower(email) = lower(trim(p_email));
+  if v_user_id is null then return; end if;   -- was pending-only; done
+  if v_user_id = auth.uid() then raise exception 'You cannot remove your own access.'; end if;
+  delete from public.user_dc_access where user_id = v_user_id and dc_id = v_dc_id;
+end;
+$$;
+
+-- ── Members list now includes pending invites (pending=true) ──
+create or replace function public.list_dc_members(p_dc_slug text)
+returns jsonb language plpgsql security definer stable as $$
+declare v_dc_id uuid;
+begin
+  select id into v_dc_id from public.dcs where slug = p_dc_slug;
+  if v_dc_id is null then raise exception 'DC not found: %', p_dc_slug; end if;
+  if not public.user_has_dc_access(v_dc_id) then
+    raise exception 'Access denied for DC: %', p_dc_slug;
+  end if;
+  return coalesce(
+    (select json_agg(row_to_json(sub) order by sub.sort_key, sub.email)::jsonb
+     from (
+       select u.email, ua.role, (ua.user_id = auth.uid()) as is_self, false as pending, 0 as sort_key
+       from public.user_dc_access ua join auth.users u on u.id = ua.user_id
+       where ua.dc_id = v_dc_id
+       union all
+       select pi.email, pi.role, false as is_self, true as pending, 1 as sort_key
+       from public.pending_invites pi
+       where pi.dc_id = v_dc_id
+     ) sub),
+    '[]'::jsonb
+  );
+end;
+$$;

@@ -895,7 +895,7 @@ th.sortable:hover { background: var(--gray-100); }
         <div class="auth-card-sub" id="auth-dc-name"></div>
       </div>
     </div>
-    <div class="auth-h2">Sign In</div>
+    <div class="auth-h2" id="auth-h2">Sign In</div>
     <form id="auth-form" onsubmit="handleSignIn(event)">
       <div class="auth-field">
         <label for="auth-email">Email</label>
@@ -908,6 +908,11 @@ th.sortable:hover { background: var(--gray-100); }
       <button type="submit" id="auth-submit-btn" class="auth-submit">Sign In</button>
     </form>
     <div id="auth-error" class="auth-error"></div>
+    <div id="auth-info" style="display:none;font-size:12px;color:#1e8449;margin-top:8px;"></div>
+    <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--gray-500,#888);">
+      <span id="auth-mode-prompt">New dispatcher?</span>
+      <a href="#" id="auth-mode-toggle" onclick="toggleAuthMode(event)" style="color:var(--red,#E61D2B);font-weight:600;text-decoration:none;">Create an account</a>
+    </div>
   </div>
 </div>
 
@@ -2087,6 +2092,17 @@ const SupabaseSync = (() => {
     return _user;
   }
 
+  // Self-registration. On signup the DB trigger auto-grants any pending invites
+  // for this email. If email confirmation is on, session may be null until confirmed.
+  async function signUp(email, password) {
+    if (!db) throw new Error('Supabase not configured.');
+    const redirect = location.protocol.startsWith('http') ? location.origin : 'https://routes.jacobsmolik.com';
+    const { data, error } = await db.auth.signUp({ email, password, options: { emailRedirectTo: redirect } });
+    if (error) throw error;
+    if (data.session) _user = data.user;   // auto-confirmed → signed in
+    return { user: data.user, session: data.session };
+  }
+
   async function signOut() {
     if (!db) return;
     await db.auth.signOut().catch(() => {});
@@ -2423,7 +2439,7 @@ const SupabaseSync = (() => {
   function getUser()       { return _user; }
   function isCommitted()   { return _committed; }
 
-  return { init, signIn, signOut, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted };
+  return { init, signIn, signUp, signOut, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted };
 })();
 
 // ── Auth UI helpers ─────────────────────────────────────────────────────────
@@ -2527,15 +2543,18 @@ async function loadDispatchers() {
     document.getElementById('disp-admin-area').style.display = iAmAdmin ? '' : 'none';
     if (!members.length) { listEl.innerHTML = '<div style="color:var(--gray-400);font-size:12px;">No dispatchers yet.</div>'; return; }
     listEl.innerHTML = members.map(m => {
-      const badge = m.role === 'admin'
+      const roleBadge = m.role === 'admin'
         ? '<span style="font-size:10px;font-weight:700;color:var(--red);background:#fff0f1;padding:2px 6px;border-radius:4px;">ADMIN</span>'
         : '<span style="font-size:10px;font-weight:600;color:var(--gray-400);background:var(--gray-100);padding:2px 6px;border-radius:4px;">Dispatcher</span>';
+      const pendBadge = m.pending
+        ? '<span style="font-size:10px;font-weight:700;color:#8a6d00;background:#fff8e1;padding:2px 6px;border-radius:4px;">⏳ Pending signup</span>'
+        : '';
       const remove = (iAmAdmin && !m.is_self)
-        ? `<button class="btn btn-ghost btn-sm" style="color:#c0392b;padding:2px 8px;" onclick="revokeDispatcher('${m.email.replace(/'/g,"\\'")}')">Remove</button>`
+        ? `<button class="btn btn-ghost btn-sm" style="color:#c0392b;padding:2px 8px;" onclick="revokeDispatcher('${m.email.replace(/'/g,"\\'")}')">${m.pending ? 'Cancel' : 'Remove'}</button>`
         : (m.is_self ? '<span style="font-size:11px;color:var(--gray-400);">you</span>' : '');
-      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray-100);">
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray-100);${m.pending?'opacity:0.85;':''}">
         <span style="font-size:13px;overflow:hidden;text-overflow:ellipsis;">${m.email}</span>
-        <span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">${badge}${remove}</span>
+        <span style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${pendBadge}${roleBadge}${remove}</span>
       </div>`;
     }).join('');
   } catch (e) {
@@ -2550,7 +2569,13 @@ async function inviteDispatcher() {
   btn.disabled = true; btn.textContent = 'Inviting…';
   try {
     const res = await SupabaseSync.grantAccess(DC_CONFIG.id, email, role);
-    dispMsg('✅ Access granted: ' + res, false);
+    if (typeof res === 'string' && res.startsWith('pending:')) {
+      const who = res.slice('pending:'.length);
+      const url = location.hostname.includes('github.io') ? 'routes.jacobsmolik.com' : location.host;
+      dispMsg(`⏳ ${who} has no account yet — invite saved. Have them go to ${url}, click "Create an account" with this email, and they'll get ${DC_CONFIG.name} access automatically.`, false);
+    } else {
+      dispMsg('✅ Access granted: ' + String(res).replace(/^granted:/, ''), false);
+    }
     document.getElementById('disp-email').value = '';
     await loadDispatchers();
   } catch (e) {
@@ -2560,7 +2585,7 @@ async function inviteDispatcher() {
   }
 }
 async function revokeDispatcher(email) {
-  if (!confirm(`Remove ${email} from ${DC_CONFIG.name}?`)) return;
+  if (!confirm(`Remove/cancel ${email} for ${DC_CONFIG.name}?`)) return;
   try {
     await SupabaseSync.revokeAccess(DC_CONFIG.id, email);
     dispMsg('Removed ' + email, false);
@@ -2582,13 +2607,58 @@ function updateUserDisplay() {
   if (syncEl)   syncEl.style.display   = user ? '' : 'none';
 }
 
+let authMode = 'signin';   // 'signin' | 'signup'
+function toggleAuthMode(e) {
+  if (e) e.preventDefault();
+  authMode = authMode === 'signin' ? 'signup' : 'signin';
+  const isUp = authMode === 'signup';
+  document.getElementById('auth-h2').textContent = isUp ? 'Create Account' : 'Sign In';
+  document.getElementById('auth-submit-btn').textContent = isUp ? 'Create Account' : 'Sign In';
+  document.getElementById('auth-mode-prompt').textContent = isUp ? 'Already have an account?' : 'New dispatcher?';
+  document.getElementById('auth-mode-toggle').textContent = isUp ? 'Sign in' : 'Create an account';
+  document.getElementById('auth-password').setAttribute('autocomplete', isUp ? 'new-password' : 'current-password');
+  document.getElementById('auth-error').textContent = '';
+  document.getElementById('auth-info').style.display = 'none';
+}
+
 async function handleSignIn(e) {
   e.preventDefault();
   const email    = document.getElementById('auth-email').value.trim();
   const password = document.getElementById('auth-password').value;
   const errEl    = document.getElementById('auth-error');
+  const infoEl   = document.getElementById('auth-info');
   const btn      = document.getElementById('auth-submit-btn');
-  errEl.textContent = '';
+  errEl.textContent = ''; infoEl.style.display = 'none';
+
+  // Signup mode: register, then (if not auto-confirmed) tell them to check email.
+  if (authMode === 'signup') {
+    if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+    btn.disabled = true; btn.textContent = 'Creating…';
+    try {
+      const { session } = await SupabaseSync.signUp(email, password);
+      if (!session) {
+        infoEl.textContent = '✅ Account created. Check your email to confirm, then sign in — your invited DCs will be waiting.';
+        infoEl.style.display = 'block';
+        toggleAuthMode();   // back to sign-in
+        btn.disabled = false;
+        return;
+      }
+      // Auto-confirmed → signed in; fall through to load
+    } catch(err) {
+      errEl.textContent = err.message || 'Could not create account.';
+      btn.disabled = false; btn.textContent = 'Create Account';
+      return;
+    }
+    document.getElementById('auth-gate').style.display = 'none';
+    updateUserDisplay();
+    if (await SupabaseSync.refreshDcConfigs()) { location.reload(); return; }
+    state = StateManager.load();
+    const dbC = await SupabaseSync.loadDayFromDB();
+    const drC = await SupabaseSync.syncDriversFromDB();
+    if (dbC || drC) renderAll();
+    return;
+  }
+
   btn.disabled = true; btn.textContent = 'Signing in…';
   try {
     await SupabaseSync.signIn(email, password);
