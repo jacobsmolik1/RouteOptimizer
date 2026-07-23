@@ -4597,11 +4597,26 @@ function renderDriverCards(result) {
         const isStamped = !!r.actualOutTime;
         // driveHrs is one-way for a home-return leg (arrival at the driver's domicile) and
         // full round-trip otherwise (arrival back at the DC), so it works for both ETAs.
-        const schedBack = fmtReturnTime(actualStartStr, driveHrs);
-        const backLabel = r.homeReturn ? 'Arrive' : 'Back';
-        const timeInfo = isStamped
-          ? `<span class="run-eta-actual">⏱ Out ${fmtActualTime(r.actualOutTime)} · ETA ${calcActualEta(r.actualOutTime, driveHrs)}</span>`
-          : (schedBack ? `<span style="display:block;font-size:9px;color:var(--gray-400);font-weight:400;">${backLabel} ~${schedBack}</span>` : '');
+        // Delivery ETA at the receiver = start + one-way (r.hrs/2), for both normal
+        // and home-return legs. Back-to-DC = start + full round trip (driveHrs).
+        const schedDeliver = fmtReturnTime(actualStartStr, r.hrs / 2);
+        const schedBack    = fmtReturnTime(actualStartStr, driveHrs);
+        const delStyle  = 'color:var(--gray-600);font-weight:700;';
+        const backStyle = 'color:var(--gray-400);font-weight:400;';
+        let timeInfo;
+        if (isStamped) {
+          const outT = fmtActualTime(r.actualOutTime);
+          const delT = calcActualEta(r.actualOutTime, r.hrs / 2);
+          timeInfo = r.homeReturn
+            ? `<span class="run-eta-actual">⏱ Out ${outT} · Del ${delT} (home)</span>`
+            : `<span class="run-eta-actual">⏱ Out ${outT} · Del ${delT} · Back ${calcActualEta(r.actualOutTime, driveHrs)}</span>`;
+        } else if (schedDeliver) {
+          timeInfo = r.homeReturn
+            ? `<span style="display:block;font-size:9px;"><span style="${delStyle}">Del ~${schedDeliver}</span> <span style="${backStyle}">(home)</span></span>`
+            : `<span style="display:block;font-size:9px;"><span style="${delStyle}">Del ~${schedDeliver}</span> <span style="${backStyle}">· Back ~${schedBack}</span></span>`;
+        } else {
+          timeInfo = '';
+        }
         const outBtn = `<button class="out-btn ${isStamped?'stamped':''}" onclick="event.stopPropagation();stampOut(${loadIdx})" title="${isStamped?'Click to clear timestamp':'Record actual departure time'}">${isStamped ? '✓ Out' : '⏱ Out'}</button>`;
         return `<div class="run-row" draggable="true"
           onclick="openReassignModal(${loadIdx})"
