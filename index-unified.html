@@ -692,7 +692,7 @@ tr.phase-group-hdr td {
 .driver-card.drag-target { box-shadow: 0 0 0 2px var(--red), var(--shadow-md); }
 th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
 th.sortable:hover { background: var(--gray-100); }
-.sort-caret { font-size: 9px; color: var(--gray-400); }
+.sort-caret, .asrt-caret { font-size: 9px; color: var(--gray-400); }
 .drag-handle { color: var(--gray-300); font-size: 13px; cursor: grab; flex-shrink: 0; line-height: 1; padding: 0 3px 0 0; }
 .run-reorder { display: inline-flex; flex-direction: column; flex-shrink: 0; gap: 1px; }
 .run-move { border: 1px solid var(--gray-200); background: var(--gray-50); color: var(--gray-500); font-size: 8px; line-height: 1; width: 18px; height: 12px; padding: 0; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -1118,12 +1118,12 @@ th.sortable:hover { background: var(--gray-100); }
                 <th class="tbl-num">#</th>
                 <th>Build Phase</th>
                 <th>Destination</th>
-                <th title="When the truck actually leaves the DC for this run (accounts for the driver's arrival and prior runs)">Depart</th>
-                <th title="Estimated arrival at the receiver">ETA</th>
+                <th class="sortable" onclick="sortAssignments('depart')" title="Sort each location by true departure (when the truck leaves the DC)">Depart <span class="asrt-caret" data-acol="depart"></span></th>
+                <th class="sortable" onclick="sortAssignments('eta')" title="Sort each location by receiver ETA">ETA <span class="asrt-caret" data-acol="eta"></span></th>
                 <th>Miles</th>
-                <th>Hrs</th>
-                <th>Driver</th>
-                <th>Run</th>
+                <th class="sortable" onclick="sortAssignments('hrs')" title="Sort each location by hours">Hrs <span class="asrt-caret" data-acol="hrs"></span></th>
+                <th class="sortable" onclick="sortAssignments('driver')" title="Sort each location by driver">Driver <span class="asrt-caret" data-acol="driver"></span></th>
+                <th class="sortable" onclick="sortAssignments('run')" title="Sort each location by driver run #">Run <span class="asrt-caret" data-acol="run"></span></th>
                 <th class="col-detail">Trailer #</th>
                 <th class="col-detail">Carrier</th>
                 <th class="no-print">Override</th>
@@ -4848,6 +4848,19 @@ function renderDriverCards(result) {
 // ════════════════════════════════════════════════════════════════════════════
 //  RENDER: ASSIGNMENTS TABLE
 // ════════════════════════════════════════════════════════════════════════════
+// ── Assignments-table within-location sorting ─────────────────────────────
+// Loads stay grouped by location (phase); this sorts the rows WITHIN each group.
+let assignSort = { col: null, dir: 1 };   // null = original load order
+function nameNatKey(s) {
+  const m = /^(.*?)(\d+)\s*$/.exec(s || '');
+  return m ? [m[1].trim().toLowerCase(), parseInt(m[2], 10)] : [(s || '').toLowerCase(), 0];
+}
+function sortAssignments(col) {
+  if (assignSort.col === col) assignSort.dir *= -1;
+  else { assignSort.col = col; assignSort.dir = 1; }
+  if (state.lastResult) renderAssignmentsTable(state.lastResult);
+}
+
 // Per-load timeline: true departure (when the truck actually leaves the DC for
 // this run) and receiver ETA. Mirrors the driver-card timing exactly.
 function computeRunTimings(result) {
@@ -4888,8 +4901,36 @@ function renderAssignmentsTable(result) {
   const statusOptions = ['Pending','Assigned','In Transit','Delivered','Complete']
     .map(s=>`<option value="${s}">${s}</option>`).join('');
 
+  // Group loads by location (phase, first-appearance order), then sort WITHIN
+  // each group by the chosen column — grouping is never broken.
+  const phaseOrder = [];
+  const groups = {};
+  result.assignments.forEach((a, idx) => {
+    if (!(a.phase in groups)) { groups[a.phase] = []; phaseOrder.push(a.phase); }
+    groups[a.phase].push({ a, idx });
+  });
+  if (assignSort.col) {
+    const sortVal = (a) => {
+      switch (assignSort.col) {
+        case 'depart': { const t = timings.get(a); return [t ? t.start : toMinutes(a.dispatchTime || '0')]; }
+        case 'eta':    { const t = timings.get(a); return [t ? t.eta : 1e9]; }
+        case 'driver': return nameNatKey(a.override || a.autoDriver);
+        case 'run':    return [a.driverLoadNum ?? 999];
+        case 'hrs':    return [a.homeReturn ? a.hrs / 2 : a.hrs];
+        default:       return [0];
+      }
+    };
+    phaseOrder.forEach(p => groups[p].sort((x, y) => fleetCmp(sortVal(x.a), sortVal(y.a)) * assignSort.dir));
+  }
+  const ordered = [];
+  phaseOrder.forEach(p => groups[p].forEach(o => ordered.push(o)));
+  // Reflect active sort in the header carets.
+  document.querySelectorAll('#assignments-table thead .asrt-caret').forEach(c => {
+    c.textContent = c.dataset.acol === assignSort.col ? (assignSort.dir > 0 ? '▲' : '▼') : '';
+  });
+
   let lastPhase = null;
-  tbody.innerHTML = result.assignments.map((a,idx) => {
+  tbody.innerHTML = ordered.map(({ a, idx }) => {
     const finalDriver = a.override || a.autoDriver;
     const dest = state.destinations.find(d=>d.code===a.dest);
     const isUnassigned = a.autoDriver === 'UNASSIGNED' && !a.override;
