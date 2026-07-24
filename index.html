@@ -1469,6 +1469,32 @@ th.sortable:hover { background: var(--gray-100); }
   </div>
 </div>
 
+<!-- ═══ OUT / DEPARTURE TIME MODAL ═══════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="out-modal">
+  <div class="modal" style="width:360px;max-width:96vw;">
+    <div class="modal-header">
+      <span>⏱ Departure (Out) Time</span>
+      <button class="modal-close" onclick="closeOutModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="out-modal-sub" style="font-size:12px;color:var(--gray-500);margin-bottom:12px;"></div>
+      <div class="field-group">
+        <label>Time out the gate</label>
+        <input type="time" id="out-time-input" class="plain">
+      </div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">
+        Sets the real departure. The receiver ETA recalculates from this time and
+        <strong>cascades to this driver's later loads</strong>. Leave loads unstamped to keep the planned ETA.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="out-clear-btn" style="color:#c0392b;" onclick="clearOutTime()">Clear</button>
+      <button class="btn btn-ghost" onclick="closeOutModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveOutTime()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ ADD/EDIT DRIVER MODAL ════════════════════════════════════════ -->
 <div class="modal-overlay driver-overlay" id="driver-modal">
   <div class="modal">
@@ -2758,7 +2784,7 @@ const TimeUtils = (() => {
   function fmt12h(t) {
     if (!t) return '—';
     const [h, m] = t.split(':').map(Number);
-    return `${h % 12 || 12}:${String(m || 0).padStart(2, '0')} ${h >= 12 ? 'pm' : 'am'}`;
+    return `${h % 12 || 12}:${String(m || 0).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
   }
   function minutesToHHMM(mins) {
     const h = Math.floor(mins / 60) % 24;
@@ -4523,6 +4549,9 @@ function toggleShoreCard() {
 function renderDriverCards(result) {
   const grid    = document.getElementById('driver-cards-grid');
   const section = document.getElementById('driver-cards-section');
+  // Shared timeline (anchors on stamped out-times + cascades) — same map the
+  // assignments table & CSV use, so every view shows identical, live ETAs.
+  const timings = result ? computeRunTimings(result) : new Map();
 
   const bucketAsgn = state.bucketAsgn || [];
   const adhocMoves = state.adhocMoves || [];
@@ -4652,43 +4681,30 @@ function renderDriverCards(result) {
     const maxSlots = autoRuns.length;
     const runLabels = Array.from({length: maxSlots}, (_, i) => `RUN ${i + 1}`);
     const runColors = ['', 'run2', 'run3'];
-    let prevReturnMins = d.arrivalTime ? toMinutes(d.arrivalTime) : null;
     const autoHTML = result ? Array.from({length: maxSlots}, (_, i) => {
       const r = autoRuns[i];
       if (r) {
         const loadIdx = result.assignments.indexOf(r);
-        const dispMins = toMinutes(r.dispatchTime);
-        const actualStartMins = prevReturnMins !== null ? Math.max(dispMins, prevReturnMins) : dispMins;
-        prevReturnMins = actualStartMins + Math.round(r.hrs * 60);
-        const actualStartStr = minutesToHHMM(actualStartMins);
-        const driveHrs = r.homeReturn ? r.hrs / 2 : r.hrs;
+        const driveHrs = r.homeReturn ? r.hrs / 2 : r.hrs;   // shown in the run-hrs cell
+        const t = timings.get(r);
+        const startMins = t ? t.start : toMinutes(r.dispatchTime);
+        const etaMins   = t ? t.eta   : startMins + Math.round((r.hrs/2)*60);
+        const backMins  = startMins + Math.round(r.hrs * 60);   // arrival back at DC
         const homeTag = r.homeReturn
           ? `<span style="display:inline-block;margin-left:4px;font-size:9px;font-weight:700;color:var(--green);background:var(--green-bg);border-radius:3px;padding:1px 4px;">← Home</span>`
           : '';
         const isStamped = !!r.actualOutTime;
-        // driveHrs is one-way for a home-return leg (arrival at the driver's domicile) and
-        // full round-trip otherwise (arrival back at the DC), so it works for both ETAs.
-        // Delivery ETA at the receiver = start + one-way (r.hrs/2), for both normal
-        // and home-return legs. Back-to-DC = start + full round trip (driveHrs).
-        const schedDeliver = fmtReturnTime(actualStartStr, r.hrs / 2);
-        const schedBack    = fmtReturnTime(actualStartStr, driveHrs);
+        // Every load shows its CURRENT ETA (cascaded from any upstream actual out
+        // times). A stamped load also shows its actual "Out" time.
+        const etaStr  = fmt12h(minutesToHHMM(etaMins % 1440));
+        const backStr = fmt12h(minutesToHHMM(backMins % 1440));
         const delStyle  = 'color:var(--gray-600);font-weight:700;';
         const backStyle = 'color:var(--gray-400);font-weight:400;';
-        let timeInfo;
-        if (isStamped) {
-          const outT = fmtActualTime(r.actualOutTime);
-          const delT = calcActualEta(r.actualOutTime, r.hrs / 2);
-          timeInfo = r.homeReturn
-            ? `<span class="run-eta-actual">⏱ Out ${outT} · Del ${delT} (home)</span>`
-            : `<span class="run-eta-actual">⏱ Out ${outT} · Del ${delT} · Back ${calcActualEta(r.actualOutTime, driveHrs)}</span>`;
-        } else if (schedDeliver) {
-          timeInfo = r.homeReturn
-            ? `<span style="display:block;font-size:9px;"><span style="${delStyle}">Del ~${schedDeliver}</span> <span style="${backStyle}">(home)</span></span>`
-            : `<span style="display:block;font-size:9px;"><span style="${delStyle}">Del ~${schedDeliver}</span> <span style="${backStyle}">· Back ~${schedBack}</span></span>`;
-        } else {
-          timeInfo = '';
-        }
-        const outBtn = `<button class="out-btn ${isStamped?'stamped':''}" onclick="event.stopPropagation();stampOut(${loadIdx})" title="${isStamped?'Click to clear timestamp':'Record actual departure time'}">${isStamped ? '✓ Out' : '⏱ Out'}</button>`;
+        const etaLead = isStamped ? `⏱ Out ${fmtActualTime(r.actualOutTime)} · ETA` : 'ETA';
+        const backPart = r.homeReturn ? `<span style="${backStyle}">(home)</span>`
+                                      : `<span style="${backStyle}">· Back ~${backStr}</span>`;
+        const timeInfo = `<span style="display:block;font-size:9px;"><span style="${delStyle}">${etaLead} ${isStamped?'':'~'}${etaStr}</span> ${backPart}</span>`;
+        const outBtn = `<button class="out-btn ${isStamped?'stamped':''}" onclick="event.stopPropagation();openOutModal(${loadIdx})" title="Set / edit the actual departure (Out) time — updates this ETA and the driver's later loads">${isStamped ? '✓ Out' : '⏱ Out'}</button>`;
         return `<div class="run-row" draggable="true"
           onclick="openReassignModal(${loadIdx})"
           ondragstart="handleDragStart(event,${loadIdx})"
@@ -4954,13 +4970,23 @@ function computeRunTimings(result) {
     let ret = drv && drv.arrivalTime ? toMinutes(drv.arrivalTime) : null;
     ordered.forEach(a => {
       const disp  = toMinutes(a.dispatchTime);
-      const start = ret !== null ? Math.max(disp, ret) : disp;
+      // A stamped actual out-time anchors this load's real departure AND cascades
+      // forward: the next load can't leave until this one's (actual) round trip ends.
+      const actualStart = a.actualOutTime != null ? isoToMins(a.actualOutTime) : null;
+      const start = actualStart != null ? actualStart
+                  : (ret !== null ? Math.max(disp, ret) : disp);
       const eta   = start + Math.round((a.hrs / 2) * 60);
       ret = start + Math.round(a.hrs * 60);
-      map.set(a, { start, eta });
+      map.set(a, { start, eta, actual: actualStart != null });
     });
   });
   return map;
+}
+
+// Minutes-since-midnight (local) from a stored ISO out-time.
+function isoToMins(iso) {
+  const d = new Date(iso);
+  return d.getHours() * 60 + d.getMinutes();
 }
 
 function renderAssignmentsTable(result) {
@@ -5016,7 +5042,7 @@ function renderAssignmentsTable(result) {
     </select>`;
     const done = a.status === 'Complete' || a.status === 'Delivered';
     const outStamp = a.actualOutTime
-      ? `<div style="font-size:9px;color:var(--green);font-weight:600;">⏱ Out ${fmtActualTime(a.actualOutTime)} · ETA ${calcActualEta(a.actualOutTime, a.homeReturn?a.hrs/2:a.hrs)}</div>`
+      ? `<div style="font-size:9px;color:var(--green);font-weight:600;">⏱ Out ${fmtActualTime(a.actualOutTime)}</div>`
       : '';
     const statusSel = `<div style="display:flex;flex-direction:column;gap:4px;">
       <select class="status-sel" onchange="setStatus(${idx},this.value)">
@@ -5042,11 +5068,14 @@ function renderAssignmentsTable(result) {
       <td class="text-center" style="font-size:11px;">${(() => {
         const t = timings.get(a);
         const depart = t ? minutesToHHMM(t.start) : (a.dispatchTime || '—');
-        const buildNote = (t && a.dispatchTime && minutesToHHMM(t.start) !== a.dispatchTime)
-          ? `<span style="display:block;font-size:9px;color:var(--gray-400);">build ${a.dispatchTime}</span>` : '';
-        return `<span style="font-weight:700;color:var(--gray-700);">${depart}</span>${buildNote}`;
+        const col = (t && t.actual) ? 'var(--green)' : 'var(--gray-700)';
+        const sub = (t && t.actual)
+          ? `<span style="display:block;font-size:9px;color:var(--green);">⏱ actual out</span>`
+          : (t && a.dispatchTime && minutesToHHMM(t.start) !== a.dispatchTime
+              ? `<span style="display:block;font-size:9px;color:var(--gray-400);">build ${a.dispatchTime}</span>` : '');
+        return `<span style="font-weight:700;color:${col};">${depart}</span>${sub}`;
       })()}</td>
-      <td class="text-center" style="font-size:11px;font-weight:700;color:var(--gray-700);">${(() => { const t = timings.get(a); return t ? minutesToHHMM(t.eta) : '—'; })()}</td>
+      <td class="text-center" style="font-size:11px;font-weight:700;">${(() => { const t = timings.get(a); if(!t) return '<span style="color:var(--gray-700);">—</span>'; const anchored = t.actual; return `<span style="color:${anchored?'var(--green)':'var(--gray-700)'};">${minutesToHHMM(t.eta)}</span>`; })()}</td>
       <td class="text-center">${dest ? (a.homeReturn ? dest.miles1Way : dest.miles1Way*2) : '—'}</td>
       <td class="text-center">${(a.homeReturn ? a.hrs/2 : a.hrs).toFixed(2)}</td>
       <td>${driverCell}</td>
@@ -6197,13 +6226,19 @@ function renderDriverRules() {
 // ════════════════════════════════════════════════════════════════════════════
 function exportCSV() {
   if (!state.lastResult && !(state.bucketAsgn||[]).length && !(state.adhocMoves||[]).length) return;
-  const rows = [['Load#','Phase','Destination','Miles','Hours','Driver','Run','Trailer #','Carrier Driver','Status','Actual Out','Actual ETA']];
+  // Depart/ETA reflect the live timeline: actual out-times (and their cascade)
+  // when stamped, otherwise the perfect-world schedule.
+  const timings = state.lastResult ? computeRunTimings(state.lastResult) : new Map();
+  const hhmm = m => minutesToHHMM(((m % 1440) + 1440) % 1440);
+  const rows = [['Load#','Phase','Destination','Miles','Hours','Driver','Run','Trailer #','Carrier Driver','Status','Depart','Out Time (actual)','ETA Delivery']];
   if (state.lastResult) {
     state.lastResult.assignments.forEach(a => {
       const dest = state.destinations.find(d=>d.code===a.dest);
       const driveHrs = a.homeReturn ? a.hrs/2 : a.hrs;
-      const actualOut = a.actualOutTime ? fmtActualTime(a.actualOutTime) : '';
-      const actualEta = a.actualOutTime ? calcActualEta(a.actualOutTime, driveHrs) : '';
+      const t = timings.get(a);
+      const depart  = t ? hhmm(t.start) : (a.dispatchTime || '');
+      const outTime = a.actualOutTime ? fmtActualTime(a.actualOutTime) : '';
+      const etaDel  = t ? hhmm(t.eta) : '';
       rows.push([
         a.loadNum, a.phase, dest?dest.name:a.dest,
         dest?(a.homeReturn?dest.miles1Way:dest.miles1Way*2):'',
@@ -6212,21 +6247,23 @@ function exportCSV() {
         a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—',
         a.trailerNum||'',
         a.autoDriver===DC_CONFIG.externalCarrier?a.carrierDriver||'':'Coca-Cola United',
-        a.status, actualOut, actualEta,
+        a.status, depart, outTime, etaDel,
       ]);
     });
   }
   (state.bucketAsgn || []).forEach(b => {
     const dest = state.destinations.find(d=>d.code===b.dest);
+    const eta = b.dispatchTime ? hhmm(toMinutes(b.dispatchTime)+Math.round((b.hrs/2)*60)) : '';
     rows.push(['MANUAL', b.phase, dest?dest.name:b.dest,
       dest?dest.miles1Way*2:'', b.hrs.toFixed(2),
-      b.driverName, 'MANUAL', '', 'Coca-Cola United', 'Manual Pre-Assignment', '', '']);
+      b.driverName, 'MANUAL', '', 'Coca-Cola United', 'Manual Pre-Assignment', b.dispatchTime||'', '', eta]);
   });
   (state.adhocMoves || []).forEach(m => {
     const typeLabel = {'bobtail-rt':'Bobtail RT','bobtail-ow':'Bobtail OW','loaded-rt':'Loaded RT'}[m.type]||m.type;
+    const eta = m.dispatchTime ? hhmm(toMinutes(m.dispatchTime)+Math.round((m.hrs/2)*60)) : '';
     rows.push(['AD HOC', `${typeLabel}`, m.destName,
       m.miles, m.hrs.toFixed(2),
-      m.driverName, 'AD HOC', '', 'Coca-Cola United', 'Ad Hoc', m.dispatchTime, m.notes||'']);
+      m.driverName, 'AD HOC', '', 'Coca-Cola United', 'Ad Hoc', m.dispatchTime||'', '', eta]);
   });
   const csv  = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
   const blob = new Blob([csv],{type:'text/csv'});
@@ -6534,14 +6571,48 @@ function reassignLoadTo(loadIdx, newName, skipMidnightCheck = false) {
   renderMetrics(state.lastResult);
 }
 
-// ── OUT TIMESTAMP ──────────────────────────────────────────────────────
-function stampOut(loadIdx) {
+// ── OUT / DEPARTURE TIME (manual entry) ────────────────────────────────
+let _outLoadIdx = null;
+function openOutModal(loadIdx) {
   const a = state.lastResult && state.lastResult.assignments[loadIdx];
   if (!a) return;
-  a.actualOutTime = a.actualOutTime ? null : new Date().toISOString();
+  _outLoadIdx = loadIdx;
+  const driver = a.override || a.autoDriver;
+  const destName = (state.destinations.find(d => d.code === a.dest) || {}).name || a.dest;
+  document.getElementById('out-modal-sub').innerHTML = `<strong>${driver}</strong> → ${destName}`;
+  // Prefill with the existing out-time, else the current clock time.
+  const d = a.actualOutTime ? new Date(a.actualOutTime) : new Date();
+  document.getElementById('out-time-input').value =
+    String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  document.getElementById('out-clear-btn').style.display = a.actualOutTime ? '' : 'none';
+  document.getElementById('out-modal').classList.add('open');
+}
+function closeOutModal() {
+  document.getElementById('out-modal').classList.remove('open');
+  _outLoadIdx = null;
+}
+function saveOutTime() {
+  const a = state.lastResult && state.lastResult.assignments[_outLoadIdx];
+  if (!a) return closeOutModal();
+  const val = document.getElementById('out-time-input').value;
+  if (!val) return;
+  const [h, m] = val.split(':').map(Number);
+  const d = new Date(); d.setHours(h, m, 0, 0);   // today at the entered gate time
+  a.actualOutTime = d.toISOString();
+  _persistOutTime();
+}
+function clearOutTime() {
+  const a = state.lastResult && state.lastResult.assignments[_outLoadIdx];
+  if (a) a.actualOutTime = null;
+  _persistOutTime();
+}
+function _persistOutTime() {
   saveResult();
+  closeOutModal();
+  // Re-render every view that shows ETAs so the cascade is reflected live.
   renderDriverCards(state.lastResult);
   renderAssignmentsTable(state.lastResult);
+  renderWorkload(state.lastResult);
 }
 
 function fmtActualTime(isoStr) {
