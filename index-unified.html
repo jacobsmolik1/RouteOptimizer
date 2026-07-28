@@ -1858,13 +1858,37 @@ function switchDC() {
   localStorage.removeItem('_active_dc');
   location.reload();
 }
+// Which DC slugs the signed-in user may access (from list_accessible_dcs, cached
+// after sign-in). null = not yet known (first load) → show all; enforced once known.
+function _accessibleDcSlugs() {
+  try { const raw = localStorage.getItem('_accessible_dc_slugs'); return raw ? JSON.parse(raw) : null; }
+  catch { return null; }
+}
+function _dcVisible(id) {
+  const acc = _accessibleDcSlugs();
+  return !acc || acc.includes(id);   // unknown → show all; otherwise restrict
+}
+// If the signed-in user is on a DC they can't access, bounce to the picker.
+// Returns true if it bounced (caller should stop).
+function enforceDcAccess() {
+  const acc = _accessibleDcSlugs();
+  if (!acc || !DC_CONFIG) return false;
+  if (!acc.includes(DC_CONFIG.id)) {
+    alert(`You don't have access to ${DC_CONFIG.name}. Pick a crossdock you're assigned to.`);
+    localStorage.removeItem('_active_dc');
+    location.reload();
+    return true;
+  }
+  return false;
+}
+
 function toggleDCSwitcher(e) {
   e.stopPropagation();
   const dd = document.getElementById('dc-switcher-dropdown');
   if (!dd) return;
   if (dd.classList.contains('open')) { dd.classList.remove('open'); return; }
-  // Build items
-  dd.innerHTML = Object.values(ALL_DC_CONFIGS).map(cfg => `
+  // Build items — only crossdocks this user can access.
+  dd.innerHTML = Object.values(ALL_DC_CONFIGS).filter(cfg => _dcVisible(cfg.id)).map(cfg => `
     <button class="dc-switcher-item${cfg.id === DC_CONFIG?.id ? ' active' : ''}" onclick="selectDC('${cfg.id}')">
       <span class="dc-dot"></span>${cfg.name}
     </button>`).join('')
@@ -1900,12 +1924,17 @@ if (!DC_CONFIG) {
     if (s) s.style.display = 'flex';
     const g = document.getElementById('auth-gate');
     if (g) g.style.display = 'none';
-    // Render a button per accessible DC (built-in + custom crossdocks from cache).
+    // Render a button per accessible DC (filtered by the user's access once known).
     const wrap = document.getElementById('dc-selector-buttons');
     if (wrap) {
-      wrap.innerHTML = Object.values(ALL_DC_CONFIGS).map(cfg =>
-        `<button onclick="selectDC('${cfg.id}')" style="background:white;color:#E61D2B;border:none;border-radius:10px;padding:20px 32px;font-size:16px;font-weight:700;cursor:pointer;min-width:180px;">${cfg.name}</button>`
-      ).join('');
+      const visible = Object.values(ALL_DC_CONFIGS).filter(cfg => _dcVisible(cfg.id));
+      if (!visible.length && _accessibleDcSlugs()) {
+        wrap.innerHTML = `<div style="color:white;font-size:14px;max-width:420px;text-align:center;">You don't have any crossdocks assigned yet. Ask an admin to add you to one, then reload.</div>`;
+      } else {
+        wrap.innerHTML = visible.map(cfg =>
+          `<button onclick="selectDC('${cfg.id}')" style="background:white;color:#E61D2B;border:none;border-radius:10px;padding:20px 32px;font-size:16px;font-weight:700;cursor:pointer;min-width:180px;">${cfg.name}</button>`
+        ).join('');
+      }
     }
   });
   throw new Error('RouteOptimizer: awaiting DC selection');
@@ -2226,6 +2255,8 @@ const SupabaseSync = (() => {
       const { data, error } = await db.rpc('list_accessible_dcs');
       if (error) throw error;
       const rows = data || [];
+      // Remember which crossdocks this user may access, to filter the pickers.
+      localStorage.setItem('_accessible_dc_slugs', JSON.stringify(rows.map(r => r.slug)));
       const cache = {};
       let activeChanged = false;
       rows.forEach(r => {
@@ -2713,7 +2744,9 @@ async function handleSignIn(e) {
     }
     document.getElementById('auth-gate').style.display = 'none';
     updateUserDisplay();
-    if (await SupabaseSync.refreshDcConfigs()) { location.reload(); return; }
+    const _rc0 = await SupabaseSync.refreshDcConfigs();
+    if (enforceDcAccess()) return;
+    if (_rc0) { location.reload(); return; }
     state = StateManager.load();
     const dbC = await SupabaseSync.loadDayFromDB();
     const drC = await SupabaseSync.syncDriversFromDB();
@@ -2728,7 +2761,9 @@ async function handleSignIn(e) {
     updateUserDisplay();
     // Pull custom-DC configs first; if the active DC's config changed, reload
     // so structural changes (dests/phases) re-init cleanly.
-    if (await SupabaseSync.refreshDcConfigs()) { location.reload(); return; }
+    const _rc1 = await SupabaseSync.refreshDcConfigs();
+    if (enforceDcAccess()) return;   // bounced — no access to this DC
+    if (_rc1) { location.reload(); return; }
     state = StateManager.load();
     const dbChanged = await SupabaseSync.loadDayFromDB();
     const driversChanged = await SupabaseSync.syncDriversFromDB();
@@ -2742,6 +2777,7 @@ async function handleSignIn(e) {
 async function handleSignOut() {
   if (!confirm('Sign out?')) return;
   await SupabaseSync.signOut();
+  localStorage.removeItem('_accessible_dc_slugs');   // don't leak access list to the next user
   location.reload();
 }
 
@@ -2757,7 +2793,9 @@ async function startupAuth() {
     return;
   }
   // Logged in — refresh custom-DC configs; reload if the active DC changed.
-  if (await SupabaseSync.refreshDcConfigs()) { location.reload(); return; }
+  const _rc = await SupabaseSync.refreshDcConfigs();
+  if (enforceDcAccess()) return;   // bounced — no access to this DC
+  if (_rc) { location.reload(); return; }
   // Pull today from DB, re-render if changed
   const dbChanged      = await SupabaseSync.loadDayFromDB();
   const driversChanged = await SupabaseSync.syncDriversFromDB();
