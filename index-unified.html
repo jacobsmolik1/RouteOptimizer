@@ -1405,14 +1405,20 @@ th.sortable:hover { background: var(--gray-100); }
         <div style="color:var(--gray-400);font-size:12px;">Loading…</div>
       </div>
       <div id="disp-admin-area" style="display:none;border-top:1px solid var(--gray-100);padding-top:14px;">
-        <div class="settings-section-title" style="margin-bottom:8px;">Invite a dispatcher</div>
+        <div class="settings-section-title" style="margin-bottom:8px;">Add a dispatcher</div>
         <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">
-          They must already have a Route Optimizer account (same email they sign in with).
+          Enter a temporary password to <strong>create their account now</strong> — they sign in
+          immediately with it. Leave the password blank to just pre-authorize the email (they
+          create their own account later).
         </p>
         <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-          <div class="field-group" style="flex:1;min-width:180px;margin:0;">
+          <div class="field-group" style="flex:1;min-width:150px;margin:0;">
             <label>Email</label>
             <input type="email" id="disp-email" class="plain" placeholder="dispatcher@example.com">
+          </div>
+          <div class="field-group" style="flex:1;min-width:120px;margin:0;">
+            <label>Temp password <span style="color:var(--gray-400);font-weight:400;">(optional)</span></label>
+            <input type="text" id="disp-password" class="plain" placeholder="min 6 chars">
           </div>
           <div class="field-group" style="margin:0;">
             <label>Role</label>
@@ -1421,7 +1427,7 @@ th.sortable:hover { background: var(--gray-100); }
               <option value="admin">Admin</option>
             </select>
           </div>
-          <button class="btn btn-primary btn-sm" id="disp-invite-btn" onclick="inviteDispatcher()">Invite</button>
+          <button class="btn btn-primary btn-sm" id="disp-invite-btn" onclick="inviteDispatcher()">Add</button>
         </div>
         <div id="disp-msg" style="display:none;margin-top:10px;padding:8px 12px;border-radius:var(--radius);font-size:12px;font-weight:600;"></div>
       </div>
@@ -2279,6 +2285,26 @@ const SupabaseSync = (() => {
     const { error } = await db.rpc('revoke_dc_access', { p_dc_slug: dcSlug, p_email: email });
     if (error) throw error;
   }
+  // Directly create an account (email + password) and grant DC access. Uses a raw
+  // signup fetch so the admin's own session is NOT replaced. Accounts auto-confirm
+  // (mailer_autoconfirm on), so the new user can sign in immediately.
+  async function createAccountDirect(dcSlug, email, password, role) {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    // 200 = created; an "already registered" error is fine — we'll just grant access.
+    if (!res.ok) {
+      const msg = (data && (data.msg || data.error_description || data.error || data.error_code)) || '';
+      if (!/already|registered|exists/i.test(String(msg))) {
+        throw new Error(String(msg) || `Signup failed (${res.status})`);
+      }
+    }
+    // Grant this DC's access (admin-gated RPC). The account now exists.
+    return grantAccess(dcSlug, email, role);
+  }
 
   // ── Pull today from DB on startup ────────────────────────────────────────
   // Returns true if state was updated (caller should re-render).
@@ -2465,7 +2491,7 @@ const SupabaseSync = (() => {
   function getUser()       { return _user; }
   function isCommitted()   { return _committed; }
 
-  return { init, signIn, signUp, signOut, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted };
+  return { init, signIn, signUp, signOut, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, createAccountDirect, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted };
 })();
 
 // ── Auth UI helpers ─────────────────────────────────────────────────────────
@@ -2588,26 +2614,36 @@ async function loadDispatchers() {
   }
 }
 async function inviteDispatcher() {
-  const email = document.getElementById('disp-email').value.trim();
-  const role  = document.getElementById('disp-role').value;
-  const btn   = document.getElementById('disp-invite-btn');
+  const email    = document.getElementById('disp-email').value.trim();
+  const password = document.getElementById('disp-password').value;
+  const role     = document.getElementById('disp-role').value;
+  const btn      = document.getElementById('disp-invite-btn');
   if (!email) return dispMsg('Enter an email address.', true);
-  btn.disabled = true; btn.textContent = 'Inviting…';
+  if (password && password.length < 6) return dispMsg('Temp password must be at least 6 characters.', true);
+  btn.disabled = true; btn.textContent = password ? 'Creating…' : 'Adding…';
   try {
-    const res = await SupabaseSync.grantAccess(DC_CONFIG.id, email, role);
-    if (typeof res === 'string' && res.startsWith('pending:')) {
-      const who = res.slice('pending:'.length);
-      const url = location.hostname.includes('github.io') ? 'routes.jacobsmolik.com' : location.host;
-      dispMsg(`⏳ ${who} has no account yet — invite saved. Have them go to ${url}, click "Create an account" with this email, and they'll get ${DC_CONFIG.name} access automatically.`, false);
+    if (password) {
+      // Create the account now (auto-confirmed) and grant access.
+      await SupabaseSync.createAccountDirect(DC_CONFIG.id, email, password, role);
+      dispMsg(`✅ Account created for ${email}. They can sign in now with the password you set (${password}) and change it later. They have ${DC_CONFIG.name} access.`, false);
+      document.getElementById('disp-email').value = '';
+      document.getElementById('disp-password').value = '';
     } else {
-      dispMsg('✅ Access granted: ' + String(res).replace(/^granted:/, ''), false);
+      const res = await SupabaseSync.grantAccess(DC_CONFIG.id, email, role);
+      if (typeof res === 'string' && res.startsWith('pending:')) {
+        const who = res.slice('pending:'.length);
+        const url = location.hostname.includes('github.io') ? 'routes.jacobsmolik.com' : location.host;
+        dispMsg(`⏳ ${who} has no account yet — pre-authorized. Have them go to ${url}, click "Create an account" with this email, and they'll get ${DC_CONFIG.name} access automatically. (Or add a temp password above to create it for them now.)`, false);
+      } else {
+        dispMsg('✅ Access granted: ' + String(res).replace(/^granted:/, ''), false);
+      }
+      document.getElementById('disp-email').value = '';
     }
-    document.getElementById('disp-email').value = '';
     await loadDispatchers();
   } catch (e) {
-    dispMsg(e.message || 'Could not grant access.', true);
+    dispMsg(e.message || 'Could not add dispatcher.', true);
   } finally {
-    btn.disabled = false; btn.textContent = 'Invite';
+    btn.disabled = false; btn.textContent = 'Add';
   }
 }
 async function revokeDispatcher(email) {
