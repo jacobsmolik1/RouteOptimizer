@@ -72,7 +72,7 @@ create table if not exists public.user_dc_access (
 -- Roster per DC. Synced to/from the app on startup.
 -- IDs keep the legacy D001..D019 format for backwards compat.
 create table if not exists public.drivers (
-  id              text        primary key,         -- e.g. 'D001'
+  id              text        not null,             -- e.g. 'D001' — unique PER DC, not globally
   dc_id           uuid        not null references public.dcs,
   name            text        not null,
   home_base       text,
@@ -86,7 +86,10 @@ create table if not exists public.drivers (
   notes           text,
   active          boolean     default true,
   created_at      timestamptz default now(),
-  updated_at      timestamptz default now()
+  updated_at      timestamptz default now(),
+  -- Composite PK: the app assigns per-DC ids (D001…) that CAN repeat across DCs.
+  -- Keying on id alone let one DC's roster save overwrite another DC's driver.
+  primary key (dc_id, id)
 );
 
 -- Backfill for existing databases (safe to re-run).

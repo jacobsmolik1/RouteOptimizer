@@ -158,7 +158,7 @@ begin
       v_d->>'notes',
       true
     )
-    on conflict (id) do update set
+    on conflict (dc_id, id) do update set   -- scope to THIS DC so a save can't touch another DC's driver
       name           = excluded.name,
       home_base      = excluded.home_base,
       restriction    = excluded.restriction,
