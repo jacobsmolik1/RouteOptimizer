@@ -1006,7 +1006,7 @@ th.sortable:hover { background: var(--gray-100); }
           <div style="display:flex;align-items:center;gap:8px;">
             <span class="bucket-count" id="bucket-count">0 unassigned</span>
             <button id="bucket-clear-btn" onclick="clearAllBucketAssignments()" style="display:none;font-size:10px;padding:2px 8px;background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger);border-radius:3px;cursor:pointer;" title="Remove all manual assignments">✕ Clear all</button>
-            <button id="bucket-rerun-btn" onclick="generateAssignments()" style="display:none;font-size:10px;padding:2px 8px;background:var(--danger);color:white;border:none;border-radius:3px;cursor:pointer;font-weight:700;" title="Re-run optimizer to place new loads">⚡ Re-run Generate</button>
+            <button id="bucket-rerun-btn" onclick="rerunRemaining()" style="display:none;font-size:10px;padding:2px 8px;background:var(--danger);color:white;border:none;border-radius:3px;cursor:pointer;font-weight:700;" title="Re-run optimizer to place new loads">⚡ Re-run Generate</button>
           </div>
         </div>
         <div class="bucket-chips" id="bucket-chips"></div>
@@ -1090,12 +1090,12 @@ th.sortable:hover { background: var(--gray-100); }
           <div id="stale-result-banner" class="no-print" style="margin-bottom:12px;padding:10px 14px;background:var(--danger-bg);border:2px solid var(--danger);border-radius:var(--radius);align-items:center;gap:10px;flex-wrap:wrap;display:none;">
             <span style="font-size:12px;font-weight:700;color:var(--danger);">⚠ <span id="stale-banner-title">Results may be stale</span></span>
             <span id="stale-banner-sub" style="font-size:11px;color:var(--gray-600);flex:1;">Something changed since last Generate — current assignments are still valid until you re-run.</span>
-            <button class="btn btn-sm" style="background:var(--danger);color:white;border:none;padding:5px 12px;" onclick="generateAssignments()">⚡ Re-run Generate</button>
+            <button class="btn btn-sm" style="background:var(--danger);color:white;border:none;padding:5px 12px;" onclick="rerunRemaining()">⚡ Re-run (keep committed)</button>
           </div>
           <div id="what-if-banner" class="no-print" style="margin-bottom:12px;padding:10px 14px;background:var(--amber-bg);border:2px solid var(--amber);border-radius:var(--radius);align-items:center;gap:10px;flex-wrap:wrap;display:none;">
             <span style="font-size:12px;font-weight:700;color:var(--amber);">⚡ What-if overrides active</span>
             <span style="font-size:11px;color:var(--gray-600);flex:1;">Changes apply on next re-run — drag results are still live.</span>
-            <button class="btn btn-sm" style="background:var(--amber);color:white;border:none;padding:5px 12px;" onclick="generateAssignments()">Re-run with overrides</button>
+            <button class="btn btn-sm" style="background:var(--amber);color:white;border:none;padding:5px 12px;" onclick="rerunRemaining()">Re-run with overrides</button>
             <button class="btn btn-outline btn-sm" onclick="clearAllWhatIf()">Clear all</button>
           </div>
           <div class="driver-cards-grid" id="driver-cards-grid"></div>
@@ -4367,6 +4367,12 @@ function renderPlanQuality(result) {
 // ════════════════════════════════════════════════════════════════════════════
 //  POST-OPTIMIZER: FAIRNESS REBALANCE
 // ════════════════════════════════════════════════════════════════════════════
+// A load is "locked" once a driver is committed to it: either it has an actual
+// out-time (auto) or the dispatcher manually locked it. Locked loads are never
+// moved or renumbered by a re-run. For any plan with no locks this is always
+// false, so all lock-aware code below is a pure no-op on the normal path.
+function isLocked(a) { return !!(a && (a.actualOutTime || a.locked)); }
+
 function rebalanceFairness() {
   if (!state.lastResult) return;
   const result = state.lastResult;
@@ -4406,14 +4412,20 @@ function rebalanceFairness() {
         const t = toMinutes(a.dispatchTime || '00:00') - toMinutes(b.dispatchTime || '00:00');
         return t !== 0 ? t : (a.loadNum || 0) - (b.loadNum || 0);
       });
+    // Locked loads keep their exact position + homeReturn; only free loads are
+    // (re)numbered, starting after the highest locked number. No-lock path is
+    // unchanged: locked is empty → startNum 0 → renumber [regular,home] 1..N.
+    const locked = loads.filter(isLocked);
+    const free   = loads.filter(a => !isLocked(a));
     const regular = [];
     const home = [];
-    loads.forEach(a => {
+    free.forEach(a => {
       a.homeReturn = false;
       if (driver.domicileDest && a.dest === driver.domicileDest) home.push(a);
       else regular.push(a);
     });
-    [...regular, ...home].forEach((a, idx) => { a.driverLoadNum = idx + 1; });
+    const startNum = locked.length ? Math.max(...locked.map(a => a.driverLoadNum || 0)) : 0;
+    [...regular, ...home].forEach((a, idx) => { a.driverLoadNum = startNum + idx + 1; });
   }
 
   function refreshDrivers(...names) {
@@ -4455,7 +4467,7 @@ function rebalanceFairness() {
 
         const candidates = result.assignments
           .filter(a => getFinalDriverName(a) === high.driver.name)
-          .filter(a => !a.override && !a.homeReturn && driverCanTakeDest(low.driver, a.dest))
+          .filter(a => !a.override && !a.homeReturn && !isLocked(a) && driverCanTakeDest(low.driver, a.dest))
           .sort((a, b) => b.hrs - a.hrs);
 
         for (const movable of candidates) {
@@ -4779,6 +4791,8 @@ function renderDriverCards(result) {
                                       : `<span style="${backStyle}">· Back ~${backStr}</span>`;
         const timeInfo = `<span style="display:block;font-size:9px;"><span style="${delStyle}">${etaLead} ${isStamped?'':'~'}${etaStr}</span> ${backPart}</span>`;
         const outBtn = `<button class="out-btn ${isStamped?'stamped':''}" onclick="event.stopPropagation();openOutModal(${loadIdx})" title="Set / edit the actual departure (Out) time — updates this ETA and the driver's later loads">${isStamped ? '✓ Out' : '⏱ Out'}</button>`;
+        const locked = isLocked(r);
+        const lockBtn = `<button class="out-btn${locked?' stamped':''}" onclick="event.stopPropagation();toggleLock(${loadIdx})" title="${locked ? (isStamped ? 'Locked (has an out-time) — stays put on Re-run' : 'Locked to this driver — stays put on Re-run. Click to unlock.') : 'Lock this load to this driver so Re-run keeps it put'}">${locked ? '🔒' : '🔓'}</button>`;
         return `<div class="run-row" draggable="true"
           onclick="openReassignModal(${loadIdx})"
           ondragstart="handleDragStart(event,${loadIdx})"
@@ -4794,7 +4808,7 @@ function renderDriverCards(result) {
           <span class="run-label ${runColors[i] || 'run3'}">${runLabels[i]}</span>
           <span class="run-phase">${r.phase}${homeTag}<span style="display:block;">${timeInfo}</span></span>
           <span class="run-hrs">${driveHrs.toFixed(2)}h</span>
-          ${outBtn}
+          ${lockBtn}${outBtn}
         </div>`;
       } else {
         return `<div class="run-row">
@@ -5456,6 +5470,86 @@ function generateAssignments() {
   if (btn) btn.textContent = '▼ Expand';
   buildCollapsedSummary();
   document.getElementById('metrics-grid').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── Re-run only the un-locked loads, preserving locked (committed) loads ──────
+// Locked = has an out-time or a manual lock. Those loads keep their driver,
+// position, and out-time; the optimizer re-plans everything else around each
+// driver's already-consumed hours and return time. A separate entry point from
+// generateAssignments so the full-generate path is never affected.
+function rerunRemaining() {
+  if (!state.lastResult) return generateAssignments();
+  const prev = state.lastResult;
+  const locked = prev.assignments.filter(a => isLocked(a) && getFinalDriverName(a) !== 'UNASSIGNED' && getFinalDriverName(a) !== DC_CONFIG.externalCarrier);
+  if (!locked.length) return generateAssignments();   // nothing committed → a normal fresh plan
+
+  const bucketByPhase = {}, lockedByPhase = {}, preLoads = {}, preItems = {};
+  const ensurePre = id => (preLoads[id] || (preLoads[id] = { loads:0, hours:0, colCount:0, destCounts:{}, returnMinutes:0 }));
+  const phaseIdx = {}; state.phases.forEach((p,i) => { phaseIdx[p.label] = i; });
+
+  // Bucket (manual pre-assignments) — identical handling to generateAssignments.
+  (state.bucketAsgn || []).forEach(b => {
+    if (b.driverName === DC_CONFIG.externalCarrier) { bucketByPhase[b.phaseIdx] = (bucketByPhase[b.phaseIdx]||0)+1; return; }
+    const driver = state.drivers.find(d => d.name === b.driverName);
+    if (!driver || driver.onVacation || (state.whatIf||{})[driver.id]?.inactive) return;
+    bucketByPhase[b.phaseIdx] = (bucketByPhase[b.phaseIdx]||0)+1;
+    const pre = ensurePre(driver.id); pre.loads++; pre.hours += b.hrs;
+    pre.destCounts[b.dest] = (pre.destCounts[b.dest]||0)+1;
+    (preItems[driver.id] = preItems[driver.id]||[]).push({ dispatchTime:b.dispatchTime, hrs:b.hrs, out:null });
+    const aDef = DC_CONFIG.restrictions.find(r => r.type==='assist' && r.destCode===b.dest);
+    if (aDef && driver.restriction===aDef.value) pre.colCount++;
+  });
+  // Locked loads → fold into preLoads and tally out of the per-phase totals.
+  locked.forEach(a => {
+    const driver = state.drivers.find(d => d.name === getFinalDriverName(a));
+    if (!driver) return;
+    const pi = phaseIdx[a.phase]; if (pi != null) lockedByPhase[pi] = (lockedByPhase[pi]||0)+1;
+    const pre = ensurePre(driver.id); pre.loads++; pre.hours += a.hrs;
+    pre.destCounts[a.dest] = (pre.destCounts[a.dest]||0)+1;
+    (preItems[driver.id] = preItems[driver.id]||[]).push({ dispatchTime:a.dispatchTime, hrs:a.hrs, out:a.actualOutTime||null });
+    const aDef = DC_CONFIG.restrictions.find(r => r.type==='assist' && r.destCode===a.dest);
+    if (aDef && driver.restriction===aDef.value) pre.colCount++;
+  });
+  // returnMinutes = when the driver is back after their committed loads (out-time anchored).
+  Object.entries(preItems).forEach(([id, items]) => {
+    const driver = state.drivers.find(d => d.id === id);
+    let ret = driver?.arrivalTime ? toMinutes(driver.arrivalTime) : 0;
+    items.slice().sort((x,y)=> toMinutes(x.dispatchTime||'00:00') - toMinutes(y.dispatchTime||'00:00')).forEach(it => {
+      const start = it.out != null ? isoToMins(it.out) : Math.max(toMinutes(it.dispatchTime||'00:00'), ret);
+      ret = start + Math.round(it.hrs * 60);
+    });
+    ensurePre(id).returnMinutes = ret;
+  });
+  (state.adhocMoves || []).forEach(m => { const d = state.drivers.find(x=>x.name===m.driverName); if (d) ensurePre(d.id).hours += m.hrs; });
+
+  const disabledCodes = new Set(state.destinations.filter(d=>d.disabled).map(d=>d.code));
+  const adjustedLoads = state.loads.map((n,i) =>
+    disabledCodes.has(state.phases[i]?.dest) ? 0 : Math.max(0, n - (bucketByPhase[i]||0) - (lockedByPhase[i]||0)));
+
+  const fresh = runOptimizer(adjustedLoads, !!state.settings.minimizeShoreline, preLoads);
+
+  // Merge preserved locked loads back in, then guarantee each driver's un-locked
+  // loads sit after its locked ones (handles even non-contiguous manual locks).
+  fresh.assignments = locked.concat(fresh.assignments);
+  const byDriver = {};
+  fresh.assignments.forEach(a => { const n = getFinalDriverName(a); if (n && n!=='UNASSIGNED') (byDriver[n]=byDriver[n]||[]).push(a); });
+  Object.values(byDriver).forEach(loads => {
+    const lk = loads.filter(isLocked);
+    const fr = loads.filter(a => !isLocked(a)).sort((a,b)=>(a.driverLoadNum||0)-(b.driverLoadNum||0));
+    const start = lk.length ? Math.max(...lk.map(a=>a.driverLoadNum||0)) : 0;
+    fr.forEach((a,i) => { a.driverLoadNum = start + i + 1; });
+  });
+  // Renumber display load #s cleanly in phase order.
+  let g = 0;
+  state.phases.map(p=>p.label).forEach(label => { fresh.assignments.filter(a=>a.phase===label).forEach(a=>{ a.loadNum = ++g; }); });
+  fresh.assignments.filter(a => !state.phases.some(p=>p.label===a.phase)).forEach(a => { a.loadNum = ++g; });
+
+  state.lastResult = fresh;
+  rebalanceFairness();          // locked loads are protected inside
+  saveResult();
+  renderMetrics(fresh); renderWorkload(fresh); renderShoreline(fresh);
+  renderDriverCards(fresh); renderAssignmentsTable(fresh); renderLoadBucket();
+  clearStaleBanner();
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -6670,6 +6764,17 @@ function reassignLoadTo(loadIdx, newName, skipMidnightCheck = false) {
 
 // ── OUT / DEPARTURE TIME (manual entry) ────────────────────────────────
 let _outLoadIdx = null;
+// Manually lock/unlock a load so Re-run keeps it on its driver. (Out-stamped
+// loads are auto-locked regardless of this flag.)
+function toggleLock(loadIdx) {
+  const a = state.lastResult && state.lastResult.assignments[loadIdx];
+  if (!a) return;
+  a.locked = !a.locked;
+  saveResult();
+  renderDriverCards(state.lastResult);
+  renderAssignmentsTable(state.lastResult);
+}
+
 function openOutModal(loadIdx) {
   const a = state.lastResult && state.lastResult.assignments[loadIdx];
   if (!a) return;
