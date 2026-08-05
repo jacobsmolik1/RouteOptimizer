@@ -5523,6 +5523,7 @@ function renderFleetTable() {
       <td class="no-print">
         <div class="btn-group">
           <button class="btn btn-ghost btn-sm" onclick="openEditDriver('${d.id}')">✏️ Edit</button>
+          <button class="btn btn-ghost btn-sm" onclick="copyDriver('${d.id}')" title="Add a new driver with this same configuration">⧉ Copy</button>
           <button class="btn btn-danger btn-sm" onclick="confirmDeleteDriver('${d.id}')">🗑</button>
         </div>
       </td>
@@ -5617,6 +5618,28 @@ function saveDriver() {
     state.drivers.push({id:nextId(),...data});
   }
   saveDrivers(); renderFleetTable(); renderDriverRules(); updateMetricsAvail(); renderAllDriverCards(); closeModal();
+}
+
+// Duplicate a driver's full config as a brand-new driver. Names smartly:
+// a trailing number bumps to the next unused (Shoreline 18 → Shoreline 19),
+// otherwise appends " copy". New driver gets a fresh (per-DC unique) id.
+function copyDriver(id) {
+  const src = state.drivers.find(x => x.id === id);
+  if (!src) return;
+  const clone = { ...src, id: nextId() };
+  const names = new Set(state.drivers.map(d => d.name));
+  const m = /^(.*?)(\d+)\s*$/.exec(src.name || '');
+  if (m) {
+    const base = m[1]; let n = parseInt(m[2], 10);
+    do { n++; } while (names.has(base + n));
+    clone.name = base + n;
+  } else {
+    let nm = (src.name || 'Driver') + ' copy', k = 1;
+    while (names.has(nm)) nm = `${src.name || 'Driver'} copy ${++k}`;
+    clone.name = nm;
+  }
+  state.drivers.push(clone);
+  saveDrivers(); renderFleetTable(); renderDriverRules(); updateMetricsAvail(); renderAllDriverCards();
 }
 
 function confirmDeleteDriver(id) {
