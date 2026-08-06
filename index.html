@@ -1917,6 +1917,22 @@ try {
 const _activeDcId = localStorage.getItem('_active_dc') || '';
 const DC_CONFIG = ALL_DC_CONFIGS[_activeDcId] || null;
 
+// Renders one button per accessible DC (built-in + custom). Called from cache
+// first, then again after a live server refresh (below) so every built location
+// shows. Defined before the throw so it exists in selector-only mode.
+function renderDcSelectorButtons() {
+  const wrap = document.getElementById('dc-selector-buttons');
+  if (!wrap) return;
+  const visible = Object.values(ALL_DC_CONFIGS).filter(cfg => _dcVisible(cfg.id));
+  if (!visible.length && _accessibleDcSlugs()) {
+    wrap.innerHTML = `<div style="color:white;font-size:14px;max-width:420px;text-align:center;">You don't have any crossdocks assigned yet. Ask an admin to add you to one, then reload.</div>`;
+  } else {
+    wrap.innerHTML = visible.map(cfg =>
+      `<button onclick="selectDC('${cfg.id}')" style="background:white;color:#E61D2B;border:none;border-radius:10px;padding:20px 32px;font-size:16px;font-weight:700;cursor:pointer;min-width:180px;">${cfg.name}</button>`
+    ).join('');
+  }
+}
+
 if (!DC_CONFIG) {
   // No DC selected — show selector overlay, hide auth gate, halt app initialization
   document.addEventListener('DOMContentLoaded', () => {
@@ -1924,18 +1940,29 @@ if (!DC_CONFIG) {
     if (s) s.style.display = 'flex';
     const g = document.getElementById('auth-gate');
     if (g) g.style.display = 'none';
-    // Render a button per accessible DC (filtered by the user's access once known).
-    const wrap = document.getElementById('dc-selector-buttons');
-    if (wrap) {
-      const visible = Object.values(ALL_DC_CONFIGS).filter(cfg => _dcVisible(cfg.id));
-      if (!visible.length && _accessibleDcSlugs()) {
-        wrap.innerHTML = `<div style="color:white;font-size:14px;max-width:420px;text-align:center;">You don't have any crossdocks assigned yet. Ask an admin to add you to one, then reload.</div>`;
-      } else {
-        wrap.innerHTML = visible.map(cfg =>
-          `<button onclick="selectDC('${cfg.id}')" style="background:white;color:#E61D2B;border:none;border-radius:10px;padding:20px 32px;font-size:16px;font-weight:700;cursor:pointer;min-width:180px;">${cfg.name}</button>`
-        ).join('');
-      }
-    }
+    renderDcSelectorButtons();   // fast path: whatever's cached (built-in + prior custom)
+    // If a Supabase session persists, pull the FULL current list of accessible DCs
+    // so the selector always shows every location built — not just cached ones.
+    // (Uses the db client directly; SupabaseSync isn't defined in selector-only mode.)
+    (async () => {
+      try {
+        if (!db) return;
+        const { data: { session } } = await db.auth.getSession();
+        if (!session) return;
+        await db.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
+        const { data, error } = await db.rpc('list_accessible_dcs');
+        if (error || !Array.isArray(data)) return;
+        const cache = {};
+        data.forEach(r => {
+          if (!r.config) return;                 // built-in DCs live in code
+          const cfg = r.config; cfg._custom = true; cfg.id = cfg.id || r.slug;
+          cache[r.slug] = cfg; ALL_DC_CONFIGS[cfg.id] = cfg;
+        });
+        localStorage.setItem('_custom_dcs', JSON.stringify(cache));
+        localStorage.setItem('_accessible_dc_slugs', JSON.stringify(data.map(r => r.slug)));
+        renderDcSelectorButtons();   // re-render with the complete, fresh list
+      } catch (e) { /* offline / no session — the cached selector stands */ }
+    })();
   });
   throw new Error('RouteOptimizer: awaiting DC selection');
 }
