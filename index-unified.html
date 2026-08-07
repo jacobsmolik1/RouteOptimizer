@@ -1640,16 +1640,13 @@ const ALL_DC_CONFIGS = {
     ],
 
     phases: [
-      { label:'Panama City (Small Store)', dest:'PAN', dispatchTime:'06:00', buildDay:'prior' },
-      { label:'Columbus (Small Store)',    dest:'COL', dispatchTime:'06:00', buildDay:'prior' },
-      { label:'Panama City (Bulk)',        dest:'PAN', dispatchTime:'07:30', buildDay:'prior' },
-      { label:'Columbus (Bulk)',           dest:'COL', dispatchTime:'07:30', buildDay:'prior' },
-      { label:'Dothan (OFS)',              dest:'DOT', dispatchTime:'08:00' },
-      { label:'Dothan (Bulk)',             dest:'DOT', dispatchTime:'08:00' },
-      { label:'Auburn (OFS)',              dest:'AUB', dispatchTime:'08:30' },
-      { label:'Auburn (Bulk)',             dest:'AUB', dispatchTime:'08:30' },
-      { label:'Evergreen (OFS)',           dest:'EVG', dispatchTime:'09:00' },
-      { label:'Evergreen (Bulk)',          dest:'EVG', dispatchTime:'09:00' },
+      // One build per location (OFS/Bulk merged). PAN/COL use the later (07:30)
+      // time — the whole location builds together now.
+      { label:'Panama City', dest:'PAN', dispatchTime:'07:30', buildDay:'prior' },
+      { label:'Columbus',    dest:'COL', dispatchTime:'07:30', buildDay:'prior' },
+      { label:'Dothan',      dest:'DOT', dispatchTime:'08:00' },
+      { label:'Auburn',      dest:'AUB', dispatchTime:'08:30' },
+      { label:'Evergreen',   dest:'EVG', dispatchTime:'09:00' },
       // ── Mobile / Gulf-coast contingency phases (dests disabled by default; enable to activate) ──
       { label:'Mobile',                    dest:'MOB', dispatchTime:'07:00' },
       { label:'Leroy',                     dest:'LRY', dispatchTime:'07:00' },
