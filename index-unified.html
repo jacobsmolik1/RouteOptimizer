@@ -1253,6 +1253,12 @@ th.sortable:hover { background: var(--gray-100); }
       <button class="btn btn-outline btn-sm" onclick="showAddPhaseForm()" style="margin-bottom:24px;">+ Add Phase</button>
 
       <div class="divider"></div>
+      <div class="settings-section-title">Load Blending</div>
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Assign loads to two locations in an alternating pattern instead of all of one then all of the other. The optimizer gives the chunk size to the first location, then the same to the second, and repeats until one runs out — then fills the rest with whatever remains. Example: chunk 2 = 2 Columbus, 2 Dothan, 2 Columbus, 2 Dothan…</p>
+      <div id="blend-list" style="margin-bottom:10px;"></div>
+      <button class="btn btn-outline btn-sm" onclick="addBlend()" style="margin-bottom:24px;">+ Add Blend</button>
+
+      <div class="divider"></div>
       <div class="settings-section-title">Receiver Windows</div>
       <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Set each destination's receiving hours. Deliveries outside the window get a plan quality warning and are deprioritized in the optimizer. Leave blank for no constraint.</p>
       <div class="tbl-wrap" style="margin-bottom:12px;">
@@ -2021,6 +2027,7 @@ const DEFAULT_SETTINGS = {
   receiverWindows:     {},
   packOverflow:        false,   // pack overflow-tier drivers onto fewest trucks (opt-in, per DC)
   windowProtect:       false,   // let an in-window truck beat a higher-priority late one (opt-in, per DC)
+  blends:              (DC_CONFIG.settings?.blends || []).map(b => ({ dests: (b.dests||[]).slice(), chunk: b.chunk|0 })),
 };
 
 // Dest → CSS class maps — index-based so any DC's dest codes work without CSS changes.
@@ -2985,6 +2992,60 @@ function toggleWindowProtect(checked) {
   applyOptimizerToggle();
 }
 
+// Flattens the optimizer's phase-by-phase assignment into a single ordered list
+// of phase indices (one entry per load). With no blends configured this is exactly
+// phaseOrder expanded phase-by-phase (byte-identical to the old nested loop). When a
+// blend is configured (state.settings.blends = [{dests:['COL','DOT'], chunk:2}, ...])
+// the phases whose destinations belong to that blend are interleaved chunk-at-a-time
+// (2 Columbus, 2 Dothan, 2 Columbus, …) until one runs out, then the remainder of the
+// others is emitted — the whole group anchored at its earliest position in phaseOrder.
+function buildBlendedLoadSequence(phaseOrder, counts) {
+  const blends = (state.settings && Array.isArray(state.settings.blends)) ? state.settings.blends : [];
+  function blendForDest(dest) {
+    for (const b of blends) {
+      if (b && Array.isArray(b.dests) && b.dests.includes(dest) && (b.chunk | 0) > 0) return b;
+    }
+    return null;
+  }
+  const seq = [];
+  const emitted = new Set();   // phaseOrder positions already output
+  phaseOrder.forEach((entry, oi) => {
+    if (emitted.has(oi)) return;
+    const phase = state.phases[entry.pi];
+    const blend = phase ? blendForDest(phase.dest) : null;
+    if (!blend) {
+      for (let i = 0; i < counts[entry.pi]; i++) seq.push(entry.pi);
+      emitted.add(oi);
+      return;
+    }
+    // Gather every not-yet-emitted phaseOrder member of this blend (anchors at earliest).
+    const group = [];
+    phaseOrder.forEach((e2, oj) => {
+      if (emitted.has(oj)) return;
+      const p2 = state.phases[e2.pi];
+      if (p2 && blend.dests.includes(p2.dest)) group.push({ oj, pi: e2.pi });
+    });
+    // Emit in the order the blend lists its destinations (so "2 Columbus, 2 Dothan"
+    // means Columbus first), round-robin chunk-at-a-time until all are exhausted.
+    const emitOrder = group.slice().sort((a, b) =>
+      blend.dests.indexOf(state.phases[a.pi].dest) - blend.dests.indexOf(state.phases[b.pi].dest));
+    const remaining = emitOrder.map(g => counts[g.pi]);
+    const chunk = blend.chunk | 0;
+    let anyLeft = true;
+    while (anyLeft) {
+      anyLeft = false;
+      for (let k = 0; k < emitOrder.length; k++) {
+        const take = Math.min(chunk, remaining[k]);
+        for (let t = 0; t < take; t++) seq.push(emitOrder[k].pi);
+        remaining[k] -= take;
+        if (remaining[k] > 0) anyLeft = true;
+      }
+    }
+    group.forEach(g => emitted.add(g.oj));
+  });
+  return seq;
+}
+
 function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
   const available = getAvailableDrivers();
   const dotMax    = state.settings.dotMaxHours;
@@ -3345,13 +3406,13 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
       return a.dispatchMins - b.dispatchMins;
     });
 
-  phaseOrder.forEach(({ pi }) => {
+  const loadSequence = buildBlendedLoadSequence(phaseOrder, counts);
+  loadSequence.forEach(pi => {
     const phase = state.phases[pi];
-    const count = counts[pi];
     const hrs   = getHrsForDest(phase.dest);
     phaseDispatchMins = toMinutes(phase.dispatchTime);
 
-    for (let i = 0; i < count; i++) {
+    {
       counts[pi]--;   // keep counts current so aubLoadsRemain()/fullDayLoadsRemain() see live state
       globalNum++;
       let drv = null;
@@ -6373,6 +6434,65 @@ function renderSettings() {
   document.getElementById('set-avg-speed').value       = state.settings.avgSpeed;
   document.getElementById('set-dot-max').value         = state.settings.dotMaxHours;
   document.getElementById('set-delivery-window').value = state.settings.deliveryWindowHours ?? DC_CONFIG.optimizer?.deliveryWindowHours ?? 5;
+  renderBlends();
+}
+
+// ── Load Blending ────────────────────────────────────────────────────────────
+// Interleave two destinations chunk-at-a-time in the optimizer. Stored on
+// state.settings.blends (= [{dests:['COL','DOT'], chunk:2}]) so it persists in
+// localStorage and syncs via buildLiveConfig for custom DCs.
+function renderBlends() {
+  const host = document.getElementById('blend-list');
+  if (!host) return;
+  const blends = state.settings.blends || (state.settings.blends = []);
+  const dests = state.destinations.filter(d => d.enabled !== false);
+  const nameOf = code => (dests.find(x => x.code === code)?.name || code || '').split(',')[0];
+  const opts = (sel) => dests.map(d =>
+    `<option value="${d.code}" ${d.code === sel ? 'selected' : ''}>${d.code} — ${nameOf(d.code)}</option>`).join('');
+  if (!blends.length) {
+    host.innerHTML = `<p style="font-size:11px;color:var(--gray-400);font-style:italic;">No blends. Loads are assigned one location fully before the next.</p>`;
+    return;
+  }
+  host.innerHTML = blends.map((b, i) => `
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:8px;margin-bottom:6px;">
+      <select class="plain" style="flex:1;min-width:110px;" onchange="updateBlendDest(${i},0,this.value)">${opts(b.dests[0])}</select>
+      <span style="font-size:11px;color:var(--gray-400);">&amp;</span>
+      <select class="plain" style="flex:1;min-width:110px;" onchange="updateBlendDest(${i},1,this.value)">${opts(b.dests[1])}</select>
+      <span style="font-size:11px;color:var(--gray-500);">chunk</span>
+      <input type="number" class="plain" min="1" max="20" step="1" value="${b.chunk||2}" style="width:56px;" onchange="updateBlendChunk(${i},this.value)">
+      <button class="btn btn-ghost btn-sm" onclick="removeBlend(${i})" title="Remove blend">✕</button>
+    </div>`).join('');
+}
+function addBlend() {
+  const dests = state.destinations.filter(d => d.enabled !== false);
+  if (dests.length < 2) { alert('Add at least two destinations before creating a blend.'); return; }
+  state.settings.blends = state.settings.blends || [];
+  state.settings.blends.push({ dests: [dests[0].code, dests[1].code], chunk: 2 });
+  saveBlends();
+}
+function updateBlendDest(i, slot, code) {
+  const b = state.settings.blends[i]; if (!b) return;
+  b.dests[slot] = code;
+  if (b.dests[0] === b.dests[1]) {
+    // Nudge the other slot to a different dest so a blend never pairs a dest with itself.
+    const alt = state.destinations.filter(d => d.enabled !== false && d.code !== code)[0];
+    if (alt) b.dests[slot === 0 ? 1 : 0] = alt.code;
+  }
+  saveBlends();
+}
+function updateBlendChunk(i, val) {
+  const b = state.settings.blends[i]; if (!b) return;
+  b.chunk = Math.max(1, parseInt(val, 10) || 1);
+  saveBlends();
+}
+function removeBlend(i) {
+  state.settings.blends.splice(i, 1);
+  saveBlends();
+}
+function saveBlends() {
+  saveSettings_();
+  renderBlends();
+  markResultStale('Blend changed', 'Click Generate to apply the new load blending.');
 }
 function saveSettings() {
   state.settings.avgSpeed             = parseFloat(document.getElementById('set-avg-speed').value)||45;
