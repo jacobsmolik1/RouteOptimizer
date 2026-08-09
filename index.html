@@ -4242,44 +4242,36 @@ function renderDomicileWarnings(result) {
 // ════════════════════════════════════════════════════════════════════════════
 //  RENDER: PLAN QUALITY PANEL
 // ════════════════════════════════════════════════════════════════════════════
-function getDestinationDeliveryWindowWarnings(result) {
-  const defaultWindowHours = state.settings.deliveryWindowHours ?? DC_CONFIG.optimizer?.deliveryWindowHours ?? 5;
-  if (!result || !defaultWindowHours) return [];
+// Delivery time (minutes since midnight) per destination, taken from the SAME timeline the
+// driver cards and assignments table use (computeRunTimings), so plan-quality warnings can
+// never disagree with what's actually displayed. computeRunTimings orders each driver's
+// loads by real dispatch sequence (and honors manual re-sequencing / stamped out-times);
+// the old per-warning calc sorted by driverLoadNum, which diverged whenever a load's number
+// didn't match its dispatch order (e.g. a home-return or manually-assigned load). External-
+// carrier loads have no driver timeline → delivery = dispatch + half the round trip.
+function deliveryTimesByDest(result) {
   const byDest = {};
-  const driverReturn = {};
-  const driverGroups = {};
+  const timings = computeRunTimings(result);
   result.assignments.forEach(a => {
     const finalDriver = getFinalDriverName(a);
     if (!finalDriver || finalDriver === 'UNASSIGNED') return;
+    let delivery;
     if (finalDriver === DC_CONFIG.externalCarrier) {
-      const dispatch = toMinutes(a.dispatchTime || '00:00');
-      const delivery = dispatch + Math.round((a.hrs / 2) * 60);
-      if (!byDest[a.dest]) byDest[a.dest] = [];
-      byDest[a.dest].push(delivery);
-      return;
+      delivery = toMinutes(a.dispatchTime || '00:00') + Math.round((a.hrs / 2) * 60);
+    } else {
+      const t = timings.get(a);
+      if (!t) return;
+      delivery = t.eta;
     }
-    if (!driverGroups[finalDriver]) driverGroups[finalDriver] = [];
-    driverGroups[finalDriver].push(a);
+    (byDest[a.dest] = byDest[a.dest] || []).push(delivery);
   });
-  Object.entries(driverGroups).forEach(([driverName, loads]) => {
-    const driver = state.drivers.find(d => d.name === driverName);
-    driverReturn[driverName] = driver?.arrivalTime ? toMinutes(driver.arrivalTime) : 0;
-    loads
-      .sort((a, b) => {
-        const an = a.driverLoadNum ?? 999;
-        const bn = b.driverLoadNum ?? 999;
-        if (an !== bn) return an - bn;
-        return toMinutes(a.dispatchTime || '00:00') - toMinutes(b.dispatchTime || '00:00');
-      })
-      .forEach(a => {
-        const dispatch = toMinutes(a.dispatchTime || '00:00');
-        const actualDispatch = Math.max(dispatch, driverReturn[driverName] || 0);
-        const delivery = actualDispatch + Math.round((a.hrs / 2) * 60);
-        if (!byDest[a.dest]) byDest[a.dest] = [];
-        byDest[a.dest].push(delivery);
-        driverReturn[driverName] = actualDispatch + Math.round(a.hrs * 60);
-      });
-  });
+  return byDest;
+}
+
+function getDestinationDeliveryWindowWarnings(result) {
+  const defaultWindowHours = state.settings.deliveryWindowHours ?? DC_CONFIG.optimizer?.deliveryWindowHours ?? 5;
+  if (!result || !defaultWindowHours) return [];
+  const byDest = deliveryTimesByDest(result);
   return Object.entries(byDest).flatMap(([dest, times]) => {
     if (times.length < 2) return [];
     const sorted = times.slice().sort((a, b) => a - b);
@@ -4307,34 +4299,7 @@ function getDestinationDeliveryWindowWarnings(result) {
 
 function getReceiverWindowWarnings(result) {
   if (!result) return [];
-  const byDest = {};
-  const driverReturn = {};
-  const driverGroups = {};
-  result.assignments.forEach(a => {
-    const finalDriver = getFinalDriverName(a);
-    if (!finalDriver || finalDriver === 'UNASSIGNED') return;
-    if (finalDriver === DC_CONFIG.externalCarrier) {
-      const delivery = toMinutes(a.dispatchTime || '00:00') + Math.round((a.hrs / 2) * 60);
-      if (!byDest[a.dest]) byDest[a.dest] = [];
-      byDest[a.dest].push(delivery);
-      return;
-    }
-    if (!driverGroups[finalDriver]) driverGroups[finalDriver] = [];
-    driverGroups[finalDriver].push(a);
-  });
-  Object.entries(driverGroups).forEach(([driverName, loads]) => {
-    const driver = state.drivers.find(d => d.name === driverName);
-    driverReturn[driverName] = driver?.arrivalTime ? toMinutes(driver.arrivalTime) : 0;
-    loads
-      .sort((a, b) => ((a.driverLoadNum??999) - (b.driverLoadNum??999)) || (toMinutes(a.dispatchTime||'00:00') - toMinutes(b.dispatchTime||'00:00')))
-      .forEach(a => {
-        const actualDispatch = Math.max(toMinutes(a.dispatchTime || '00:00'), driverReturn[driverName] || 0);
-        const delivery = actualDispatch + Math.round((a.hrs / 2) * 60);
-        if (!byDest[a.dest]) byDest[a.dest] = [];
-        byDest[a.dest].push(delivery);
-        driverReturn[driverName] = actualDispatch + Math.round(a.hrs * 60);
-      });
-  });
+  const byDest = deliveryTimesByDest(result);
   const warnings = [];
   Object.entries(byDest).forEach(([dest, times]) => {
     const w = (state.settings.receiverWindows || {})[dest]
