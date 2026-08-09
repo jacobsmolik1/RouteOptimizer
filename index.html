@@ -5474,6 +5474,24 @@ function generateAssignments() {
     alert('Please enter at least one load before generating assignments.');
     return;
   }
+  // Keep locked loads locked across a full Generate. If the current plan has any locked
+  // internal loads, route through rerunRemaining (which preserves them and re-optimizes
+  // everything else) instead of wiping them in a fresh regen. Uses the SAME lock predicate
+  // as rerunRemaining so the two never ping-pong: rerunRemaining only falls back to
+  // generateAssignments when there are NO locks, at which point this guard is a no-op.
+  if (state.lastResult && state.lastResult.assignments.some(a =>
+        isLocked(a) && getFinalDriverName(a) !== 'UNASSIGNED'
+        && getFinalDriverName(a) !== DC_CONFIG.externalCarrier)) {
+    rerunRemaining();
+    // Mirror the full-generate UI (collapse the input card, scroll to results).
+    const inputCard = document.querySelector('#tab-dashboard .card');
+    if (inputCard) inputCard.classList.add('input-card-collapsed');
+    const btn = document.getElementById('input-toggle-btn');
+    if (btn) btn.textContent = '▼ Expand';
+    buildCollapsedSummary();
+    document.getElementById('metrics-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
   // Subtract manually-assigned bucket loads so optimizer only fills what's left
   const bucketByPhase = {};
   const preLoads = {};
