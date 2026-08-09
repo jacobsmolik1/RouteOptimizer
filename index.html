@@ -1274,6 +1274,12 @@ th.sortable:hover { background: var(--gray-100); }
       <div class="field-group"><label>Average Speed (mph)</label><input type="number" class="plain" id="set-avg-speed" min="20" max="75" step="1"></div>
       <div class="field-group"><label>DOT Max Driving Hours</label><input type="number" class="plain" id="set-dot-max" min="8" max="11" step="0.5"></div>
       <div class="field-group"><label>Default Delivery Window Target (hours)</label><input type="number" class="plain" id="set-delivery-window" min="1" max="12" step="0.5"></div>
+      <div class="field-group"><label>Driver Card Order</label>
+        <select class="plain" id="set-card-sort">
+          <option value="arrival">By arrival time (start time)</option>
+          <option value="name">By name / number</option>
+        </select>
+      </div>
 
       <button class="btn btn-dark btn-sm" onclick="saveSettings()" style="margin-bottom:24px;">Save Settings</button>
 
@@ -2028,6 +2034,7 @@ const DEFAULT_SETTINGS = {
   packOverflow:        false,   // pack overflow-tier drivers onto fewest trucks (opt-in, per DC)
   windowProtect:       false,   // let an in-window truck beat a higher-priority late one (opt-in, per DC)
   blends:              (DC_CONFIG.settings?.blends || []).map(b => ({ dests: (b.dests||[]).slice(), chunk: b.chunk|0 })),
+  cardSort:            DC_CONFIG.settings?.cardSort || 'arrival',   // pass-out card order: 'arrival' (by start time) | 'name'
 };
 
 // Dest → CSS class maps — index-based so any DC's dest codes work without CSS changes.
@@ -4930,11 +4937,21 @@ function renderDriverCards(result) {
     const m = /^(.*?)(\d+)\s*$/.exec(d.name || '');
     return m ? [m[1].trim().toLowerCase(), parseInt(m[2], 10)] : [(d.name || '').toLowerCase(), 0];
   };
-  let cardsHTML = driversToShow.slice().sort((a, b) => {
+  const byName = (a, b) => {
     const [pa, na] = nameKey(a), [pb, nb] = nameKey(b);
     if (pa !== pb) return pa < pb ? -1 : 1;
     return na - nb;
-  }).map(buildCard).join('');
+  };
+  // Card order: 'arrival' lists drivers by start time (natural pass-out order — hand out
+  // loads as they show up; blank arrival times sort to the end), else natural name/number.
+  const cardCmp = (state.settings.cardSort || 'arrival') === 'name'
+    ? byName
+    : (a, b) => {
+        const aa = a.arrivalTime ? toMinutes(a.arrivalTime) : 99999;
+        const ab = b.arrivalTime ? toMinutes(b.arrivalTime) : 99999;
+        return aa !== ab ? aa - ab : byName(a, b);
+      };
+  let cardsHTML = driversToShow.slice().sort(cardCmp).map(buildCard).join('');
 
   // Unassigned card — loads the optimizer could not place. Modeled on the external
   // carrier card: each load is draggable onto a driver card (or click to reassign).
@@ -6399,6 +6416,7 @@ function renderSettings() {
   document.getElementById('set-avg-speed').value       = state.settings.avgSpeed;
   document.getElementById('set-dot-max').value         = state.settings.dotMaxHours;
   document.getElementById('set-delivery-window').value = state.settings.deliveryWindowHours ?? DC_CONFIG.optimizer?.deliveryWindowHours ?? 5;
+  document.getElementById('set-card-sort').value       = state.settings.cardSort || 'arrival';
   renderBlends();
 }
 
@@ -6463,6 +6481,7 @@ function saveSettings() {
   state.settings.avgSpeed             = parseFloat(document.getElementById('set-avg-speed').value)||45;
   state.settings.dotMaxHours          = parseFloat(document.getElementById('set-dot-max').value)||10;
   state.settings.deliveryWindowHours  = parseFloat(document.getElementById('set-delivery-window').value)||5;
+  state.settings.cardSort             = document.getElementById('set-card-sort').value || 'arrival';
   // Recalculate bucket hrs — avgSpeed change affects getHrsForDest
   state.bucketAsgn = (state.bucketAsgn || []).map(b => ({...b, hrs: getHrsForDest(b.dest)}));
   saveBucketAsgn();
