@@ -5024,12 +5024,15 @@ function renderDriverCards(result) {
 
   if (shoreLoads.length > 0) {
     const dNames = Object.fromEntries(state.destinations.map(d => [d.code, d.name.split(',')[0]]));
+    const lockedCount = shoreLoads.filter(isLocked).length;
     let runRows;
     if (shoreExpanded) {
       const sorted = shoreLoads.slice().sort((a,b) => (a.driverLoadNum||0) - (b.driverLoadNum||0));
       runRows = sorted.map(a => {
         const loadIdx = result.assignments.indexOf(a);
-        return `<div class="run-row shore-row" draggable="true"
+        const locked = isLocked(a);
+        const lockBtn = `<button class="out-btn${locked?' stamped':''}" onclick="event.stopPropagation();toggleLock(${loadIdx})" title="${locked ? 'Locked to '+DC_CONFIG.externalCarrier+' — stays here when you regenerate. Click to unlock.' : 'Lock this load to '+DC_CONFIG.externalCarrier+' so it stays put when you regenerate'}">${locked ? '🔒' : '🔓'}</button>`;
+        return `<div class="run-row shore-row${locked?' is-locked':''}" draggable="true"
           onclick="openReassignModal(${loadIdx})"
           ondragstart="handleDragStart(event,${loadIdx})"
           ondragend="handleDragEnd(event)"
@@ -5041,6 +5044,7 @@ function renderDriverCards(result) {
           <span class="run-label" style="background:var(--purple);">${a.dest}</span>
           <span class="run-phase">${a.phase}<span style="display:block;font-size:9px;color:var(--gray-400);">${a.dispatchTime} dispatch</span></span>
           <span class="run-hrs">${a.hrs.toFixed(2)}h</span>
+          ${lockBtn}
         </div>`;
       }).join('');
     } else {
@@ -5058,7 +5062,7 @@ function renderDriverCards(result) {
         <div class="drv-initial" style="background:white;color:var(--purple);">${DC_CONFIG.externalCarrier.charAt(0)}</div>
         <div style="flex:1;">
           <div class="drv-name">${DC_CONFIG.externalCarrier} CARRIER</div>
-          <div class="drv-base">${shoreExpanded ? 'Drag a load onto any driver card ↓' : `Outside Carrier — ${shoreLoads.length} load${shoreLoads.length!==1?'s':''}`}</div>
+          <div class="drv-base">${shoreExpanded ? 'Drag a load onto any driver card ↓' : `Outside Carrier — ${shoreLoads.length} load${shoreLoads.length!==1?'s':''}${lockedCount?` · 🔒 ${lockedCount} locked`:''}`}</div>
         </div>
         <div style="font-size:15px;color:white;opacity:0.6;flex-shrink:0;">${shoreExpanded ? '▲' : '▼'}</div>
       </div>
@@ -5480,8 +5484,7 @@ function generateAssignments() {
   // as rerunRemaining so the two never ping-pong: rerunRemaining only falls back to
   // generateAssignments when there are NO locks, at which point this guard is a no-op.
   if (state.lastResult && state.lastResult.assignments.some(a =>
-        isLocked(a) && getFinalDriverName(a) !== 'UNASSIGNED'
-        && getFinalDriverName(a) !== DC_CONFIG.externalCarrier)) {
+        isLocked(a) && getFinalDriverName(a) !== 'UNASSIGNED')) {
     rerunRemaining();
     // Mirror the full-generate UI (collapse the input card, scroll to results).
     const inputCard = document.querySelector('#tab-dashboard .card');
@@ -5566,7 +5569,10 @@ function rerunRemaining() {
   if (!state.lastResult) return generateAssignments();
   const prev = state.lastResult;
   const locked = prev.assignments.filter(a => isLocked(a) && getFinalDriverName(a) !== 'UNASSIGNED' && getFinalDriverName(a) !== DC_CONFIG.externalCarrier);
-  if (!locked.length) return generateAssignments();   // nothing committed → a normal fresh plan
+  // Locked outside-carrier (overflow) loads: kept on the carrier and pulled out of the pool
+  // so the optimizer won't re-plan them, but they consume no internal driver capacity.
+  const lockedCarrier = prev.assignments.filter(a => isLocked(a) && getFinalDriverName(a) === DC_CONFIG.externalCarrier);
+  if (!locked.length && !lockedCarrier.length) return generateAssignments();   // nothing committed → a normal fresh plan
 
   const bucketByPhase = {}, lockedByPhase = {}, preLoads = {}, preItems = {};
   const ensurePre = id => (preLoads[id] || (preLoads[id] = { loads:0, hours:0, colCount:0, destCounts:{}, returnMinutes:0 }));
@@ -5595,6 +5601,10 @@ function rerunRemaining() {
     const aDef = DC_CONFIG.restrictions.find(r => r.type==='assist' && r.destCode===a.dest);
     if (aDef && driver.restriction===aDef.value) pre.colCount++;
   });
+  // Locked carrier loads → only remove from the per-phase pool (no internal driver consumed).
+  lockedCarrier.forEach(a => {
+    const pi = phaseIdx[a.phase]; if (pi != null) lockedByPhase[pi] = (lockedByPhase[pi]||0)+1;
+  });
   // returnMinutes = when the driver is back after their committed loads (out-time anchored).
   Object.entries(preItems).forEach(([id, items]) => {
     const driver = state.drivers.find(d => d.id === id);
@@ -5615,7 +5625,7 @@ function rerunRemaining() {
 
   // Merge preserved locked loads back in, then guarantee each driver's un-locked
   // loads sit after its locked ones (handles even non-contiguous manual locks).
-  fresh.assignments = locked.concat(fresh.assignments);
+  fresh.assignments = locked.concat(lockedCarrier).concat(fresh.assignments);
   const byDriver = {};
   fresh.assignments.forEach(a => { const n = getFinalDriverName(a); if (n && n!=='UNASSIGNED') (byDriver[n]=byDriver[n]||[]).push(a); });
   Object.values(byDriver).forEach(loads => {
