@@ -1911,6 +1911,12 @@ document.addEventListener('click', () => {
   if (dd) dd.classList.remove('open');
 });
 
+// Built-in DCs are defined in code (ALL_DC_CONFIGS above). Capture their ids BEFORE the
+// custom-DC merge so we can distinguish code-defined DCs (montgomery/tifton/birmingham)
+// from user-created crossdocks. Built-in DCs sync only their phases + destinations via
+// dcs.config (settings ride the dispatch_days path) and must never be cached as custom.
+const BUILTIN_DC_IDS = new Set(Object.keys(ALL_DC_CONFIGS));
+
 // ── Merge user-created crossdocks (synchronous, offline-safe) ────────────
 // Custom DC configs are cached in localStorage under '_custom_dcs' so they
 // are available BEFORE DC_CONFIG resolves below (auth/Supabase is async and
@@ -1963,7 +1969,7 @@ if (!DC_CONFIG) {
         if (error || !Array.isArray(data)) return;
         const cache = {};
         data.forEach(r => {
-          if (!r.config) return;                 // built-in DCs live in code
+          if (!r.config || BUILTIN_DC_IDS.has(r.slug)) return;   // built-in DCs live in code, never custom
           const cfg = r.config; cfg._custom = true; cfg.id = cfg.id || r.slug;
           cache[r.slug] = cfg; ALL_DC_CONFIGS[cfg.id] = cfg;
         });
@@ -2255,18 +2261,18 @@ const SupabaseSync = (() => {
       settings:        state.settings,
       destinations:    state.destinations,
       phases:          state.phases,
-      _custom:         true,
+      _custom:         !!DC_CONFIG._custom,   // false for built-in DCs (they stay code-defined)
     };
   }
 
   function queueConfigSync() {
-    if (!DC_CONFIG || !DC_CONFIG._custom) return;   // built-in DCs live in code
+    if (!DC_CONFIG) return;   // every DC (built-in + custom) syncs its structural config
     clearTimeout(_configTimer);
     _configTimer = setTimeout(_syncConfig, 2000);
   }
 
   async function _syncConfig() {
-    if (!db || !_user || !DC_CONFIG || !DC_CONFIG._custom) return;
+    if (!db || !_user || !DC_CONFIG) return;
     try {
       const cfg = buildLiveConfig();
       const { error } = await db.rpc('save_dc_config', {
@@ -2274,10 +2280,13 @@ const SupabaseSync = (() => {
         p_config:  cfg,
       });
       if (error) throw error;
-      // Keep the local cache and the in-memory config in step.
-      const cache = JSON.parse(localStorage.getItem('_custom_dcs') || '{}');
-      cache[DC_CONFIG.id] = cfg;
-      localStorage.setItem('_custom_dcs', JSON.stringify(cache));
+      // Custom DCs cache their whole config; built-in DCs stay code-defined and must NOT
+      // enter the custom-DC cache (only their phases/dests sync, applied on pull).
+      if (DC_CONFIG._custom) {
+        const cache = JSON.parse(localStorage.getItem('_custom_dcs') || '{}');
+        cache[DC_CONFIG.id] = cfg;
+        localStorage.setItem('_custom_dcs', JSON.stringify(cache));
+      }
       localStorage.setItem(DC_CONFIG.storagePrefix + '_cfgsync', Date.now().toString());
     } catch(e) {
       console.error('[SupabaseSync] _syncConfig failed:', e);
@@ -2298,18 +2307,21 @@ const SupabaseSync = (() => {
       const cache = {};
       let activeChanged = false;
       rows.forEach(r => {
-        if (!r.config) return;                       // built-in DC — lives in code
-        const cfg = r.config; cfg._custom = true; cfg.id = cfg.id || r.slug;
-        cache[r.slug] = cfg;
+        if (!r.config) return;                       // no synced config yet
+        const isBuiltin = BUILTIN_DC_IDS.has(r.slug);
+        const cfg = r.config; cfg.id = cfg.id || r.slug;
+        // Only user-created crossdocks enter the custom-DC cache; built-in DCs stay in code.
+        if (!isBuiltin) { cfg._custom = true; cache[r.slug] = cfg; }
         if (r.slug === _activeDcId) {
           const P = cfg.storagePrefix || (r.slug + '_');
           const dbTs    = new Date(r.config_updated_at).getTime();
           const localTs = parseInt(localStorage.getItem(P + '_cfgsync') || '0');
           if (dbTs > localTs) {
-            // DB wins — overwrite the active DC's cached structural state.
+            // DB wins — overwrite the active DC's cached structural state. Built-in DCs sync
+            // ONLY phases + destinations; their settings ride the dispatch_days path.
             if (cfg.destinations) localStorage.setItem(P + 'dests',    JSON.stringify(cfg.destinations));
             if (cfg.phases)       localStorage.setItem(P + 'phases',   JSON.stringify(cfg.phases));
-            if (cfg.settings)     localStorage.setItem(P + 'settings', JSON.stringify(cfg.settings));
+            if (!isBuiltin && cfg.settings) localStorage.setItem(P + 'settings', JSON.stringify(cfg.settings));
             localStorage.setItem(P + '_cfgsync', dbTs.toString());
             activeChanged = true;
           }
