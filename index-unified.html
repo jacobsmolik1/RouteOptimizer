@@ -4925,7 +4925,7 @@ function renderDriverCards(result) {
       ondrop="handleCardDrop(event,'${safeName}')">
       <div class="driver-card-header">
         <div class="drv-initial">${initial}</div>
-        <div><div class="drv-name">${d.name}${isModified?'<span class="wi-badge">~</span>':''}</div><div class="drv-base">${d.homeBase}</div></div>
+        <div><div class="drv-name">${d.name}${isModified?'<span class="wi-badge">~</span>':''}</div><div class="drv-base">${d.homeBase}${d.arrivalTime?` · <span style="color:rgba(255,255,255,0.92);font-weight:700;">🕐 Arrives ${fmt12h(d.arrivalTime)}</span>`:''}</div></div>
         <div style="display:flex;gap:5px;align-items:center;margin-left:auto;">
           <button class="btn-adhoc-add no-print" onclick="openAdHocModal('${safeName}')">+ Ad Hoc</button>
           <button class="wi-toggle-btn no-print" onclick="toggleWhatIfPanel('${d.id}')" id="wi-toggle-${d.id}">⚙ What-if</button>
