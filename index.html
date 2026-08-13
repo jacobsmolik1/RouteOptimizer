@@ -2400,6 +2400,9 @@ const SupabaseSync = (() => {
       });
       if (error) throw error;
       if (!data) return false;
+      // A row exists for today → the local sheet belongs to today. Stamp it so the
+      // day-rollover check treats it as current (and a coworker's built plan isn't cleared).
+      localStorage.setItem(P + 'planDate', todayLocal());
       const dbTs    = new Date(data.updated_at).getTime();
       const localTs = parseInt(localStorage.getItem(P + '_dbsync') || '0');
       if (dbTs <= localTs) return false;
@@ -2533,16 +2536,15 @@ const SupabaseSync = (() => {
   }
 
   // ── Commit day ───────────────────────────────────────────────────────────
-  async function commitDay() {
+  async function commitDay(dateOverride) {
     if (!db || !_user) return;
-    const today = new Date().toISOString().slice(0, 10);
+    const date = dateOverride || new Date().toISOString().slice(0, 10);
     const { error } = await db.rpc('commit_dispatch_day', {
       p_dc_slug: DC_CONFIG.id,
-      p_date:    today,
+      p_date:    date,
     });
     if (error) throw error;
-    _committed = true;
-    _setCommitBadge();
+    if (!dateOverride) { _committed = true; _setCommitBadge(); }   // only flip today's badge
   }
 
   function _setCommitBadge() {
@@ -2800,7 +2802,8 @@ async function handleSignIn(e) {
     state = StateManager.load();
     const dbC = await SupabaseSync.loadDayFromDB();
     const drC = await SupabaseSync.syncDriversFromDB();
-    if (dbC || drC) renderAll();
+    const roC = autoRolloverDay();   // new day → commit yesterday + clear the sheet
+    if (dbC || drC || roC) renderAll();
     return;
   }
 
@@ -2817,7 +2820,8 @@ async function handleSignIn(e) {
     state = StateManager.load();
     const dbChanged = await SupabaseSync.loadDayFromDB();
     const driversChanged = await SupabaseSync.syncDriversFromDB();
-    if (dbChanged || driversChanged) renderAll();
+    const rolled = autoRolloverDay();   // new day → commit yesterday + clear the sheet
+    if (dbChanged || driversChanged || rolled) renderAll();
   } catch(err) {
     errEl.textContent = err.message || 'Sign-in failed. Check your credentials.';
     btn.disabled = false; btn.textContent = 'Sign In';
@@ -2849,9 +2853,10 @@ async function startupAuth() {
   // Pull today from DB, re-render if changed
   const dbChanged      = await SupabaseSync.loadDayFromDB();
   const driversChanged = await SupabaseSync.syncDriversFromDB();
+  const rolled         = autoRolloverDay();   // new day → commit yesterday + clear the sheet
   document.getElementById('auth-gate').style.display = 'none';
   updateUserDisplay();
-  if (dbChanged || driversChanged) renderAll();
+  if (dbChanged || driversChanged || rolled) renderAll();
 }
 
 // Re-renders all UI sections from current state (used after DB pull or sign-in).
@@ -3772,11 +3777,43 @@ function getRollingHours(driverId) {
   return last7.reduce((sum, entry) => sum + (entry.driverHours[driverId] || 0), 0);
 }
 
-function commitToHistory() {
-  if (!state.lastResult) { alert('Generate assignments first.'); return; }
+// Local calendar date (YYYY-MM-DD) in the device's timezone — NOT UTC. Used for the
+// day-rollover check so the "new day" boundary is local midnight, not UTC midnight
+// (which for a Central DC would fall in the middle of evening dispatch).
+function todayLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Auto-commit + clear on a new day. Runs at startup AFTER loadDayFromDB (which stamps
+// planDate = today when a row for today exists). If the local sheet belongs to a previous
+// local day, log it to history under its own date and reset for the fresh day. Order
+// matters for multi-user: because loadDayFromDB pulls (and stamps) today's row first, a
+// dispatcher who pulls a coworker's already-built current-day plan won't clear it.
+function autoRolloverDay() {
+  if (typeof state === 'undefined' || !state || !DC_CONFIG) return false;
+  const P = DC_CONFIG.storagePrefix;
+  const today = todayLocal();
+  const planDate = localStorage.getItem(P + 'planDate');
+  if (!planDate) { localStorage.setItem(P + 'planDate', today); return false; }  // first run — adopt today
+  if (planDate >= today) return false;                                            // still the same local day
+  // New local day since the sheet was last worked → commit yesterday, then clear.
+  const hasPlan = !!state.lastResult || (state.loads || []).some(n => n > 0) || (state.bucketAsgn || []).length > 0;
+  if (state.lastResult) {
+    try { commitToHistory(planDate); } catch (e) { console.error('[autoRollover] commit failed:', e); }
+  }
+  if (hasPlan) resetLoads();   // clears loads, result (and its locks), bucket, ad-hoc, returned
+  localStorage.setItem(P + 'planDate', today);
+  return hasPlan;
+}
+
+function commitToHistory(dateOverride) {
+  if (!state.lastResult) { if (!dateOverride) alert('Generate assignments first.'); return; }
   const now  = new Date();
-  const date = now.toISOString().slice(0, 10);
-  const dayLabel = now.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
+  const date = dateOverride || now.toISOString().slice(0, 10);
+  const dayLabel = dateOverride
+    ? new Date(dateOverride + 'T12:00:00').toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'})
+    : now.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
 
   const driverHours = {};
   state.lastResult.workload.forEach(w => { driverHours[w.id] = w.hours; });
@@ -3806,8 +3843,8 @@ function commitToHistory() {
   state.history = state.history.slice(-60);
   saveHistory();
   renderWorkload(state.lastResult); // refresh weekly hrs display
-  SupabaseSync.commitDay().catch(e => console.error('[commitDay]', e));
-  alert(`✅ ${dayLabel} committed to log.`);
+  SupabaseSync.commitDay(dateOverride).catch(e => console.error('[commitDay]', e));  // best-effort DB commit
+  if (!dateOverride) alert(`✅ ${dayLabel} committed to log.`);
 }
 
 function clearHistory() {
