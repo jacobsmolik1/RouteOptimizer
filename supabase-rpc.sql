@@ -138,6 +138,13 @@ begin
     raise exception 'Access denied for DC: %', p_dc_slug;
   end if;
 
+  -- Deletions propagate: drop drivers no longer in the submitted roster. Guard against an
+  -- empty payload wiping the whole roster (client always sends the full current roster).
+  if jsonb_array_length(coalesce(p_drivers,'[]'::jsonb)) > 0 then
+    delete from public.drivers where dc_id = v_dc_id
+      and id not in (select value->>'id' from jsonb_array_elements(p_drivers) value);
+  end if;
+
   for v_d in select * from jsonb_array_elements(p_drivers) loop
     insert into public.drivers
       (id, dc_id, name, home_base, restriction, max_loads,
