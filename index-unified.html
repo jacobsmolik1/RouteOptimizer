@@ -2101,8 +2101,8 @@ function saveDrivers()    { localStorage.setItem(DC_CONFIG.storagePrefix + 'driv
 function saveDests()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'dests',      JSON.stringify(state.destinations)); SupabaseSync.queueConfigSync(); }
 function saveSettings_()  { localStorage.setItem(DC_CONFIG.storagePrefix + 'settings',   JSON.stringify(state.settings));    SupabaseSync.queueSync(); SupabaseSync.queueConfigSync(); }
 function savePhases()     { localStorage.setItem(DC_CONFIG.storagePrefix + 'phases',     JSON.stringify(state.phases));      SupabaseSync.queueConfigSync(); }
-function saveLoads()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'loads',      JSON.stringify(state.loads));       SupabaseSync.queueSync(); }
-function saveResult()     { localStorage.setItem(DC_CONFIG.storagePrefix + 'lastresult', JSON.stringify(state.lastResult));  SupabaseSync.queueSync(); }
+function saveLoads()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'loads',      JSON.stringify(state.loads));       stampPlanToday(); SupabaseSync.queueSync(); }
+function saveResult()     { localStorage.setItem(DC_CONFIG.storagePrefix + 'lastresult', JSON.stringify(state.lastResult));  stampPlanToday(); SupabaseSync.queueSync(); }
 function saveReturned()   { localStorage.setItem(DC_CONFIG.storagePrefix + 'returned',   JSON.stringify(state.returned));    SupabaseSync.queueSync(); }
 function saveTemplates()  { localStorage.setItem(DC_CONFIG.storagePrefix + 'templates',  JSON.stringify(state.templates));   SupabaseSync.queueSync(); }
 function saveHistory()    { localStorage.setItem(DC_CONFIG.storagePrefix + 'history',    JSON.stringify(state.history)); }
@@ -3783,6 +3783,15 @@ function getRollingHours(driverId) {
 function todayLocal() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Mark the current sheet as belonging to today. Called whenever the user actively works a
+// plan (enters loads / generates) so planDate stays current even if the DB pull didn't set
+// it — which makes the next-day rollover fire reliably instead of depending on load timing.
+function stampPlanToday() {
+  if (typeof DC_CONFIG !== 'undefined' && DC_CONFIG) {
+    localStorage.setItem(DC_CONFIG.storagePrefix + 'planDate', todayLocal());
+  }
 }
 
 // Auto-commit + clear on a new day. Runs at startup AFTER loadDayFromDB (which stamps
