@@ -873,7 +873,7 @@ th.sortable:hover { background: var(--gray-100); }
       <strong id="hdr-date"></strong>
       <span id="hdr-day"></span>
     </div>
-    <button class="hdr-settings-btn no-print" onclick="openSettings()" title="Settings">⚙</button>
+    <button class="hdr-settings-btn no-print" id="btn-settings-gear" onclick="openSettings()" title="Settings" style="display:none">⚙</button>
     <div class="dc-switcher no-print" id="dc-switcher">
       <button class="hdr-settings-btn" onclick="toggleDCSwitcher(event)" title="Switch DC" style="font-size:15px;">⇄</button>
       <div class="dc-switcher-dropdown" id="dc-switcher-dropdown"></div>
@@ -1901,9 +1901,10 @@ function toggleDCSwitcher(e) {
     <button class="dc-switcher-item${cfg.id === DC_CONFIG?.id ? ' active' : ''}" onclick="selectDC('${cfg.id}')">
       <span class="dc-dot"></span>${cfg.name}
     </button>`).join('')
-    + `<button class="dc-switcher-item" style="border-top:1px solid #eee;color:var(--red);font-weight:700;" onclick="openCrossdockWizard()">
+    // + Add Crossdock is admin-only (create_dc is server-enforced admin-only too).
+    + (_isDcAdmin ? `<button class="dc-switcher-item" style="border-top:1px solid #eee;color:var(--red);font-weight:700;" onclick="openCrossdockWizard()">
          <span class="dc-dot" style="background:var(--red);"></span>+ Add Crossdock
-       </button>`;
+       </button>` : '');
   dd.classList.add('open');
 }
 document.addEventListener('click', () => {
@@ -2574,7 +2575,19 @@ const SupabaseSync = (() => {
   function getUser()       { return _user; }
   function isCommitted()   { return _committed; }
 
-  return { init, signIn, signUp, signOut, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, createAccountDirect, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted };
+  // Is the signed-in user an admin of the ACTIVE DC? Drives UI gating (Settings, Add
+  // Crossdock, Dispatchers). The real enforcement is server-side in the RPCs; this only
+  // hides controls a dispatcher can't use anyway.
+  async function amIAdmin() {
+    if (!db || !_user || !DC_CONFIG) return false;
+    try {
+      const { data, error } = await db.rpc('am_i_dc_admin', { p_dc_slug: DC_CONFIG.id });
+      if (error) throw error;
+      return !!data;
+    } catch(e) { console.error('[SupabaseSync] amIAdmin failed:', e); return false; }
+  }
+
+  return { init, signIn, signUp, signOut, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, createAccountDirect, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted, amIAdmin };
 })();
 
 // ── Auth UI helpers ─────────────────────────────────────────────────────────
@@ -2740,16 +2753,35 @@ async function revokeDispatcher(email) {
   }
 }
 
+// ── Role gating ──────────────────────────────────────────────────────────────
+// Admin-only controls (Settings, Add Crossdock, Dispatchers) are hidden for
+// dispatchers. This is cosmetic — the enforcement is server-side in the RPCs
+// (save_dc_config / create_dc / grant_dc_access are admin-only). Default LOCKED
+// (false) and reveal admin controls once the role check resolves, so an admin
+// sees controls appear rather than a dispatcher seeing them flash then vanish.
+let _isDcAdmin = false;
+function applyRoleGating() {
+  const user = SupabaseSync.getUser();
+  const settingsBtn = document.getElementById('btn-settings-gear');
+  if (settingsBtn) settingsBtn.style.display = (user && _isDcAdmin) ? '' : 'none';
+  const dispBtn = document.getElementById('hdr-dispatchers-btn');
+  if (dispBtn) dispBtn.style.display = (user && _isDcAdmin) ? '' : 'none';
+  // "+ Add Crossdock" lives in the switcher dropdown — gated when it's built (toggleDCSwitcher).
+}
+async function refreshRoleGating() {
+  _isDcAdmin = await SupabaseSync.amIAdmin();
+  applyRoleGating();
+}
+
 function updateUserDisplay() {
   const user = SupabaseSync.getUser();
   const emailEl  = document.getElementById('hdr-user-email');
   const logoutEl = document.getElementById('hdr-logout-btn');
-  const dispEl   = document.getElementById('hdr-dispatchers-btn');
   const syncEl   = document.getElementById('sync-indicator');
   if (emailEl)  emailEl.textContent = user?.email || '';
   if (logoutEl) logoutEl.style.display = user ? '' : 'none';
-  if (dispEl)   dispEl.style.display   = user ? '' : 'none';
   if (syncEl)   syncEl.style.display   = user ? '' : 'none';
+  applyRoleGating();   // Settings + Dispatchers buttons gated by admin role
 }
 
 let authMode = 'signin';   // 'signin' | 'signup'
@@ -2803,6 +2835,7 @@ async function handleSignIn(e) {
     const dbC = await SupabaseSync.loadDayFromDB();
     const drC = await SupabaseSync.syncDriversFromDB();
     const roC = autoRolloverDay();   // new day → commit yesterday + clear the sheet
+    refreshRoleGating();             // fetch admin role → hide admin-only controls for dispatchers
     if (dbC || drC || roC) renderAll();
     return;
   }
@@ -2821,6 +2854,7 @@ async function handleSignIn(e) {
     const dbChanged = await SupabaseSync.loadDayFromDB();
     const driversChanged = await SupabaseSync.syncDriversFromDB();
     const rolled = autoRolloverDay();   // new day → commit yesterday + clear the sheet
+    refreshRoleGating();                // fetch admin role → hide admin-only controls for dispatchers
     if (dbChanged || driversChanged || rolled) renderAll();
   } catch(err) {
     errEl.textContent = err.message || 'Sign-in failed. Check your credentials.';
@@ -2856,6 +2890,7 @@ async function startupAuth() {
   const rolled         = autoRolloverDay();   // new day → commit yesterday + clear the sheet
   document.getElementById('auth-gate').style.display = 'none';
   updateUserDisplay();
+  refreshRoleGating();                  // fetch admin role → hide admin-only controls for dispatchers
   if (dbChanged || driversChanged || rolled) renderAll();
 }
 

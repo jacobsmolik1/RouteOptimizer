@@ -133,13 +133,9 @@ declare
 begin
   select id into v_dc_id from public.dcs where slug = p_dc_slug;
   if v_dc_id is null then raise exception 'DC not found: %', p_dc_slug; end if;
-  if not exists (
-    select 1 from public.user_dc_access
-    where user_id = auth.uid()
-      and dc_id   = v_dc_id
-      and role    = 'admin'
-  ) then
-    raise exception 'Admin access required for DC: %', p_dc_slug;
+  -- Any DC member (dispatcher or admin) may edit the driver roster.
+  if not public.user_has_dc_access(v_dc_id) then
+    raise exception 'Access denied for DC: %', p_dc_slug;
   end if;
 
   for v_d in select * from jsonb_array_elements(p_drivers) loop
@@ -186,6 +182,10 @@ returns text language plpgsql security definer as $$
 declare v_dc_id uuid;
 begin
   if auth.uid() is null then raise exception 'Not authenticated'; end if;
+  -- Only admins (of at least one existing DC) may create new crossdocks.
+  if not exists (select 1 from public.user_dc_access where user_id = auth.uid() and role = 'admin') then
+    raise exception 'Only crossdock admins can create new crossdocks';
+  end if;
   if p_slug is null or length(trim(p_slug)) = 0 then raise exception 'Slug required'; end if;
   if exists (select 1 from public.dcs where slug = p_slug) then
     raise exception 'DC slug already exists: %', p_slug;
