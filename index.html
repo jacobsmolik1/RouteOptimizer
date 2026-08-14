@@ -1055,7 +1055,7 @@ th.sortable:hover { background: var(--gray-100); }
             <button class="btn btn-green btn-sm" id="commit-day-btn" onclick="commitToHistory()">📅 Commit Day</button>
             <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
             <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ CSV</button>
-            <button class="btn btn-outline btn-sm" onclick="resetLoads()">↺ Reset</button>
+            <button class="btn btn-outline btn-sm" onclick="openClearDayModal()">↺ Start Over</button>
           </div>
         </div>
         <div class="card-body">
@@ -1358,6 +1358,27 @@ th.sortable:hover { background: var(--gray-100); }
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeAdHocModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveAdHocMove()">Save Ad Hoc Move</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CLEAR DAY / START OVER CONFIRM ════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="clear-day-modal">
+  <div class="modal" style="width:380px;max-width:96vw;">
+    <div class="modal-header">
+      <span>↺ Start Over</span>
+      <button class="modal-close" onclick="closeClearDayModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--gray-600);line-height:1.55;">
+        Are you sure you want to <strong>delete the current plan and start over</strong>?
+        This clears all load counts, driver assignments, locks, and today's result.
+        Your drivers and settings are kept.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeClearDayModal()">No, keep it</button>
+      <button class="btn btn-danger" onclick="confirmClearDay()">Yes, start over</button>
     </div>
   </div>
 </div>
@@ -4031,6 +4052,11 @@ function updateTotalsDisplay() {
   document.getElementById('total-loads-display').textContent = tl;
   document.getElementById('total-hrs-display').textContent   = fmtHrs(th);
 }
+
+// Confirmation popup for wiping the day and starting fresh (destructive).
+function openClearDayModal()  { const m = document.getElementById('clear-day-modal'); if (m) m.classList.add('open'); }
+function closeClearDayModal() { const m = document.getElementById('clear-day-modal'); if (m) m.classList.remove('open'); }
+function confirmClearDay()    { closeClearDayModal(); resetLoads(); }
 
 function resetLoads() {
   state.loads = Array(state.phases.length).fill(0);
