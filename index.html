@@ -4549,6 +4549,19 @@ function renderPlanQuality(result) {
 // false, so all lock-aware code below is a pure no-op on the normal path.
 function isLocked(a) { return !!(a && (a.actualOutTime || a.locked)); }
 
+// A locked load is only PRESERVED across a regenerate if it still belongs to a valid,
+// active assignee: the outside carrier, or an internal driver who exists in the roster and
+// is NOT on vacation / what-if-inactive. Locks on a since-vacationed (or deleted, or
+// name-cleared) driver are stale — they get released back to the optimizer to re-plan.
+function isPreservableLock(a) {
+  if (!isLocked(a)) return false;
+  const n = getFinalDriverName(a);
+  if (!n || n === 'UNASSIGNED') return false;
+  if (n === DC_CONFIG.externalCarrier) return true;
+  const d = state.drivers.find(x => x.name === n);
+  return !!(d && !d.onVacation && !(state.whatIf || {})[d.id]?.inactive);
+}
+
 function rebalanceFairness() {
   if (!state.lastResult) return;
   const result = state.lastResult;
@@ -5597,13 +5610,12 @@ function generateAssignments() {
     alert('Please enter at least one load before generating assignments.');
     return;
   }
-  // Keep locked loads locked across a full Generate. If the current plan has any locked
-  // internal loads, route through rerunRemaining (which preserves them and re-optimizes
-  // everything else) instead of wiping them in a fresh regen. Uses the SAME lock predicate
-  // as rerunRemaining so the two never ping-pong: rerunRemaining only falls back to
-  // generateAssignments when there are NO locks, at which point this guard is a no-op.
-  if (state.lastResult && state.lastResult.assignments.some(a =>
-        isLocked(a) && getFinalDriverName(a) !== 'UNASSIGNED')) {
+  // Keep locked loads locked across a full Generate. If the current plan has any PRESERVABLE
+  // locks (active driver or the carrier — see isPreservableLock), route through rerunRemaining
+  // which keeps them and re-optimizes the rest. Uses the SAME predicate as rerunRemaining so
+  // the two never ping-pong: locks on vacationed/removed drivers aren't preservable, so this
+  // guard is a no-op for them and a full fresh generate re-plans them.
+  if (state.lastResult && state.lastResult.assignments.some(isPreservableLock)) {
     rerunRemaining();
     // Mirror the full-generate UI (collapse the input card, scroll to results).
     const inputCard = document.querySelector('#tab-dashboard .card');
@@ -5687,10 +5699,12 @@ function generateAssignments() {
 function rerunRemaining() {
   if (!state.lastResult) return generateAssignments();
   const prev = state.lastResult;
-  const locked = prev.assignments.filter(a => isLocked(a) && getFinalDriverName(a) !== 'UNASSIGNED' && getFinalDriverName(a) !== DC_CONFIG.externalCarrier);
+  // Only PRESERVABLE locks are kept (active driver in roster); locks on a vacationed/removed
+  // driver are stale and fall through to the optimizer to re-plan.
+  const locked = prev.assignments.filter(a => isPreservableLock(a) && getFinalDriverName(a) !== DC_CONFIG.externalCarrier);
   // Locked outside-carrier (overflow) loads: kept on the carrier and pulled out of the pool
   // so the optimizer won't re-plan them, but they consume no internal driver capacity.
-  const lockedCarrier = prev.assignments.filter(a => isLocked(a) && getFinalDriverName(a) === DC_CONFIG.externalCarrier);
+  const lockedCarrier = prev.assignments.filter(a => isPreservableLock(a) && getFinalDriverName(a) === DC_CONFIG.externalCarrier);
   if (!locked.length && !lockedCarrier.length) return generateAssignments();   // nothing committed → a normal fresh plan
 
   const bucketByPhase = {}, lockedByPhase = {}, preLoads = {}, preItems = {};
