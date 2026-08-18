@@ -2546,6 +2546,7 @@ const SupabaseSync = (() => {
         return {
           date: row.date, dayLabel, total, internal,
           shoreline: external, driverHours,
+          driverRuns: buildDriverRuns(assignments),
           committedAt: row.committed_at,
         };
       });
@@ -3872,6 +3873,21 @@ function autoRolloverDay() {
   return hasPlan;
 }
 
+// Per-driver run breakdown for the History log: each driver's loads with destination,
+// hours, planned dispatch time, and the stamped out-time (if any). The outside carrier is
+// kept as its own entry; UNASSIGNED loads are skipped. Compact keys keep the cache small.
+// This is the raw material for future efficiency metrics (loads/driver, actual vs planned).
+function buildDriverRuns(assignments) {
+  const runs = {};
+  (assignments || []).forEach(a => {
+    const n = a.override || a.autoDriver;
+    if (!n || n === 'UNASSIGNED') return;
+    (runs[n] = runs[n] || []).push({ d: a.dest, h: a.hrs || 0, dt: a.dispatchTime || '', o: a.actualOutTime || null, ln: a.driverLoadNum || 0 });
+  });
+  Object.values(runs).forEach(list => list.sort((x, y) => (x.ln || 0) - (y.ln || 0)));
+  return runs;
+}
+
 function commitToHistory(dateOverride) {
   if (!state.lastResult) { if (!dateOverride) alert('Generate assignments first.'); return; }
   const now  = new Date();
@@ -3897,7 +3913,7 @@ function commitToHistory(dateOverride) {
   const internal = state.lastResult.assignments.filter(a => a.internal).length + bucketCount; // bucket assignments are always internal
   const external = state.lastResult.assignments.filter(a => (a.override || a.autoDriver) === DC_CONFIG.externalCarrier).length;
 
-  const entry = { date, dayLabel, total, internal, shoreline: external, driverHours, loads: deepCopy(state.loads) };
+  const entry = { date, dayLabel, total, internal, shoreline: external, driverHours, driverRuns: buildDriverRuns(state.lastResult.assignments), loads: deepCopy(state.loads) };
 
   // Replace existing entry for same date or append
   const idx = state.history.findIndex(e => e.date === date);
@@ -3948,6 +3964,29 @@ function renderHistoryTab() {
       const warn = !over && hrs > dotMax * 0.9;
       return `<span class="hist-driver-chip ${over?'over':warn?'warn':''}">${name}: ${hrs.toFixed(1)}h${over?' ⚠️':warn?' ⚡':''}</span>`;
     }).join('');
+    // Full per-driver run log (destinations, out-time / planned, one-way ETA, hours).
+    const runLog = entry.driverRuns ? Object.entries(entry.driverRuns)
+      .sort((a, b) => {
+        const ca = a[0] === DC_CONFIG.externalCarrier ? 1 : 0, cb = b[0] === DC_CONFIG.externalCarrier ? 1 : 0;
+        return ca !== cb ? ca - cb : a[0].localeCompare(b[0]);
+      })
+      .map(([name, runs]) => {
+        const isCarrier = name === DC_CONFIG.externalCarrier;
+        const totalH = runs.reduce((s, r) => s + (r.h || 0), 0);
+        const chips = runs.map(r => {
+          let depMins = null, stamped = false;
+          if (r.o) { const dt = new Date(r.o); depMins = dt.getHours() * 60 + dt.getMinutes(); stamped = true; }
+          else if (r.dt) { depMins = toMinutes(r.dt); }
+          const depStr = depMins != null ? fmt12h(minutesToHHMM(depMins)) : '';
+          const etaStr = depMins != null ? fmt12h(minutesToHHMM((depMins + Math.round((r.h || 0) / 2 * 60)) % 1440)) : '';
+          const timeInfo = depStr ? `<span style="opacity:.55;font-weight:400;"> ${stamped ? 'out ' : ''}${depStr}${etaStr ? ' → ' + etaStr : ''}</span>` : '';
+          return `<span style="display:inline-block;font-size:11px;background:${isCarrier ? 'rgba(139,92,246,0.12)' : 'var(--gray-100)'};border-radius:4px;padding:2px 7px;margin:2px 3px 0 0;">${r.d}${timeInfo}</span>`;
+        }).join('');
+        return `<div style="padding:6px 16px;border-bottom:1px solid var(--gray-100);">
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;${isCarrier ? 'color:var(--purple);' : ''}"><span>${name}</span><span style="font-weight:400;color:var(--gray-400);">${runs.length} load${runs.length !== 1 ? 's' : ''} · ${totalH.toFixed(1)}h</span></div>
+          <div>${chips}</div>
+        </div>`;
+      }).join('') : '';
     return `<div class="hist-entry">
       <div class="hist-date-bar" onclick="const d=document.getElementById('${uid}');d.classList.toggle('open');this.querySelector('.hist-arrow').textContent=d.classList.contains('open')?'▲':'▼';" style="cursor:pointer;user-select:none;">
         <div><div class="hist-date-label">${entry.dayLabel}</div></div>
@@ -3964,7 +4003,7 @@ function renderHistoryTab() {
       </div>
       <div class="hist-drivers">${summaryChips || '<span style="font-size:11px;color:var(--gray-400);">No driver data</span>'}</div>
       <div id="${uid}" class="hist-entry-detail">
-        ${driverRows || '<div style="padding:10px 16px;font-size:12px;color:var(--gray-400);">No driver hours recorded.</div>'}
+        ${runLog || driverRows || '<div style="padding:10px 16px;font-size:12px;color:var(--gray-400);">No driver detail recorded.</div>'}
       </div>
     </div>`;
   }).join('');
