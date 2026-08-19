@@ -2437,7 +2437,17 @@ const SupabaseSync = (() => {
         changed = true;
       };
       set('loads',       data.loads,              'loads');
-      set('lastResult',  data.result,              'lastresult');
+      // A reset/rolled-over day (nightly server rollover, or a coworker's "Start Over")
+      // carries a null result. We only reach here when the DB row is newer than our local
+      // copy, so honor it: clear the stale local plan instead of leaving yesterday's driver
+      // assignments sitting under today's freshly-zeroed loads.
+      if (data.result === null) {
+        state.lastResult = null;
+        localStorage.setItem(P + 'lastresult', 'null');
+        changed = true;
+      } else {
+        set('lastResult', data.result, 'lastresult');
+      }
       set('settings',    data.settings,            'settings');
       set('adhocMoves',  data.ad_hoc,              'adhoc');
       set('bucketAsgn',  data.bucket_assignments,  'basgn');
