@@ -2124,7 +2124,7 @@ function saveDests()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'dest
 function saveSettings_()  { localStorage.setItem(DC_CONFIG.storagePrefix + 'settings',   JSON.stringify(state.settings));    SupabaseSync.queueSync(); SupabaseSync.queueConfigSync(); }
 function savePhases()     { localStorage.setItem(DC_CONFIG.storagePrefix + 'phases',     JSON.stringify(state.phases));      SupabaseSync.queueConfigSync(); }
 function saveLoads()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'loads',      JSON.stringify(state.loads));       stampPlanToday(); SupabaseSync.queueSync(); }
-function saveResult()     { localStorage.setItem(DC_CONFIG.storagePrefix + 'lastresult', JSON.stringify(state.lastResult));  stampPlanToday(); SupabaseSync.queueSync(); }
+function saveResult()     { if (state.lastResult) state.lastResult.snapshot = buildPlanSnapshot(); localStorage.setItem(DC_CONFIG.storagePrefix + 'lastresult', JSON.stringify(state.lastResult));  stampPlanToday(); SupabaseSync.queueSync(); }
 function saveReturned()   { localStorage.setItem(DC_CONFIG.storagePrefix + 'returned',   JSON.stringify(state.returned));    SupabaseSync.queueSync(); }
 function saveTemplates()  { localStorage.setItem(DC_CONFIG.storagePrefix + 'templates',  JSON.stringify(state.templates));   SupabaseSync.queueSync(); }
 function saveHistory()    { localStorage.setItem(DC_CONFIG.storagePrefix + 'history',    JSON.stringify(state.history)); }
@@ -2148,6 +2148,17 @@ const { saveDrivers, saveDests, saveSettings_, savePhases, saveLoads, saveResult
         saveReturned, saveTemplates, saveHistory, saveWhatIf,
         saveBucketAsgn, saveAdhocMoves } = StateManager.save;
 let state = StateManager.load();
+
+// Config + roster as-of the current plan, stamped onto the result so History can recompute
+// a comparable "ideal" plan later even after phases/destinations/roster drift (config sync).
+function buildPlanSnapshot() {
+  return {
+    phases:       deepCopy(state.phases),
+    destinations: deepCopy(state.destinations),
+    settings:     deepCopy(state.settings),
+    drivers:      deepCopy(state.drivers),
+  };
+}
 
 // Rebuild the dest→CSS-class maps from the live (editable) destination list so
 // destinations added/removed at runtime get correct colors everywhere. The maps
@@ -2558,6 +2569,8 @@ const SupabaseSync = (() => {
           shoreline: external, driverHours,
           driverRuns: buildDriverRuns(assignments),
           committedAt: row.committed_at,
+          loads: row.loads || null,          // optimizer inputs for that day (efficiency re-run)
+          snapshot: result.snapshot || null, // config + roster as-of that day
         };
       });
       localStorage.setItem(DC_CONFIG.storagePrefix + 'history', JSON.stringify(state.history));
@@ -3923,7 +3936,7 @@ function commitToHistory(dateOverride) {
   const internal = state.lastResult.assignments.filter(a => a.internal).length + bucketCount; // bucket assignments are always internal
   const external = state.lastResult.assignments.filter(a => (a.override || a.autoDriver) === DC_CONFIG.externalCarrier).length;
 
-  const entry = { date, dayLabel, total, internal, shoreline: external, driverHours, driverRuns: buildDriverRuns(state.lastResult.assignments), loads: deepCopy(state.loads) };
+  const entry = { date, dayLabel, total, internal, shoreline: external, driverHours, driverRuns: buildDriverRuns(state.lastResult.assignments), loads: deepCopy(state.loads), snapshot: state.lastResult.snapshot || buildPlanSnapshot() };
 
   // Replace existing entry for same date or append
   const idx = state.history.findIndex(e => e.date === date);
@@ -3943,6 +3956,133 @@ function clearHistory() {
   state.history = [];
   saveHistory();
   renderHistoryTab();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  EFFICIENCY ANALYSIS — grade a committed day against the optimizer's ideal plan
+// ════════════════════════════════════════════════════════════════════════════
+// Re-runs the optimizer on the day's own inputs + config snapshot ("perfect world"),
+// then compares it to what was actually dispatched. Score = how close the actual in-house
+// coverage came to the best the fleet could have done. Cached per DC+date per session.
+const _effCache = {};
+function analyzeHistoryDay(entry) {
+  const key = DC_CONFIG.id + '|' + entry.date;
+  if (key in _effCache) return _effCache[key];
+  return (_effCache[key] = _computeEfficiency(entry));
+}
+
+function _computeEfficiency(entry) {
+  const loads = entry.loads;
+  const snap  = entry.snapshot;
+  if (!Array.isArray(loads) || !loads.length)
+    return { status: 'unavailable', reason: 'No load counts were recorded for this day.' };
+
+  // Which phase config do the stored loads line up with?  A committed day's loads are
+  // indexed to the phases as they were THAT day. If we have no snapshot, we can only
+  // approximate against the current config — and only if the phase COUNT still matches.
+  const refPhases = snap ? snap.phases : state.phases;
+  if (loads.length !== refPhases.length)
+    return { status: 'unavailable', reason: 'Destinations/phases changed since this day — no comparable plan can be recomputed.' };
+  const mode = snap ? 'exact' : 'approx';
+
+  // ── Actual (what was dispatched) ──
+  const carrier          = DC_CONFIG.externalCarrier;
+  const actualTotal      = entry.total || 0;
+  const actualInternal   = entry.internal || 0;
+  const actualExternal   = entry.shoreline || 0;
+  const actualUnassigned = Math.max(0, actualTotal - actualInternal - actualExternal);
+  const actualDrivers    = Object.keys(entry.driverRuns || {}).filter(n => n !== carrier).length;
+  const actualHours      = Object.values(entry.driverHours || {}).reduce((s, h) => s + (h || 0), 0);
+
+  // ── Ideal (re-run optimizer on that day's inputs + config) ──
+  const saved = { drivers: state.drivers, phases: state.phases, destinations: state.destinations,
+                  settings: state.settings, whatIf: state.whatIf, lastResult: state.lastResult };
+  let ideal;
+  try {
+    if (snap) {
+      state.drivers      = snap.drivers;
+      state.phases       = snap.phases;
+      state.destinations = snap.destinations;
+      state.settings     = snap.settings;
+    }
+    state.whatIf = {};   // the ideal plan ignores day-of what-if overrides
+    ideal = runOptimizer(loads, !!state.settings.minimizeShoreline, {});
+  } catch (e) {
+    console.error('[efficiency] re-run failed for', entry.date, e);
+    return { status: 'unavailable', reason: 'Could not recompute the ideal plan for this day.' };
+  } finally {
+    Object.assign(state, saved);   // always restore live state
+  }
+
+  const ia = ideal.assignments || [];
+  const idealInternal   = ia.filter(a => a.internal).length;
+  const idealExternal   = ia.filter(a => (a.override || a.autoDriver) === carrier).length;
+  const idealUnassigned = ia.filter(a => (a.override || a.autoDriver) === 'UNASSIGNED').length;
+  const idealDrivers    = new Set(ia.filter(a => a.internal).map(a => a.override || a.autoDriver)).size;
+  const idealHours      = (ideal.workload || []).reduce((s, w) => s + (w.hours || 0), 0);
+
+  // Score: actual in-house coverage vs. the best the fleet could have covered.
+  const benchmark = idealInternal;
+  const score = benchmark > 0
+    ? Math.round(100 * Math.min(actualInternal, benchmark) / benchmark)
+    : 100;   // optimizer couldn't keep anything in-house either → nothing was left on the table
+
+  const notes = [];
+  const excessExt = actualExternal - idealExternal;
+  const excessUn  = actualUnassigned - idealUnassigned;
+  if (excessExt > 0) notes.push(`${excessExt} load${excessExt>1?'s':''} went to ${carrier} that the fleet could have covered.`);
+  if (excessUn  > 0) notes.push(`${excessUn} load${excessUn>1?'s':''} left unassigned that could have been covered.`);
+  if (actualDrivers > idealDrivers) notes.push(`Used ${actualDrivers} drivers; the optimizer covered it with ${idealDrivers}.`);
+  if (!notes.length) notes.push(`Matched the optimizer's best plan — no in-house capacity left unused.`);
+
+  return {
+    status: mode, score,
+    actual: { internal: actualInternal, external: actualExternal, unassigned: actualUnassigned, drivers: actualDrivers, hours: actualHours },
+    ideal:  { internal: idealInternal,  external: idealExternal,  unassigned: idealUnassigned,  drivers: idealDrivers,  hours: idealHours },
+    notes,
+  };
+}
+
+function _effScoreColor(s) { return s >= 90 ? 'var(--green)' : s >= 70 ? '#f59e0b' : '#ef4444'; }
+
+// Efficiency panel HTML for the expanded detail of a committed day.
+function renderEfficiencyPanel(entry) {
+  const a = analyzeHistoryDay(entry);
+  if (a.status === 'unavailable') {
+    return `<div style="padding:10px 16px;font-size:12px;color:var(--gray-400);border-bottom:1px solid var(--gray-100);">
+      ⚡ Efficiency: <span style="opacity:.8;">unavailable</span> — ${a.reason}</div>`;
+  }
+  const col = _effScoreColor(a.score);
+  const row = (lbl, av, iv, better) => {
+    const diff = av - iv;
+    const bad  = better === 'low' ? diff > 0 : diff < 0;
+    const good = better === 'low' ? diff <= 0 : diff >= 0;
+    return `<tr>
+      <td style="padding:3px 10px;color:var(--gray-500);">${lbl}</td>
+      <td style="padding:3px 10px;text-align:right;font-weight:600;${bad?'color:#ef4444;':good&&diff!==0?'color:var(--green);':''}">${av}</td>
+      <td style="padding:3px 10px;text-align:right;color:var(--gray-400);">${iv}</td>
+    </tr>`;
+  };
+  return `<div style="padding:12px 16px;border-bottom:1px solid var(--gray-100);background:var(--gray-50,rgba(0,0,0,0.015));">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+      <div style="width:46px;height:46px;border-radius:50%;border:3px solid ${col};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:${col};flex-shrink:0;">${a.score}</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;">Efficiency score</div>
+        <div style="font-size:11px;color:var(--gray-400);">In-house coverage vs. the optimizer's best plan${a.status==='approx'?' · <span style="color:#f59e0b;">approximate — this day predates plan snapshots, compared to current config</span>':''}</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px;">
+      <thead><tr style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-400);">
+        <th style="text-align:left;padding:2px 10px;">Metric</th><th style="text-align:right;padding:2px 10px;">Actual</th><th style="text-align:right;padding:2px 10px;">Ideal</th></tr></thead>
+      <tbody>
+        ${row('Internal loads', a.actual.internal, a.ideal.internal, 'high')}
+        ${row(`${DC_CONFIG.externalCarrier} loads`, a.actual.external, a.ideal.external, 'low')}
+        ${row('Unassigned', a.actual.unassigned, a.ideal.unassigned, 'low')}
+        ${row('Drivers used', a.actual.drivers, a.ideal.drivers, 'low')}
+      </tbody>
+    </table>
+    <div style="font-size:11px;color:var(--gray-500);line-height:1.5;">${a.notes.map(n => '• ' + n).join('<br>')}</div>
+  </div>`;
 }
 
 function renderHistoryTab() {
@@ -4001,6 +4141,7 @@ function renderHistoryTab() {
       <div class="hist-date-bar" onclick="const d=document.getElementById('${uid}');d.classList.toggle('open');this.querySelector('.hist-arrow').textContent=d.classList.contains('open')?'▲':'▼';" style="cursor:pointer;user-select:none;">
         <div><div class="hist-date-label">${entry.dayLabel}</div></div>
         <div style="display:flex;align-items:center;gap:12px;">
+          ${(() => { const a = analyzeHistoryDay(entry); return a.status !== 'unavailable' ? `<span title="Efficiency vs. the optimizer's ideal plan — expand for detail" style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;color:#fff;background:${_effScoreColor(a.score)};">⚡ ${a.score}</span>` : ''; })()}
           <span style="font-size:11px;opacity:0.6;">${entry.date}</span>
           ${entry.committedAt ? '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:rgba(34,197,94,0.15);color:#4ade80;">🔒 Committed</span>' : ''}
           <span class="hist-arrow" style="font-size:13px;opacity:0.7;" title="Expand for driver detail">▼</span>
@@ -4013,6 +4154,7 @@ function renderHistoryTab() {
       </div>
       <div class="hist-drivers">${summaryChips || '<span style="font-size:11px;color:var(--gray-400);">No driver data</span>'}</div>
       <div id="${uid}" class="hist-entry-detail">
+        ${renderEfficiencyPanel(entry)}
         ${runLog || driverRows || '<div style="padding:10px 16px;font-size:12px;color:var(--gray-400);">No driver detail recorded.</div>'}
       </div>
     </div>`;

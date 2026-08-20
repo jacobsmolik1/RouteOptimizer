@@ -112,7 +112,7 @@ begin
   return coalesce(
     (select json_agg(row_to_json(sub))::jsonb
      from (
-       select date, status, committed_at, result, bucket_assignments
+       select date, status, committed_at, result, bucket_assignments, loads
        from public.dispatch_days
        where dc_id = v_dc_id and status = 'committed'
        order by date desc
