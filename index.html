@@ -4006,7 +4006,12 @@ function _computeEfficiency(entry) {
       state.settings     = snap.settings;
     }
     state.whatIf = {};   // the ideal plan ignores day-of what-if overrides
-    ideal = runOptimizer(loads, !!state.settings.minimizeShoreline, {});
+    // Mirror generateAssignments: zero out loads for disabled destinations so the re-run
+    // sees the same inputs a real generate would (matters when a dest is disabled in the
+    // config we're running against but the stored day still carries a count for it).
+    const disabledCodes = new Set((state.destinations || []).filter(d => d.disabled).map(d => d.code));
+    const effLoads = loads.map((n, i) => disabledCodes.has(state.phases[i]?.dest) ? 0 : n);
+    ideal = runOptimizer(effLoads, !!state.settings.minimizeShoreline, {});
   } catch (e) {
     console.error('[efficiency] re-run failed for', entry.date, e);
     return { status: 'unavailable', reason: 'Could not recompute the ideal plan for this day.' };
@@ -4068,7 +4073,7 @@ function renderEfficiencyPanel(entry) {
       <div style="width:46px;height:46px;border-radius:50%;border:3px solid ${col};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:${col};flex-shrink:0;">${a.score}</div>
       <div>
         <div style="font-size:13px;font-weight:700;">Efficiency score</div>
-        <div style="font-size:11px;color:var(--gray-400);">In-house coverage vs. the optimizer's best plan${a.status==='approx'?' · <span style="color:#f59e0b;">approximate — this day predates plan snapshots, compared to current config</span>':''}</div>
+        <div style="font-size:11px;color:var(--gray-400);">In-house coverage vs. letting the optimizer plan the day from scratch (manual locks &amp; buckets aside)${a.status==='approx'?' · <span style="color:#f59e0b;">approximate — this day predates plan snapshots, so it&#39;s compared to the current config &amp; roster</span>':''}</div>
       </div>
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px;">
