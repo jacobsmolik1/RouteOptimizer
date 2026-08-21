@@ -3912,7 +3912,7 @@ function buildDriverRuns(assignments, adhocMoves, bucketAsgn) {
   });
   (bucketAsgn || []).forEach(b => {
     if (!b.driverName) return;
-    (runs[b.driverName] = runs[b.driverName] || []).push({ d: b.dest, h: b.hrs || 0, dt: b.dispatchTime || '', o: null, ln: 0, bucket: true, phase: b.phase });
+    (runs[b.driverName] = runs[b.driverName] || []).push({ d: b.dest, h: b.hrs || 0, dt: b.dispatchTime || '', o: b.actualOutTime || null, ln: 0, bucket: true, phase: b.phase });
   });
   (adhocMoves || []).forEach(m => {
     if (!m.driverName) return;
@@ -5161,8 +5161,9 @@ function renderDriverCards(result) {
       `<div class="run-row bucket-row">
         <span class="drag-handle" style="visibility:hidden;">⠿</span>
         <span class="run-label" style="background:var(--red);min-width:38px;font-size:8px;">MANUAL</span>
-        <span class="run-phase">${b.phase}<span style="display:block;font-size:9px;color:var(--gray-400);">${b.dispatchTime} dispatch</span></span>
+        <span class="run-phase">${b.phase}<span style="display:block;font-size:9px;color:var(--gray-400);">${b.actualOutTime?`<span style="color:var(--green);font-weight:700;">⏱ Out ${fmtActualTime(b.actualOutTime)}</span>`:`${b.dispatchTime} dispatch`}</span></span>
         <span class="run-hrs">${b.hrs.toFixed(2)}h</span>
+        <button class="out-btn ${b.actualOutTime?'stamped':''} no-print" onclick="event.stopPropagation();openBucketOutModal('${b.id}')" title="Set / edit the actual departure (Out) time for this manual load">${b.actualOutTime?'✓ Out':'⏱ Out'}</button>
         <button class="btn-remove-bkt no-print" onclick="event.stopPropagation();removeBucketAssignment('${b.id}')">✕</button>
       </div>`).join('');
 
@@ -5613,19 +5614,25 @@ function renderAssignmentsTable(result) {
     return d && !d.onVacation && !(state.whatIf||{})[d.id]?.inactive;
   }).map(b => {
     const dest = state.destinations.find(d => d.code === b.dest);
+    const bOutMins = b.actualOutTime ? (new Date(b.actualOutTime).getHours()*60 + new Date(b.actualOutTime).getMinutes()) : (b.dispatchTime ? toMinutes(b.dispatchTime) : null);
+    const bDispCell = b.actualOutTime
+      ? `<span style="color:var(--green);font-weight:700;">${fmtActualTime(b.actualOutTime)}</span><span style="display:block;font-size:9px;color:var(--green);">⏱ actual out</span>`
+      : (b.dispatchTime || '—');
+    const bEtaCell = bOutMins != null ? minutesToHHMM(bOutMins + Math.round((b.hrs/2)*60)) : '—';
+    const bktOutBtn = `<button class="no-print" onclick="openBucketOutModal('${b.id}')" title="Set / edit the actual departure (Out) time" style="font-size:10px;padding:2px 6px;background:${b.actualOutTime?'var(--green-bg)':'var(--gray-100)'};color:${b.actualOutTime?'var(--green)':'var(--gray-600)'};border:1px solid ${b.actualOutTime?'rgba(34,197,94,.4)':'var(--gray-200)'};border-radius:3px;cursor:pointer;font-weight:700;">${b.actualOutTime?'✓ Out':'⏱ Out'}</button>`;
     return `<tr class="row-${DEST_COLORS[b.dest]||'shore'}" style="opacity:0.85;">
       <td class="tbl-num" style="color:var(--red);font-weight:700;">M</td>
       <td><span class="tag ${DEST_TAGS[b.dest]||''}">${b.dest}</span> ${b.phase}</td>
       <td style="font-size:11px;color:var(--gray-600);">${dest?dest.name:b.dest}</td>
-      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${b.dispatchTime||'—'}</td>
-      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${b.dispatchTime ? minutesToHHMM(toMinutes(b.dispatchTime)+Math.round((b.hrs/2)*60)) : '—'}</td>
+      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${bDispCell}</td>
+      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${bEtaCell}</td>
       <td class="text-center">${dest?dest.miles1Way*2:'—'}</td>
       <td class="text-center">${b.hrs.toFixed(2)}</td>
       <td><strong>${b.driverName}</strong> <span style="font-size:9px;color:var(--red);font-weight:700;">MANUAL</span></td>
       <td class="text-center">—</td>
       <td class="col-detail">—</td>
       <td class="col-detail"><span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span></td>
-      <td class="no-print">—</td>
+      <td class="no-print">${bktOutBtn}</td>
       <td class="no-print">—</td>
     </tr>`;
   });
@@ -7337,6 +7344,17 @@ function openAdhocOutModal(id) {
   if (!m) return;
   _openOutModal(m, m.driverName, m.destName || m.dest, () => {
     saveAdhocMoves();
+    renderAllDriverCards();
+    if (state.lastResult) renderAssignmentsTable(state.lastResult);
+  });
+}
+// Manual (bucket) loads (live in state.bucketAsgn, not in the optimizer result).
+function openBucketOutModal(id) {
+  const b = (state.bucketAsgn || []).find(x => x.id === id);
+  if (!b) return;
+  const destName = (state.destinations.find(d => d.code === b.dest) || {}).name || b.phase || b.dest;
+  _openOutModal(b, b.driverName, destName, () => {
+    saveBucketAsgn();
     renderAllDriverCards();
     if (state.lastResult) renderAssignmentsTable(state.lastResult);
   });
