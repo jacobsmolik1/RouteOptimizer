@@ -2567,7 +2567,7 @@ const SupabaseSync = (() => {
         return {
           date: row.date, dayLabel, total, internal,
           shoreline: external, driverHours,
-          driverRuns: buildDriverRuns(assignments),
+          driverRuns: buildDriverRuns(assignments, row.ad_hoc, row.bucket_assignments),
           committedAt: row.committed_at,
           loads: row.loads || null,          // optimizer inputs for that day (efficiency re-run)
           snapshot: result.snapshot || null, // config + roster as-of that day
@@ -3900,14 +3900,30 @@ function autoRolloverDay() {
 // hours, planned dispatch time, and the stamped out-time (if any). The outside carrier is
 // kept as its own entry; UNASSIGNED loads are skipped. Compact keys keep the cache small.
 // This is the raw material for future efficiency metrics (loads/driver, actual vs planned).
-function buildDriverRuns(assignments) {
+// A driver's TRUE day: optimizer loads + manual (bucket) loads + ad-hoc trailer moves,
+// ordered chronologically by dispatch time. adhocMoves/bucketAsgn are optional so old
+// callers keep working; History passes all three.
+function buildDriverRuns(assignments, adhocMoves, bucketAsgn) {
   const runs = {};
   (assignments || []).forEach(a => {
     const n = a.override || a.autoDriver;
     if (!n || n === 'UNASSIGNED') return;
     (runs[n] = runs[n] || []).push({ d: a.dest, h: a.hrs || 0, dt: a.dispatchTime || '', o: a.actualOutTime || null, ln: a.driverLoadNum || 0 });
   });
-  Object.values(runs).forEach(list => list.sort((x, y) => (x.ln || 0) - (y.ln || 0)));
+  (bucketAsgn || []).forEach(b => {
+    if (!b.driverName) return;
+    (runs[b.driverName] = runs[b.driverName] || []).push({ d: b.dest, h: b.hrs || 0, dt: b.dispatchTime || '', o: null, ln: 0, bucket: true, phase: b.phase });
+  });
+  (adhocMoves || []).forEach(m => {
+    if (!m.driverName) return;
+    (runs[m.driverName] = runs[m.driverName] || []).push({ d: m.dest, h: m.hrs || 0, dt: m.dispatchTime || '', o: null, ln: 0, adhoc: true, type: m.type, notes: m.notes, destName: m.destName });
+  });
+  // Order each driver's day by dispatch time (fallback to run # when no time is set).
+  Object.values(runs).forEach(list => list.sort((x, y) => {
+    const mx = x.dt ? toMinutes(x.dt) : (x.ln || 0) * 1000;
+    const my = y.dt ? toMinutes(y.dt) : (y.ln || 0) * 1000;
+    return mx !== my ? mx - my : (x.ln || 0) - (y.ln || 0);
+  }));
   return runs;
 }
 
@@ -3920,12 +3936,9 @@ function commitToHistory(dateOverride) {
     : now.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
 
   const driverHours = {};
+  // workload.hours is the FULL duty (loads + deadhead + ad-hoc) — ad-hoc is already folded
+  // in via the optimizer preLoad seed / recalcDriverWorkload, so do NOT add it again here.
   state.lastResult.workload.forEach(w => { driverHours[w.id] = w.hours; });
-  // Layer in ad-hoc move hours that aren't represented in workload
-  (state.adhocMoves || []).forEach(m => {
-    const drv = state.drivers.find(d => d.name === m.driverName);
-    if (drv) driverHours[drv.id] = (driverHours[drv.id] || 0) + m.hrs;
-  });
 
   const wi = state.whatIf || {};
   const bucketCount = (state.bucketAsgn || []).filter(b => {
@@ -3936,7 +3949,7 @@ function commitToHistory(dateOverride) {
   const internal = state.lastResult.assignments.filter(a => a.internal).length + bucketCount; // bucket assignments are always internal
   const external = state.lastResult.assignments.filter(a => (a.override || a.autoDriver) === DC_CONFIG.externalCarrier).length;
 
-  const entry = { date, dayLabel, total, internal, shoreline: external, driverHours, driverRuns: buildDriverRuns(state.lastResult.assignments), loads: deepCopy(state.loads), snapshot: state.lastResult.snapshot || buildPlanSnapshot() };
+  const entry = { date, dayLabel, total, internal, shoreline: external, driverHours, driverRuns: buildDriverRuns(state.lastResult.assignments, state.adhocMoves, state.bucketAsgn), loads: deepCopy(state.loads), snapshot: state.lastResult.snapshot || buildPlanSnapshot() };
 
   // Replace existing entry for same date or append
   const idx = state.history.findIndex(e => e.date === date);
@@ -3991,7 +4004,9 @@ function _computeEfficiency(entry) {
   const actualInternal   = entry.internal || 0;
   const actualExternal   = entry.shoreline || 0;
   const actualUnassigned = Math.max(0, actualTotal - actualInternal - actualExternal);
-  const actualDrivers    = Object.keys(entry.driverRuns || {}).filter(n => n !== carrier).length;
+  // Count only load-bearing drivers — a driver who did ONLY an ad-hoc move isn't a truck the
+  // optimizer's ideal would have used, so counting them would unfairly inflate "drivers used".
+  const actualDrivers    = Object.entries(entry.driverRuns || {}).filter(([n, rs]) => n !== carrier && rs.some(r => !r.adhoc)).length;
   const actualHours      = Object.values(entry.driverHours || {}).reduce((s, h) => s + (h || 0), 0);
 
   // ── Ideal (re-run optimizer on that day's inputs + config) ──
@@ -4127,18 +4142,28 @@ function renderHistoryTab() {
       })
       .map(([name, runs]) => {
         const isCarrier = name === DC_CONFIG.externalCarrier;
+        const typeLabels = {'bobtail-rt':'Bobtail RT','bobtail-ow':'Bobtail OW','loaded-rt':'Loaded RT'};
         const totalH = runs.reduce((s, r) => s + (r.h || 0), 0);
+        const loadN  = runs.filter(r => !r.adhoc).length;   // loads incl manual/bucket
+        const adhocN = runs.filter(r =>  r.adhoc).length;
         const chips = runs.map(r => {
           let depMins = null, stamped = false;
           if (r.o) { const dt = new Date(r.o); depMins = dt.getHours() * 60 + dt.getMinutes(); stamped = true; }
           else if (r.dt) { depMins = toMinutes(r.dt); }
           const depStr = depMins != null ? fmt12h(minutesToHHMM(depMins)) : '';
+          if (r.adhoc) {
+            const lbl = `${r.destName || r.d} · ${typeLabels[r.type] || r.type}`;
+            return `<span style="display:inline-block;font-size:11px;background:var(--blue-bg);color:var(--blue);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:2px 7px;margin:2px 3px 0 0;"><b>AD HOC</b> ${lbl}${depStr?`<span style="opacity:.6;font-weight:400;"> ${depStr}</span>`:''}${r.notes?`<span style="opacity:.6;font-weight:400;"> · ${r.notes}</span>`:''}</span>`;
+          }
+          if (r.bucket) {
+            return `<span style="display:inline-block;font-size:11px;background:rgba(239,68,68,.10);color:var(--red);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 7px;margin:2px 3px 0 0;"><b>MANUAL</b> ${r.d}${depStr?`<span style="opacity:.6;font-weight:400;"> ${depStr}</span>`:''}</span>`;
+          }
           const etaStr = depMins != null ? fmt12h(minutesToHHMM((depMins + Math.round((r.h || 0) / 2 * 60)) % 1440)) : '';
           const timeInfo = depStr ? `<span style="opacity:.55;font-weight:400;"> ${stamped ? 'out ' : ''}${depStr}${etaStr ? ' → ' + etaStr : ''}</span>` : '';
           return `<span style="display:inline-block;font-size:11px;background:${isCarrier ? 'rgba(139,92,246,0.12)' : 'var(--gray-100)'};border-radius:4px;padding:2px 7px;margin:2px 3px 0 0;">${r.d}${timeInfo}</span>`;
         }).join('');
         return `<div style="padding:6px 16px;border-bottom:1px solid var(--gray-100);">
-          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;${isCarrier ? 'color:var(--purple);' : ''}"><span>${name}</span><span style="font-weight:400;color:var(--gray-400);">${runs.length} load${runs.length !== 1 ? 's' : ''} · ${totalH.toFixed(1)}h</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;${isCarrier ? 'color:var(--purple);' : ''}"><span>${name}</span><span style="font-weight:400;color:var(--gray-400);">${loadN} load${loadN !== 1 ? 's' : ''}${adhocN?` · ${adhocN} ad hoc`:''} · ${totalH.toFixed(1)}h</span></div>
           <div>${chips}</div>
         </div>`;
       }).join('') : '';
@@ -5111,15 +5136,17 @@ function renderDriverCards(result) {
       const we = result.workload.find(w => w.id === d.id);
       autoHrs = we ? we.hours : autoRuns.reduce((s,r) => s + r.hrs, 0);
     }
-    // When result exists, autoHrs (we.hours) already includes deadhead + bucket hrs via preLoads.
-    // Only add adhocHrs on top since those aren't run through the optimizer.
+    // When result exists, autoHrs (we.hours) is the FULL duty — deadhead + bucket AND ad-hoc
+    // are already folded in (optimizer preLoad seed + recalcDriverWorkload keep it current),
+    // so we must NOT add adhocHrs again here (that was a double-count). The no-result path has
+    // no workload, so it sums the pieces (incl adhoc) once.
     // Every working driver gets a flat 30-min DOT break folded into their overall time
     // (display only). The break is NOT counted against the DOT limit — status is based
     // on driving/route hours (dutyHrs), which is what the optimizer controls.
     const loadCount = autoRuns.length + bktRuns.length + adhRuns.length;
     const breakHrs  = loadCount > 0 ? BREAK_HRS : 0;
     const dutyHrs = result
-      ? autoHrs + adhocHrs
+      ? autoHrs
       : deadheadHrs + bucketHrs + adhocHrs;
     const totalHrs = dutyHrs + breakHrs;
 
@@ -5140,11 +5167,13 @@ function renderDriverCards(result) {
       </div>`).join('');
 
     const typeLabels = {'bobtail-rt':'Bobtail RT','bobtail-ow':'Bobtail OW','loaded-rt':'Loaded RT'};
-    const adhHTML = adhRuns.map(m =>
+    const adhHTML = adhRuns.slice()
+      .sort((a, b) => toMinutes(a.dispatchTime || '00:00') - toMinutes(b.dispatchTime || '00:00'))
+      .map(m =>
       `<div class="run-row adhoc-row">
         <span class="drag-handle" style="visibility:hidden;">⠿</span>
         <span class="run-label" style="background:var(--blue);min-width:38px;font-size:8px;">AD HOC</span>
-        <span class="run-phase">${m.destName} — ${typeLabels[m.type]||m.type}${m.notes?`<span style="display:block;font-size:9px;color:var(--gray-400);">${m.notes}</span>`:''}</span>
+        <span class="run-phase">${m.destName} — ${typeLabels[m.type]||m.type}<span style="display:block;font-size:9px;color:var(--gray-400);">${m.dispatchTime?fmt12h(m.dispatchTime)+' dispatch':''}${m.notes?(m.dispatchTime?' · ':'')+m.notes:''}</span></span>
         <span class="run-hrs">${m.hrs.toFixed(2)}h</span>
         <button class="btn-remove-bkt no-print" onclick="event.stopPropagation();removeAdhocMove('${m.id}')">✕</button>
       </div>`).join('');
@@ -5598,7 +5627,9 @@ function renderAssignmentsTable(result) {
   });
 
   const typeLabels = {'bobtail-rt':'Bobtail RT','bobtail-ow':'Bobtail OW','loaded-rt':'Loaded RT'};
-  const adhRows = (state.adhocMoves || []).map(m => {
+  const adhRows = (state.adhocMoves || []).slice()
+    .sort((a, b) => (a.driverName || '').localeCompare(b.driverName || '') || toMinutes(a.dispatchTime || '00:00') - toMinutes(b.dispatchTime || '00:00'))
+    .map(m => {
     const typeLabel = typeLabels[m.type] || m.type;
     return `<tr style="background:var(--blue-bg);">
       <td class="tbl-num" style="color:var(--blue);font-weight:700;">A</td>
@@ -7674,6 +7705,9 @@ function saveAdHocMove() {
     notes,
   });
   saveAdhocMoves();
+  // Keep the driver's workload.hours current so it reflects this move without a regen
+  // (Option B: workload.hours is the full duty incl ad-hoc; consumers don't re-add it).
+  if (state.lastResult) recalcDriverWorkload(driverName);
   closeAdHocModal();
   renderAllDriverCards();
 }
@@ -7683,8 +7717,10 @@ function closeAdHocModal() {
 }
 
 function removeAdhocMove(id) {
+  const removed = (state.adhocMoves || []).find(m => m.id === id);
   state.adhocMoves = (state.adhocMoves || []).filter(m => m.id !== id);
   saveAdhocMoves();
+  if (state.lastResult && removed) recalcDriverWorkload(removed.driverName);
   renderAllDriverCards();
 }
 
