@@ -3916,7 +3916,7 @@ function buildDriverRuns(assignments, adhocMoves, bucketAsgn) {
   });
   (adhocMoves || []).forEach(m => {
     if (!m.driverName) return;
-    (runs[m.driverName] = runs[m.driverName] || []).push({ d: m.dest, h: m.hrs || 0, dt: m.dispatchTime || '', o: null, ln: 0, adhoc: true, type: m.type, notes: m.notes, destName: m.destName });
+    (runs[m.driverName] = runs[m.driverName] || []).push({ d: m.dest, h: m.hrs || 0, dt: m.dispatchTime || '', o: m.actualOutTime || null, ln: 0, adhoc: true, type: m.type, notes: m.notes, destName: m.destName });
   });
   // Order each driver's day by dispatch time (fallback to run # when no time is set).
   Object.values(runs).forEach(list => list.sort((x, y) => {
@@ -5173,8 +5173,9 @@ function renderDriverCards(result) {
       `<div class="run-row adhoc-row">
         <span class="drag-handle" style="visibility:hidden;">⠿</span>
         <span class="run-label" style="background:var(--blue);min-width:38px;font-size:8px;">AD HOC</span>
-        <span class="run-phase">${m.destName} — ${typeLabels[m.type]||m.type}<span style="display:block;font-size:9px;color:var(--gray-400);">${m.dispatchTime?fmt12h(m.dispatchTime)+' dispatch':''}${m.notes?(m.dispatchTime?' · ':'')+m.notes:''}</span></span>
+        <span class="run-phase">${m.destName} — ${typeLabels[m.type]||m.type}<span style="display:block;font-size:9px;color:var(--gray-400);">${m.actualOutTime?`<span style="color:var(--green);font-weight:700;">⏱ Out ${fmtActualTime(m.actualOutTime)}</span>`:(m.dispatchTime?fmt12h(m.dispatchTime)+' dispatch':'')}${m.notes?((m.actualOutTime||m.dispatchTime)?' · ':'')+m.notes:''}</span></span>
         <span class="run-hrs">${m.hrs.toFixed(2)}h</span>
+        <button class="out-btn ${m.actualOutTime?'stamped':''} no-print" onclick="event.stopPropagation();openAdhocOutModal('${m.id}')" title="Set / edit the actual departure (Out) time for this ad-hoc move">${m.actualOutTime?'✓ Out':'⏱ Out'}</button>
         <button class="btn-remove-bkt no-print" onclick="event.stopPropagation();removeAdhocMove('${m.id}')">✕</button>
       </div>`).join('');
 
@@ -5560,11 +5561,14 @@ function renderAssignmentsTable(result) {
     const outStamp = a.actualOutTime
       ? `<div style="font-size:9px;color:var(--green);font-weight:600;">⏱ Out ${fmtActualTime(a.actualOutTime)}</div>`
       : '';
+    const outBtnTbl = isUnassigned ? '' :
+      `<button class="no-print" onclick="openOutModal(${idx})" title="Set / edit the actual departure (Out) time" style="font-size:10px;padding:2px 6px;background:${a.actualOutTime?'var(--green-bg)':'var(--gray-100)'};color:${a.actualOutTime?'var(--green)':'var(--gray-600)'};border:1px solid ${a.actualOutTime?'rgba(34,197,94,.4)':'var(--gray-200)'};border-radius:3px;cursor:pointer;font-weight:700;">${a.actualOutTime?'✓ Out':'⏱ Out'}</button>`;
     const statusSel = `<div style="display:flex;flex-direction:column;gap:4px;">
       <select class="status-sel" onchange="setStatus(${idx},this.value)">
         ${statusOptions.replace(`value="${a.status}"`,`value="${a.status}" selected`)}
       </select>
       ${done ? '' : `<button onclick="openReassignModal(${idx})" style="font-size:10px;padding:2px 6px;background:var(--blue-bg);color:var(--blue);border:1px solid #BBDEFB;border-radius:3px;cursor:pointer;">↔ Reassign</button>`}
+      ${outBtnTbl}
       ${outStamp}
     </div>`;
 
@@ -5631,19 +5635,25 @@ function renderAssignmentsTable(result) {
     .sort((a, b) => (a.driverName || '').localeCompare(b.driverName || '') || toMinutes(a.dispatchTime || '00:00') - toMinutes(b.dispatchTime || '00:00'))
     .map(m => {
     const typeLabel = typeLabels[m.type] || m.type;
+    const outMins = m.actualOutTime ? (new Date(m.actualOutTime).getHours()*60 + new Date(m.actualOutTime).getMinutes()) : (m.dispatchTime ? toMinutes(m.dispatchTime) : null);
+    const dispCell = m.actualOutTime
+      ? `<span style="color:var(--green);font-weight:700;">${fmtActualTime(m.actualOutTime)}</span><span style="display:block;font-size:9px;color:var(--green);">⏱ actual out</span>`
+      : (m.dispatchTime || '—');
+    const etaCell = outMins != null ? minutesToHHMM(outMins + Math.round((m.hrs/2)*60)) : '—';
+    const adhOutBtn = `<button class="no-print" onclick="openAdhocOutModal('${m.id}')" title="Set / edit the actual departure (Out) time" style="font-size:10px;padding:2px 6px;background:${m.actualOutTime?'var(--green-bg)':'var(--gray-100)'};color:${m.actualOutTime?'var(--green)':'var(--gray-600)'};border:1px solid ${m.actualOutTime?'rgba(34,197,94,.4)':'var(--gray-200)'};border-radius:3px;cursor:pointer;font-weight:700;">${m.actualOutTime?'✓ Out':'⏱ Out'}</button>`;
     return `<tr style="background:var(--blue-bg);">
       <td class="tbl-num" style="color:var(--blue);font-weight:700;">A</td>
       <td><span class="tag tag-dot" style="background:var(--blue);">${m.type==='bobtail-ow'?'OW':'RT'}</span> ${typeLabel}</td>
       <td style="font-size:11px;color:var(--gray-600);">${m.destName}</td>
-      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${m.dispatchTime||'—'}</td>
-      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${m.dispatchTime ? minutesToHHMM(toMinutes(m.dispatchTime)+Math.round((m.hrs/2)*60)) : '—'}</td>
+      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${dispCell}</td>
+      <td class="text-center" style="font-size:11px;color:var(--gray-600);">${etaCell}</td>
       <td class="text-center">${m.miles||'—'}</td>
       <td class="text-center">${m.hrs.toFixed(2)}</td>
       <td><strong>${m.driverName}</strong> <span style="font-size:9px;color:var(--blue);font-weight:700;">AD HOC</span></td>
       <td class="text-center">—</td>
       <td class="col-detail">—</td>
       <td class="col-detail"><span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span></td>
-      <td class="no-print">—</td>
+      <td class="no-print">${adhOutBtn}</td>
       <td class="no-print">—</td>
     </tr>`;
   });
@@ -7279,7 +7289,11 @@ function reassignLoadTo(loadIdx, newName, skipMidnightCheck = false) {
 }
 
 // ── OUT / DEPARTURE TIME (manual entry) ────────────────────────────────
-let _outLoadIdx = null;
+// Works for any object carrying an `actualOutTime` — optimizer loads, overflow-carrier
+// loads (both are assignments) and ad-hoc moves. `_outRef` is that object; `_outPersist`
+// saves + re-renders the right views for its kind.
+let _outRef = null;
+let _outPersist = null;
 // Manually lock/unlock a load so Re-run keeps it on its driver. (Out-stamped
 // loads are auto-locked regardless of this flag.)
 function toggleLock(loadIdx) {
@@ -7291,46 +7305,62 @@ function toggleLock(loadIdx) {
   renderAssignmentsTable(state.lastResult);
 }
 
+function _openOutModal(ref, driver, destName, persist) {
+  if (!ref) return;
+  _outRef = ref; _outPersist = persist;
+  document.getElementById('out-modal-sub').innerHTML = `<strong>${driver}</strong> → ${destName}`;
+  // Prefill with the existing out-time, else the current clock time.
+  const d = ref.actualOutTime ? new Date(ref.actualOutTime) : new Date();
+  document.getElementById('out-time-input').value =
+    String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  document.getElementById('out-clear-btn').style.display = ref.actualOutTime ? '' : 'none';
+  document.getElementById('out-modal').classList.add('open');
+}
+// Optimizer & overflow-carrier loads (both live in state.lastResult.assignments).
 function openOutModal(loadIdx) {
   const a = state.lastResult && state.lastResult.assignments[loadIdx];
   if (!a) return;
-  _outLoadIdx = loadIdx;
-  const driver = a.override || a.autoDriver;
+  const driver   = a.override || a.autoDriver;
   const destName = (state.destinations.find(d => d.code === a.dest) || {}).name || a.dest;
-  document.getElementById('out-modal-sub').innerHTML = `<strong>${driver}</strong> → ${destName}`;
-  // Prefill with the existing out-time, else the current clock time.
-  const d = a.actualOutTime ? new Date(a.actualOutTime) : new Date();
-  document.getElementById('out-time-input').value =
-    String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
-  document.getElementById('out-clear-btn').style.display = a.actualOutTime ? '' : 'none';
-  document.getElementById('out-modal').classList.add('open');
+  _openOutModal(a, driver, destName, () => {
+    saveResult();
+    // Re-render every view that shows ETAs so the cascade is reflected live.
+    renderDriverCards(state.lastResult);
+    renderAssignmentsTable(state.lastResult);
+    renderWorkload(state.lastResult);
+    renderShoreline(state.lastResult);
+  });
+}
+// Ad-hoc trailer moves (live in state.adhocMoves, not in the optimizer result).
+function openAdhocOutModal(id) {
+  const m = (state.adhocMoves || []).find(x => x.id === id);
+  if (!m) return;
+  _openOutModal(m, m.driverName, m.destName || m.dest, () => {
+    saveAdhocMoves();
+    renderAllDriverCards();
+    if (state.lastResult) renderAssignmentsTable(state.lastResult);
+  });
 }
 function closeOutModal() {
   document.getElementById('out-modal').classList.remove('open');
-  _outLoadIdx = null;
+  _outRef = null; _outPersist = null;
 }
 function saveOutTime() {
-  const a = state.lastResult && state.lastResult.assignments[_outLoadIdx];
-  if (!a) return closeOutModal();
+  if (!_outRef) return closeOutModal();
   const val = document.getElementById('out-time-input').value;
   if (!val) return;
   const [h, m] = val.split(':').map(Number);
   const d = new Date(); d.setHours(h, m, 0, 0);   // today at the entered gate time
-  a.actualOutTime = d.toISOString();
-  _persistOutTime();
+  _outRef.actualOutTime = d.toISOString();
+  const persist = _outPersist;
+  closeOutModal();
+  if (persist) persist();
 }
 function clearOutTime() {
-  const a = state.lastResult && state.lastResult.assignments[_outLoadIdx];
-  if (a) a.actualOutTime = null;
-  _persistOutTime();
-}
-function _persistOutTime() {
-  saveResult();
+  if (_outRef) _outRef.actualOutTime = null;
+  const persist = _outPersist;
   closeOutModal();
-  // Re-render every view that shows ETAs so the cascade is reflected live.
-  renderDriverCards(state.lastResult);
-  renderAssignmentsTable(state.lastResult);
-  renderWorkload(state.lastResult);
+  if (persist) persist();
 }
 
 function fmtActualTime(isoStr) {
