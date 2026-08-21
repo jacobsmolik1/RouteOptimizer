@@ -7356,6 +7356,7 @@ function openBucketOutModal(id) {
   _openOutModal(b, b.driverName, destName, () => {
     saveBucketAsgn();
     renderAllDriverCards();
+    renderLoadBucket();   // refresh the Load Bucket panel so its chip shows the stamp
     if (state.lastResult) renderAssignmentsTable(state.lastResult);
   });
 }
@@ -7508,11 +7509,15 @@ function renderLoadBucket() {
       const assignLbl = isShore
         ? `<span style="font-size:10px;color:var(--purple);font-weight:700;">→ ${DC_CONFIG.externalCarrier}</span>`
         : `<span style="font-size:10px;color:var(--green);font-weight:700;">→ ${b.driverName.split(' ')[0]}</span>`;
+      const outStamp = b.actualOutTime
+        ? `<span style="font-size:9px;color:var(--green);font-weight:700;">⏱ ${fmtActualTime(b.actualOutTime)}</span>` : '';
       return `<div class="bucket-chip bucket-chip-assigned" style="${isShore ? 'border-color:var(--purple);' : ''}" title="${b.phase} → ${b.driverName} · ${b.hrs.toFixed(2)}h">
         <span class="tag ${tagCls}" style="font-size:8px;">${b.dest}</span>
         <span>${sub}</span>
         ${assignLbl}
         <span class="chip-hrs">${b.hrs.toFixed(1)}h</span>
+        ${outStamp}
+        <button class="btn-remove-bkt no-print" onclick="openBucketOutModal('${b.id}')" title="Set / edit the actual departure (Out) time" style="color:${b.actualOutTime?'var(--green)':'var(--gray-500)'};font-weight:700;">${b.actualOutTime?'✓':'⏱'}</button>
         <button class="btn-remove-bkt no-print" onclick="removeBucketAssignment('${b.id}')" title="Un-assign (clears result — regenerate needed)">✕</button>
       </div>`;
     }).join('');
