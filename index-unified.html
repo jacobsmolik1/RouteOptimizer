@@ -5180,7 +5180,16 @@ function renderDriverCards(result) {
       ? `<span class="card-dot-status card-dot-warn">⚡ Near Limit</span>`
       : `<span class="card-dot-status card-dot-ok">✓ DOT OK</span>`;
 
-    const bktHTML = bktRuns.map(b =>
+    // Build every card row (manual/bucket, ad-hoc, and optimizer loads) into one list,
+    // each tagged with an EFFECTIVE dispatch/out time, then interleave them chronologically
+    // so an ad-hoc move set for 2 PM shows AFTER a 10 AM load ("load first, then ad-hoc")
+    // instead of being lumped at the top. Display-layer only: optimizer-load rows keep their
+    // own loadIdx and all drag/lock/out/moveRun handlers untouched.
+    const typeLabels = {'bobtail-rt':'Bobtail RT','bobtail-ow':'Bobtail OW','loaded-rt':'Loaded RT'};
+    const effMins = (out, disp) => out ? isoToMins(out) : toMinutes(disp || '00:00');
+    const rowItems = [];
+
+    bktRuns.forEach(b => rowItems.push({ sortMins: effMins(b.actualOutTime, b.dispatchTime), homeReturn: false, html:
       `<div class="run-row bucket-row">
         <span class="drag-handle" style="visibility:hidden;">⠿</span>
         <span class="run-label" style="background:var(--red);min-width:38px;font-size:8px;">MANUAL</span>
@@ -5188,12 +5197,9 @@ function renderDriverCards(result) {
         <span class="run-hrs">${b.hrs.toFixed(2)}h</span>
         <button class="out-btn ${b.actualOutTime?'stamped':''} no-print" onclick="event.stopPropagation();openBucketOutModal('${b.id}')" title="Set / edit the actual departure (Out) time for this manual load">${b.actualOutTime?'✓ Out':'⏱ Out'}</button>
         <button class="btn-remove-bkt no-print" onclick="event.stopPropagation();removeBucketAssignment('${b.id}')">✕</button>
-      </div>`).join('');
+      </div>` }));
 
-    const typeLabels = {'bobtail-rt':'Bobtail RT','bobtail-ow':'Bobtail OW','loaded-rt':'Loaded RT'};
-    const adhHTML = adhRuns.slice()
-      .sort((a, b) => toMinutes(a.dispatchTime || '00:00') - toMinutes(b.dispatchTime || '00:00'))
-      .map(m =>
+    adhRuns.forEach(m => rowItems.push({ sortMins: effMins(m.actualOutTime, m.dispatchTime), homeReturn: false, html:
       `<div class="run-row adhoc-row">
         <span class="drag-handle" style="visibility:hidden;">⠿</span>
         <span class="run-label" style="background:var(--blue);min-width:38px;font-size:8px;">AD HOC</span>
@@ -5201,38 +5207,35 @@ function renderDriverCards(result) {
         <span class="run-hrs">${m.hrs.toFixed(2)}h</span>
         <button class="out-btn ${m.actualOutTime?'stamped':''} no-print" onclick="event.stopPropagation();openAdhocOutModal('${m.id}')" title="Set / edit the actual departure (Out) time for this ad-hoc move">${m.actualOutTime?'✓ Out':'⏱ Out'}</button>
         <button class="btn-remove-bkt no-print" onclick="event.stopPropagation();removeAdhocMove('${m.id}')">✕</button>
-      </div>`).join('');
+      </div>` }));
 
-    const maxSlots = autoRuns.length;
-    const runLabels = Array.from({length: maxSlots}, (_, i) => `RUN ${i + 1}`);
     const runColors = ['', 'run2', 'run3'];
-    const autoHTML = result ? Array.from({length: maxSlots}, (_, i) => {
-      const r = autoRuns[i];
-      if (r) {
-        const loadIdx = result.assignments.indexOf(r);
-        const driveHrs = r.homeReturn ? r.hrs / 2 : r.hrs;   // shown in the run-hrs cell
-        const t = timings.get(r);
-        const startMins = t ? t.start : toMinutes(r.dispatchTime);
-        const etaMins   = t ? t.eta   : startMins + Math.round((r.hrs/2)*60);
-        const backMins  = startMins + Math.round(r.hrs * 60);   // arrival back at DC
-        const homeTag = r.homeReturn
-          ? `<span style="display:inline-block;margin-left:4px;font-size:9px;font-weight:700;color:var(--green);background:var(--green-bg);border-radius:3px;padding:1px 4px;">← Home</span>`
-          : '';
-        const isStamped = !!r.actualOutTime;
-        // Every load shows its CURRENT ETA (cascaded from any upstream actual out
-        // times). A stamped load also shows its actual "Out" time.
-        const etaStr  = fmt12h(minutesToHHMM(etaMins % 1440));
-        const backStr = fmt12h(minutesToHHMM(backMins % 1440));
-        const delStyle  = 'color:var(--gray-600);font-weight:700;';
-        const backStyle = 'color:var(--gray-400);font-weight:400;';
-        const etaLead = isStamped ? `⏱ Out ${fmtActualTime(r.actualOutTime)} · ETA` : 'ETA';
-        const backPart = r.homeReturn ? `<span style="${backStyle}">(home)</span>`
-                                      : `<span style="${backStyle}">· Back ~${backStr}</span>`;
-        const timeInfo = `<span style="display:block;font-size:9px;"><span style="${delStyle}">${etaLead} ${isStamped?'':'~'}${etaStr}</span> ${backPart}</span>`;
-        const outBtn = `<button class="out-btn ${isStamped?'stamped':''}" onclick="event.stopPropagation();openOutModal(${loadIdx})" title="Set / edit the actual departure (Out) time — updates this ETA and the driver's later loads">${isStamped ? '✓ Out' : '⏱ Out'}</button>`;
-        const locked = isLocked(r);
-        const lockBtn = `<button class="out-btn${locked?' stamped':''}" onclick="event.stopPropagation();toggleLock(${loadIdx})" title="${locked ? (isStamped ? 'Locked (has an out-time) — stays put on Re-run' : 'Locked to this driver — stays put on Re-run. Click to unlock.') : 'Lock this load to this driver so Re-run keeps it put'}">${locked ? '🔒' : '🔓'}</button>`;
-        return `<div class="run-row" draggable="true"
+    if (result) autoRuns.forEach((r, i) => {
+      const loadIdx = result.assignments.indexOf(r);
+      const driveHrs = r.homeReturn ? r.hrs / 2 : r.hrs;   // shown in the run-hrs cell
+      const t = timings.get(r);
+      const startMins = t ? t.start : toMinutes(r.dispatchTime);
+      const etaMins   = t ? t.eta   : startMins + Math.round((r.hrs/2)*60);
+      const backMins  = startMins + Math.round(r.hrs * 60);   // arrival back at DC
+      const homeTag = r.homeReturn
+        ? `<span style="display:inline-block;margin-left:4px;font-size:9px;font-weight:700;color:var(--green);background:var(--green-bg);border-radius:3px;padding:1px 4px;">← Home</span>`
+        : '';
+      const isStamped = !!r.actualOutTime;
+      // Every load shows its CURRENT ETA (cascaded from any upstream actual out
+      // times). A stamped load also shows its actual "Out" time.
+      const etaStr  = fmt12h(minutesToHHMM(etaMins % 1440));
+      const backStr = fmt12h(minutesToHHMM(backMins % 1440));
+      const delStyle  = 'color:var(--gray-600);font-weight:700;';
+      const backStyle = 'color:var(--gray-400);font-weight:400;';
+      const etaLead = isStamped ? `⏱ Out ${fmtActualTime(r.actualOutTime)} · ETA` : 'ETA';
+      const backPart = r.homeReturn ? `<span style="${backStyle}">(home)</span>`
+                                    : `<span style="${backStyle}">· Back ~${backStr}</span>`;
+      const timeInfo = `<span style="display:block;font-size:9px;"><span style="${delStyle}">${etaLead} ${isStamped?'':'~'}${etaStr}</span> ${backPart}</span>`;
+      const outBtn = `<button class="out-btn ${isStamped?'stamped':''}" onclick="event.stopPropagation();openOutModal(${loadIdx})" title="Set / edit the actual departure (Out) time — updates this ETA and the driver's later loads">${isStamped ? '✓ Out' : '⏱ Out'}</button>`;
+      const locked = isLocked(r);
+      const lockBtn = `<button class="out-btn${locked?' stamped':''}" onclick="event.stopPropagation();toggleLock(${loadIdx})" title="${locked ? (isStamped ? 'Locked (has an out-time) — stays put on Re-run' : 'Locked to this driver — stays put on Re-run. Click to unlock.') : 'Lock this load to this driver so Re-run keeps it put'}">${locked ? '🔒' : '🔓'}</button>`;
+      rowItems.push({ sortMins: startMins, homeReturn: !!r.homeReturn, html:
+        `<div class="run-row" draggable="true"
           onclick="openReassignModal(${loadIdx})"
           ondragstart="handleDragStart(event,${loadIdx})"
           ondragend="handleDragEnd(event)"
@@ -5244,20 +5247,18 @@ function renderDriverCards(result) {
             <button class="run-move" title="Move earlier" onclick="event.stopPropagation();moveRun(${loadIdx},-1)">▲</button>
             <button class="run-move" title="Move later" onclick="event.stopPropagation();moveRun(${loadIdx},1)">▼</button>
           </span>
-          <span class="run-label ${runColors[i] || 'run3'}">${runLabels[i]}</span>
+          <span class="run-label ${runColors[i] || 'run3'}">RUN ${i + 1}</span>
           <span class="run-phase">${r.phase}${homeTag}<span style="display:block;">${timeInfo}</span></span>
           <span class="run-hrs">${driveHrs.toFixed(2)}h</span>
           ${lockBtn}${outBtn}
-        </div>`;
-      } else {
-        return `<div class="run-row">
-          <span class="run-reorder" style="visibility:hidden;"><button class="run-move">▲</button></span>
-          <span class="run-label empty">${runLabels[i]}</span>
-          <span class="run-phase empty">—</span>
-          <span class="run-hrs empty">—</span>
-        </div>`;
-      }
-    }).join('') : '';
+        </div>` });
+    });
+
+    // Interleave chronologically; a home-return run is forced to the absolute end (you never
+    // do an ad-hoc or another load AFTER heading home). Array.sort is stable, so equal-time
+    // items keep insertion order (manual/ad-hoc before same-time loads; loads keep moveRun order).
+    rowItems.sort((a, b) => (a.homeReturn !== b.homeReturn) ? (a.homeReturn ? 1 : -1) : (a.sortMins - b.sortMins));
+    const runsHTML = rowItems.map(x => x.html).join('');
 
     const hasAnyRows = bktRuns.length || adhRuns.length || (result && autoRuns.length);
     const dropHint = (!hasAnyRows && totalLoads > 0)
@@ -5301,7 +5302,7 @@ function renderDriverCards(result) {
           <button class="wi-toggle-btn no-print" onclick="toggleWhatIfPanel('${d.id}')" id="wi-toggle-${d.id}">⚙ What-if</button>
         </div>
       </div>
-      <div class="driver-card-runs">${bktHTML}${adhHTML}${autoHTML}${dropHint}</div>
+      <div class="driver-card-runs">${runsHTML}${dropHint}</div>
       ${wiPanel}
       <div class="driver-card-footer">
         <span class="card-total-hrs"${breakHrs?' title="Includes a 30-min DOT break"':''}>${totalHrs.toFixed(2)} hrs${breakHrs?'<span style="font-weight:400;color:var(--gray-400);font-size:9px;"> ·incl 30m break</span>':''}</span>
