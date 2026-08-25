@@ -5199,9 +5199,12 @@ function renderDriverCards(result) {
         <button class="btn-remove-bkt no-print" onclick="event.stopPropagation();removeBucketAssignment('${b.id}')">✕</button>
       </div>` }));
 
-    adhRuns.forEach(m => rowItems.push({ sortMins: effMins(m.actualOutTime, m.dispatchTime), homeReturn: false, html:
+    adhRuns.forEach(m => rowItems.push({ sortMins: (m.seqMins != null ? m.seqMins : effMins(m.actualOutTime, m.dispatchTime)), homeReturn: false, html:
       `<div class="run-row adhoc-row">
-        <span class="drag-handle" style="visibility:hidden;">⠿</span>
+        <span class="run-reorder">
+          <button class="run-move" title="Move earlier" onclick="event.stopPropagation();moveAdhoc('${m.id}',-1)">▲</button>
+          <button class="run-move" title="Move later" onclick="event.stopPropagation();moveAdhoc('${m.id}',1)">▼</button>
+        </span>
         <span class="run-label" style="background:var(--blue);min-width:38px;font-size:8px;">AD HOC</span>
         <span class="run-phase">${m.destName} — ${typeLabels[m.type]||m.type}<span style="display:block;font-size:9px;color:var(--gray-400);">${m.actualOutTime?`<span style="color:var(--green);font-weight:700;">⏱ Out ${fmtActualTime(m.actualOutTime)}</span>`:(m.dispatchTime?fmt12h(m.dispatchTime)+' dispatch':'')}${m.notes?((m.actualOutTime||m.dispatchTime)?' · ':'')+m.notes:''}</span></span>
         <span class="run-hrs">${m.hrs.toFixed(2)}h</span>
@@ -7252,6 +7255,49 @@ function moveRun(loadIdx, dir) {
   renderDriverCards(state.lastResult);
   renderAssignmentsTable(state.lastResult);
   renderDomicileWarnings(state.lastResult); // refreshes plan quality + domicile violations
+}
+
+// Manually reorder an ad-hoc move up/down within its driver's card sequence (▲/▼). Unlike
+// loads (moveRun/driverLoadNum), ad-hoc moves aren't in the optimizer result, so we store an
+// explicit `seqMins` sort key on the move and place it between its new neighbors' effective
+// times. seqMins overrides the move's dispatch-time ordering but leaves dispatchTime/actualOutTime
+// untouched (so a stamped Out time still displays correctly). Persists + syncs via saveAdhocMoves.
+function moveAdhoc(id, dir) {
+  const move = (state.adhocMoves || []).find(m => m.id === id);
+  if (!move) return;
+  const driver = move.driverName;
+  const effMins    = (out, disp) => out ? isoToMins(out) : toMinutes(disp || '00:00');
+  const adhocSort  = m => (m.seqMins != null ? m.seqMins : effMins(m.actualOutTime, m.dispatchTime));
+  // Rebuild this driver's unified card sequence with the SAME keys the card render uses.
+  const items = [];
+  (state.bucketAsgn || []).filter(b => b.driverName === driver)
+    .forEach(b => items.push({ sortMins: effMins(b.actualOutTime, b.dispatchTime), homeReturn: false }));
+  (state.adhocMoves || []).filter(m => m.driverName === driver)
+    .forEach(m => items.push({ id: m.id, sortMins: adhocSort(m), homeReturn: false }));
+  if (state.lastResult) {
+    const timings = computeRunTimings(state.lastResult);
+    state.lastResult.assignments
+      .filter(a => (a.override || a.autoDriver) === driver)
+      .forEach(a => { const t = timings.get(a); items.push({ sortMins: t ? t.start : toMinutes(a.dispatchTime), homeReturn: !!a.homeReturn }); });
+  }
+  items.sort((a, b) => (a.homeReturn !== b.homeReturn) ? (a.homeReturn ? 1 : -1) : (a.sortMins - b.sortMins));
+  const pos = items.findIndex(it => it.id === id);
+  const tgt = pos + dir;
+  if (pos < 0 || tgt < 0 || tgt >= items.length) return;      // already at an edge
+  if (dir > 0 && items[tgt].homeReturn) return;               // never move below a home-return
+  let newSort;
+  if (dir < 0) {   // move up: land between the item two-above and the neighbor above
+    const lo = tgt - 1 >= 0 ? items[tgt - 1].sortMins : items[tgt].sortMins - 2;
+    newSort = (lo + items[tgt].sortMins) / 2;
+  } else {         // move down: land between the neighbor below and the item two-below
+    const hasHi = tgt + 1 < items.length && !items[tgt + 1].homeReturn;
+    const hi = hasHi ? items[tgt + 1].sortMins : items[tgt].sortMins + 2;
+    newSort = (items[tgt].sortMins + hi) / 2;
+  }
+  move.seqMins = newSort;
+  saveAdhocMoves();
+  renderAllDriverCards();
+  if (state.lastResult) renderAssignmentsTable(state.lastResult);
 }
 
 function handleCardDragOver(e, card) {
