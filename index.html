@@ -1021,6 +1021,7 @@ th.sortable:hover { background: var(--gray-100); }
             <button class="btn btn-green btn-sm" id="commit-day-btn" onclick="commitToHistory()">📅 Commit Day</button>
             <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
             <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ CSV</button>
+            <button class="btn btn-outline btn-sm" onclick="exportSheet()">📊 Sheet</button>
             <button class="btn btn-outline btn-sm" onclick="openClearDayModal()">↺ Start Over</button>
           </div>
         </div>
@@ -1303,6 +1304,7 @@ th.sortable:hover { background: var(--gray-100); }
         <button class="btn btn-green btn-sm" onclick="exportState()">📤 Export State</button>
         <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file-input').click()">📥 Import State</button>
         <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="btn btn-outline btn-sm" onclick="exportSheet()">📊 Export Sheet</button>
       </div>
       <p style="font-size:11px;color:var(--gray-400);margin-bottom:20px;">Export saves your drivers, settings &amp; loads. Import restores them on any machine.</p>
 
@@ -6989,56 +6991,160 @@ function renderDriverRules() {
 // ════════════════════════════════════════════════════════════════════════════
 //  EXPORT CSV
 // ════════════════════════════════════════════════════════════════════════════
-function exportCSV() {
-  if (!state.lastResult && !(state.bucketAsgn||[]).length && !(state.adhocMoves||[]).length) return;
-  // Depart/ETA reflect the live timeline: actual out-times (and their cascade)
-  // when stamped, otherwise the perfect-world schedule.
+// ── Shared export model ───────────────────────────────────────────────────────
+// One normalized structure both the CSV and the styled Sheet render from, so they
+// can never drift. Mirrors the on-screen Pass-Out Sheet: loads grouped by build
+// phase (in build order), then Manual and Ad Hoc sections, plus a summary.
+function _buildExportModel() {
   const timings = state.lastResult ? computeRunTimings(state.lastResult) : new Map();
-  const hhmm = m => minutesToHHMM(((m % 1440) + 1440) % 1440);
-  const rows = [['Load#','Phase','Destination','Miles','Hours','Driver','Run','Trailer #','Carrier Driver','Status','Depart','Out Time (actual)','ETA Delivery']];
+  const hhmm = m => fmt12h(minutesToHHMM(((m % 1440) + 1440) % 1440));
+  const carrier = DC_CONFIG.externalCarrier;
+  const typeLabels = {'bobtail-rt':'Bobtail RT','bobtail-ow':'Bobtail OW','loaded-rt':'Loaded RT'};
+  const destIndex = {}; state.destinations.forEach((d, i) => destIndex[d.code] = i);
+
+  const sections = [];   // { title, sub, colorIdx, kind, rows:[ {num,dest,depart,eta,miles,hrs,driver,run,trailer,carrier,outTime,status,home} ] }
+  const byPhase = {};
+
   if (state.lastResult) {
     state.lastResult.assignments.forEach(a => {
-      const dest = state.destinations.find(d=>d.code===a.dest);
-      const driveHrs = a.homeReturn ? a.hrs/2 : a.hrs;
+      const dest = state.destinations.find(d => d.code === a.dest);
       const t = timings.get(a);
-      const depart  = t ? hhmm(t.start) : (a.dispatchTime || '');
-      const outTime = a.actualOutTime ? fmtActualTime(a.actualOutTime) : '';
-      const etaDel  = t ? hhmm(t.eta) : '';
-      rows.push([
-        a.loadNum, a.phase, dest?dest.name:a.dest,
-        dest?(a.homeReturn?dest.miles1Way:dest.miles1Way*2):'',
-        driveHrs.toFixed(2),
-        a.override||a.autoDriver,
-        a.driverLoadNum!==null?`#${a.driverLoadNum}`:'—',
-        a.trailerNum||'',
-        a.autoDriver===DC_CONFIG.externalCarrier?a.carrierDriver||'':'Coca-Cola United',
-        a.status, depart, outTime, etaDel,
-      ]);
+      if (!byPhase[a.phase]) {
+        const ph = state.phases.find(p => p.label === a.phase);
+        byPhase[a.phase] = { title: (dest ? dest.name : a.dest), sub: (ph && ph.dispatchTime ? `dispatch ${fmt12h(ph.dispatchTime)}` : a.phase),
+                             colorIdx: destIndex[a.dest] ?? 0, kind: 'load', rows: [] };
+        sections.push(byPhase[a.phase]);
+      }
+      byPhase[a.phase].rows.push({
+        num: a.loadNum, dest: dest ? dest.name : a.dest,
+        depart: t ? hhmm(t.start) : (a.dispatchTime ? fmt12h(a.dispatchTime) : ''),
+        eta: t ? hhmm(t.eta) : '',
+        miles: dest ? (a.homeReturn ? dest.miles1Way : dest.miles1Way * 2) : '',
+        hrs: (a.homeReturn ? a.hrs / 2 : a.hrs).toFixed(2),
+        driver: a.override || a.autoDriver,
+        run: a.driverLoadNum != null ? `#${a.driverLoadNum}` : '—',
+        trailer: a.trailerNum || '',
+        carrier: a.autoDriver === carrier ? (a.carrierDriver || '') : 'Coca-Cola United',
+        outTime: a.actualOutTime ? fmtActualTime(a.actualOutTime) : '',
+        status: a.status || '', home: !!a.homeReturn,
+      });
     });
   }
-  (state.bucketAsgn || []).forEach(b => {
-    const dest = state.destinations.find(d=>d.code===b.dest);
-    const eta = b.dispatchTime ? hhmm(toMinutes(b.dispatchTime)+Math.round((b.hrs/2)*60)) : '';
-    rows.push(['MANUAL', b.phase, dest?dest.name:b.dest,
-      dest?dest.miles1Way*2:'', b.hrs.toFixed(2),
-      b.driverName, 'MANUAL', '', 'Coca-Cola United', 'Manual Pre-Assignment', b.dispatchTime||'', '', eta]);
-  });
-  (state.adhocMoves || []).forEach(m => {
-    const typeLabel = {'bobtail-rt':'Bobtail RT','bobtail-ow':'Bobtail OW','loaded-rt':'Loaded RT'}[m.type]||m.type;
-    const eta = m.dispatchTime ? hhmm(toMinutes(m.dispatchTime)+Math.round((m.hrs/2)*60)) : '';
-    rows.push(['AD HOC', `${typeLabel}`, m.destName,
-      m.miles, m.hrs.toFixed(2),
-      m.driverName, 'AD HOC', '', 'Coca-Cola United', 'Ad Hoc', m.dispatchTime||'', '', eta]);
-  });
-  const csv  = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
-  const blob = new Blob([csv],{type:'text/csv'});
+
+  const bkt = (state.bucketAsgn || []);
+  if (bkt.length) {
+    const rows = bkt.map(b => {
+      const dest = state.destinations.find(d => d.code === b.dest);
+      const out  = b.actualOutTime ? isoToMins(b.actualOutTime) : (b.dispatchTime ? toMinutes(b.dispatchTime) : null);
+      return { num: 'M', dest: dest ? dest.name : b.dest,
+        depart: b.actualOutTime ? fmtActualTime(b.actualOutTime) : (b.dispatchTime ? fmt12h(b.dispatchTime) : ''),
+        eta: out != null ? hhmm(out + Math.round((b.hrs / 2) * 60)) : '',
+        miles: dest ? dest.miles1Way * 2 : '', hrs: b.hrs.toFixed(2), driver: b.driverName, run: 'MANUAL',
+        trailer: '', carrier: 'Coca-Cola United', outTime: b.actualOutTime ? fmtActualTime(b.actualOutTime) : '',
+        status: 'Manual Pre-Assignment', home: false };
+    });
+    sections.push({ title: 'Manual Pre-Assignments', sub: `${rows.length} load${rows.length !== 1 ? 's' : ''}`, colorIdx: -1, kind: 'manual', rows });
+  }
+
+  const adh = (state.adhocMoves || []);
+  if (adh.length) {
+    const rows = adh.map(m => {
+      const out = m.actualOutTime ? isoToMins(m.actualOutTime) : (m.dispatchTime ? toMinutes(m.dispatchTime) : null);
+      return { num: 'A', dest: `${m.destName} — ${typeLabels[m.type] || m.type}`,
+        depart: m.actualOutTime ? fmtActualTime(m.actualOutTime) : (m.dispatchTime ? fmt12h(m.dispatchTime) : ''),
+        eta: out != null ? hhmm(out + Math.round((m.hrs / 2) * 60)) : '',
+        miles: m.miles || '', hrs: m.hrs.toFixed(2), driver: m.driverName, run: 'AD HOC',
+        trailer: '', carrier: 'Coca-Cola United', outTime: m.actualOutTime ? fmtActualTime(m.actualOutTime) : '',
+        status: m.notes || 'Ad Hoc', home: false };
+    });
+    sections.push({ title: 'Ad Hoc Moves', sub: `${rows.length} move${rows.length !== 1 ? 's' : ''}`, colorIdx: -1, kind: 'adhoc', rows });
+  }
+
+  // Summary (mirrors the table footer / history entry).
+  const wi = state.whatIf || {};
+  const bucketCount = bkt.filter(b => { const d = state.drivers.find(x => x.name === b.driverName); return d && !d.onVacation && !wi[d.id]?.inactive; }).length;
+  const asg = state.lastResult ? state.lastResult.assignments : [];
+  const total    = asg.length + bucketCount;
+  const internal = asg.filter(a => a.internal).length + bucketCount;
+  const external = asg.filter(a => (a.override || a.autoDriver) === carrier).length;
+  const driversUsed = new Set(asg.filter(a => a.internal).map(a => a.override || a.autoDriver)).size;
+
+  const now = new Date();
+  return {
+    dcName: DC_CONFIG.name,
+    dateStr: now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }),
+    carrier, sections,
+    summary: { total, internal, external, driversUsed },
+    cols: ['#','Destination','Depart','ETA','Miles','Hrs','Driver','Run','Trailer #','Carrier','Out Time','Status'],
+  };
+}
+
+function _downloadFile(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
   const url  = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href = url;
-  const today = new Date(); const localDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  link.download = `CCBCU_Routes_${localDate}.csv`;
-  link.click();
+  link.href = url; link.download = filename; link.click();
   URL.revokeObjectURL(url);
+}
+function _localDate() {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+}
+
+// ── Enhanced grouped CSV (universal, plain) ──────────────────────────────────
+function exportCSV() {
+  if (!state.lastResult && !(state.bucketAsgn||[]).length && !(state.adhocMoves||[]).length) return;
+  const m = _buildExportModel();
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const line = arr => arr.map(esc).join(',');
+  const blank = line(m.cols.map(() => ''));
+  const out = [];
+  out.push(line([`CCBCU Route Assignments — ${m.dcName} — ${m.dateStr}`]));
+  out.push(blank);
+  m.sections.forEach(sec => {
+    out.push(line([`>> ${sec.title.toUpperCase()}  ·  ${sec.sub}`]));
+    out.push(line(m.cols));
+    sec.rows.forEach(r => out.push(line([r.num, r.dest + (r.home ? '  ← Home' : ''), r.depart, r.eta, r.miles, r.hrs, r.driver, r.run, r.trailer, r.carrier, r.outTime, r.status])));
+    out.push(line(['', `Subtotal: ${sec.rows.length}`]));
+    out.push(blank);
+  });
+  out.push(line([`SUMMARY   Total ${m.summary.total}  ·  Internal ${m.summary.internal}  ·  ${m.carrier} ${m.summary.external}  ·  Drivers used ${m.summary.driversUsed}`]));
+  _downloadFile(out.join('\r\n'), `CCBCU_Routes_${_localDate()}.csv`, 'text/csv;charset=utf-8');
+}
+
+// ── Styled Sheet (HTML table saved as .xls — opens in Excel/Sheets/browser) ───
+function exportSheet() {
+  if (!state.lastResult && !(state.bucketAsgn||[]).length && !(state.adhocMoves||[]).length) return;
+  const m = _buildExportModel();
+  // Soft per-destination band colors (self-contained; mirrors the app's color-tagged rows).
+  const bands = ['#E3F2FD','#F1F8E9','#FFF3E0','#FCE4EC','#EDE7F6','#E0F7FA','#FFF8E1','#F3E5F5'];
+  const esc = v => String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const nCols = m.cols.length;
+  let body = '';
+  m.sections.forEach(sec => {
+    const band = sec.colorIdx >= 0 ? bands[sec.colorIdx % bands.length] : '#ECEFF1';
+    const accent = sec.kind === 'manual' ? '#c0392b' : sec.kind === 'adhoc' ? '#2563eb' : '#111827';
+    body += `<tr><td colspan="${nCols}" style="background:${band};border-left:5px solid ${accent};font-weight:700;font-size:13px;padding:8px 10px;">${esc(sec.title)} <span style="font-weight:400;color:#555;font-size:11px;">· ${esc(sec.sub)}</span></td></tr>`;
+    body += `<tr>${m.cols.map(c => `<th style="background:#37474F;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:5px 8px;text-align:left;white-space:nowrap;">${esc(c)}</th>`).join('')}</tr>`;
+    sec.rows.forEach((r, i) => {
+      const zebra = i % 2 ? '#ffffff' : '#fafafa';
+      const cells = [r.num, esc(r.dest) + (r.home ? ' <span style="color:#16a34a;font-weight:700;">← Home</span>' : ''), r.depart, r.eta, r.miles, r.hrs, r.driver, r.run, r.trailer, r.carrier,
+        r.outTime ? `<span style="color:#16a34a;font-weight:700;">${esc(r.outTime)}</span>` : '', r.status];
+      body += `<tr style="background:${zebra};">${cells.map((c,ci) => `<td style="padding:4px 8px;font-size:12px;border-bottom:1px solid #eee;${ci===0?'font-weight:700;color:#888;':''}white-space:nowrap;">${ci===1||ci===10?c:esc(c)}</td>`).join('')}</tr>`;
+    });
+    body += `<tr><td colspan="${nCols}" style="padding:3px 8px;font-size:11px;color:#666;text-align:right;font-style:italic;">Subtotal: ${sec.rows.length}</td></tr>`;
+    body += `<tr><td colspan="${nCols}" style="height:8px;"></td></tr>`;
+  });
+  const s = m.summary;
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><style>table{border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;} td,th{mso-number-format:'\\@';}</style></head><body>
+    <table style="border-collapse:collapse;">
+      <tr><td colspan="${nCols}" style="font-size:18px;font-weight:800;padding:6px 10px;color:#B71C1C;">CCBCU Route Assignments</td></tr>
+      <tr><td colspan="${nCols}" style="font-size:12px;padding:0 10px 10px;color:#444;">${esc(m.dcName)} &nbsp;·&nbsp; ${esc(m.dateStr)}</td></tr>
+      ${body}
+      <tr><td colspan="${nCols}" style="height:6px;"></td></tr>
+      <tr><td colspan="${nCols}" style="background:#37474F;color:#fff;font-weight:700;padding:8px 10px;font-size:13px;">SUMMARY &nbsp; Total ${s.total} &nbsp;·&nbsp; Internal ${s.internal} &nbsp;·&nbsp; ${esc(m.carrier)} ${s.external} &nbsp;·&nbsp; Drivers used ${s.driversUsed}</td></tr>
+    </table></body></html>`;
+  _downloadFile(html, `CCBCU_Routes_${_localDate()}.xls`, 'application/vnd.ms-excel');
 }
 
 // ════════════════════════════════════════════════════════════════════════════
