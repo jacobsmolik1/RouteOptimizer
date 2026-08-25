@@ -5413,7 +5413,12 @@ function renderDriverCards(result) {
       runRows = sorted.map(a => {
         const loadIdx = result.assignments.indexOf(a);
         const locked = isLocked(a);
+        const isStamped = !!a.actualOutTime;
         const lockBtn = `<button class="out-btn${locked?' stamped':''}" onclick="event.stopPropagation();toggleLock(${loadIdx})" title="${locked ? 'Locked to '+DC_CONFIG.externalCarrier+' — stays here when you regenerate. Click to unlock.' : 'Lock this load to '+DC_CONFIG.externalCarrier+' so it stays put when you regenerate'}">${locked ? '🔒' : '🔓'}</button>`;
+        const outBtn = `<button class="out-btn ${isStamped?'stamped':''}" onclick="event.stopPropagation();openOutModal(${loadIdx})" title="Set / edit the actual departure (Out) time for this ${DC_CONFIG.externalCarrier} load">${isStamped ? '✓ Out' : '⏱ Out'}</button>`;
+        const subLine = isStamped
+          ? `<span style="display:block;font-size:9px;color:var(--green);font-weight:700;">⏱ Out ${fmtActualTime(a.actualOutTime)}</span>`
+          : `<span style="display:block;font-size:9px;color:var(--gray-400);">${a.dispatchTime} dispatch</span>`;
         return `<div class="run-row shore-row${locked?' is-locked':''}" draggable="true"
           onclick="openReassignModal(${loadIdx})"
           ondragstart="handleDragStart(event,${loadIdx})"
@@ -5424,9 +5429,9 @@ function renderDriverCards(result) {
           title="Drag to a driver card · Click to assign to an internal driver">
           <span class="drag-handle">⠿</span>
           <span class="run-label" style="background:var(--purple);">${a.dest}</span>
-          <span class="run-phase">${a.phase}<span style="display:block;font-size:9px;color:var(--gray-400);">${a.dispatchTime} dispatch</span></span>
+          <span class="run-phase">${a.phase}${subLine}</span>
           <span class="run-hrs">${a.hrs.toFixed(2)}h</span>
-          ${lockBtn}
+          ${lockBtn}${outBtn}
         </div>`;
       }).join('');
     } else {
