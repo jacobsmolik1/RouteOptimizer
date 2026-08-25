@@ -960,41 +960,7 @@ th.sortable:hover { background: var(--gray-100); }
         </div>
       </div>
 
-      <!-- Minimize external-carrier toggle -->
-      <div class="no-print" style="display:flex;align-items:center;gap:12px;padding:6px 2px;">
-        <div class="toggle-wrap">
-          <label class="toggle" title="General pool drivers will cover PAN/COL loads before falling back to outside carrier">
-            <input type="checkbox" id="minimize-shore-toggle" onchange="toggleMinimizeShoreline(this.checked)">
-            <span class="slider"></span>
-          </label>
-          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Minimize External</span>
-        </div>
-        <span style="font-size:11px;color:var(--gray-400);">General pool drivers cover PAN/COL before falling back to outside carrier</span>
-      </div>
-
-      <!-- Pack overflow-tier drivers onto fewest trucks -->
-      <div class="no-print" style="display:flex;align-items:center;gap:12px;padding:6px 2px;">
-        <div class="toggle-wrap">
-          <label class="toggle" title="Concentrate overflow/outside-carrier loads onto as few trucks as legally fit (shows minimum trucks needed). Internal drivers stay balanced.">
-            <input type="checkbox" id="pack-overflow-toggle" onchange="togglePackOverflow(this.checked)">
-            <span class="slider"></span>
-          </label>
-          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Pack Overflow</span>
-        </div>
-        <span style="font-size:11px;color:var(--gray-400);">Fill overflow trucks one at a time (reveals fewest needed). Off = spread across all.</span>
-      </div>
-
-      <!-- Protect delivery windows over internal packing -->
-      <div class="no-print" style="display:flex;align-items:center;gap:12px;padding:6px 2px;">
-        <div class="toggle-wrap">
-          <label class="toggle" title="When a higher-priority driver would deliver a load after its receiver window closes, let a lower-priority (overflow) truck take it if that truck delivers in-window. Only acts when it changes on-time status.">
-            <input type="checkbox" id="window-protect-toggle" onchange="toggleWindowProtect(this.checked)">
-            <span class="slider"></span>
-          </label>
-          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Protect Windows</span>
-        </div>
-        <span style="font-size:11px;color:var(--gray-400);">Let an in-window truck beat a higher-priority late one. Keeps internal first whenever it still hits the window.</span>
-      </div>
+      <!-- Optimizer tuning toggles moved to Settings → Optimizer Tuning -->
 
       <!-- Generate Button -->
       <button class="btn-generate no-print" onclick="generateAssignments()">⚡ Generate Load Assignments</button>
@@ -1282,6 +1248,54 @@ th.sortable:hover { background: var(--gray-100); }
       </div>
 
       <button class="btn btn-dark btn-sm" onclick="saveSettings()" style="margin-bottom:24px;">Save Settings</button>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Optimizer Tuning</div>
+      <p style="font-size:11px;color:var(--gray-400);margin:-4px 0 12px;">These apply immediately and re-generate the plan. No need to click Save Settings.</p>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 2px;">
+        <div class="toggle-wrap" style="flex-shrink:0;">
+          <label class="toggle" title="After assigning, shuffle loads between drivers to even out their hours. Note: this can pull a driver off the first-built loads and cause window misses — turn OFF if you want everyone to take the earliest-built loads first.">
+            <input type="checkbox" id="fairness-toggle" onchange="toggleFairness(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Balance Driver Hours</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);flex:1;">Evens out hours across drivers. <strong>Off</strong> = strictly dispatch loads in build order (everyone takes the earliest-built loads first).</span>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 2px;">
+        <div class="toggle-wrap" style="flex-shrink:0;">
+          <label class="toggle" title="General pool drivers cover overflow-eligible loads before falling back to the outside carrier">
+            <input type="checkbox" id="minimize-shore-toggle" onchange="toggleMinimizeShoreline(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Minimize External</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);flex:1;">Internal drivers cover overflow-eligible loads before falling back to the outside carrier.</span>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 2px;">
+        <div class="toggle-wrap" style="flex-shrink:0;">
+          <label class="toggle" title="Concentrate overflow/outside-carrier loads onto as few trucks as legally fit (shows minimum trucks needed). Internal drivers stay balanced.">
+            <input type="checkbox" id="pack-overflow-toggle" onchange="togglePackOverflow(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Pack Overflow</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);flex:1;">Fill overflow trucks one at a time (reveals fewest needed). Off = spread across all.</span>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 2px;margin-bottom:24px;">
+        <div class="toggle-wrap" style="flex-shrink:0;">
+          <label class="toggle" title="When a higher-priority driver would deliver a load after its receiver window closes, let a lower-priority (overflow) truck take it if that truck delivers in-window. Only acts when it changes on-time status.">
+            <input type="checkbox" id="window-protect-toggle" onchange="toggleWindowProtect(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Protect Windows</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);flex:1;">Let an in-window truck beat a higher-priority late one. Keeps internal first whenever it still hits the window.</span>
+      </div>
 
       <div class="divider"></div>
       <div class="settings-section-title">Data</div>
@@ -3096,6 +3110,12 @@ function toggleWindowProtect(checked) {
   applyOptimizerToggle();
 }
 
+function toggleFairness(checked) {
+  state.settings.fairnessEnabled = checked;
+  saveSettings_();
+  applyOptimizerToggle();
+}
+
 // Flattens the optimizer's phase-by-phase assignment into a single ordered list
 // of phase indices (one entry per load). With no blends configured this is exactly
 // phaseOrder expanded phase-by-phase (byte-identical to the old nested loop). When a
@@ -3746,10 +3766,10 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
 
   return {assignments, workload};
 }
-  return { toggleMinimizeShoreline, togglePackOverflow, toggleWindowProtect, runOptimizer };
+  return { toggleMinimizeShoreline, togglePackOverflow, toggleWindowProtect, toggleFairness, runOptimizer };
 })();
 // Re-export to global scope — call sites remain unchanged during incremental migration.
-const { toggleMinimizeShoreline, togglePackOverflow, toggleWindowProtect, runOptimizer } = Optimizer;
+const { toggleMinimizeShoreline, togglePackOverflow, toggleWindowProtect, toggleFairness, runOptimizer } = Optimizer;
 
 // ════════════════════════════════════════════════════════════════════════════
 //  MODULE: TemplatesAndHistory
@@ -4789,7 +4809,10 @@ function rebalanceFairness() {
   const dotMax = state.settings.dotMaxHours;
   const active = getAvailableDrivers();
   const fairnessCfg = DC_CONFIG.optimizer?.fairness || {};
-  if (fairnessCfg.enabled === false) return;
+  // Settings toggle (Settings → Optimizer Tuning) wins when set; otherwise fall back to the
+  // DC's coded default. MUST match the checkbox-render expression in renderSettings exactly.
+  const fairnessOn = state.settings.fairnessEnabled ?? (fairnessCfg.enabled !== false);
+  if (!fairnessOn) return;
   const maxSpread = fairnessCfg.maxHourSpread ?? 2.0;
   const minImprove = 0.005;
 
@@ -6822,6 +6845,15 @@ function renderSettings() {
   document.getElementById('set-dot-max').value         = state.settings.dotMaxHours;
   document.getElementById('set-delivery-window').value = state.settings.deliveryWindowHours ?? DC_CONFIG.optimizer?.deliveryWindowHours ?? 5;
   document.getElementById('set-card-sort').value       = state.settings.cardSort || 'arrival';
+  // Optimizer Tuning toggles. Fairness fallback expression MUST match rebalanceFairness exactly.
+  const fair = document.getElementById('fairness-toggle');
+  if (fair) fair.checked = state.settings.fairnessEnabled ?? (DC_CONFIG.optimizer?.fairness?.enabled !== false);
+  const mst2 = document.getElementById('minimize-shore-toggle');
+  if (mst2) mst2.checked = !!state.settings.minimizeShoreline;
+  const pot2 = document.getElementById('pack-overflow-toggle');
+  if (pot2) pot2.checked = !!state.settings.packOverflow;
+  const wpt2 = document.getElementById('window-protect-toggle');
+  if (wpt2) wpt2.checked = !!state.settings.windowProtect;
   renderBlends();
 }
 
