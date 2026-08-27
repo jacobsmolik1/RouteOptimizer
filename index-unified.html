@@ -8068,7 +8068,29 @@ function init() {
 }
 
 init();
+
+// ── Service worker: network-first auto-update ────────────────────────────────
+// Register the network-first SW (sw.js) so getting on the site pulls the newest build
+// automatically — no manual "Reset & Update". When an updated SW takes control we reload
+// once to apply it, but ONLY under three guards so a dispatcher is never yanked mid-shift:
+//   1) there was already a controller (an UPDATE, not a brand-new visitor's first install),
+//   2) at most once per tab session (loop protection if a proxy ever serves a varying sw.js),
+//   3) only shortly after load (fresh-at-open) — the ~24h background SW check that fires while
+//      a tab sits open all day is ignored; that tab keeps working and updates on its next open.
+if ('serviceWorker' in navigator) {
+  const _swLoadTime = Date.now();
+  const _swHadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!_swHadController) return;                                  // new visitor — already fresh
+    if (sessionStorage.getItem('_swReloaded')) return;             // one reload per tab session
+    if (Date.now() - _swLoadTime > 60000) return;                  // late (24h check) — don't yank
+    sessionStorage.setItem('_swReloaded', '1');
+    location.reload();
+  });
+}
 </script>
 <!-- Service worker intentionally removed: file:// protocol does not support SW -->
 </body>
 </html>
+
