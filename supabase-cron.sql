@@ -42,6 +42,29 @@ begin
     on conflict (dc_id, date) do nothing;
   end loop;
 
+  -- 3) BLEED GUARD (fixes the UTC-vs-local date split). The client keys dispatch_days by the
+  --    UTC date (new Date().toISOString().slice(0,10)), but the team works US Central/Eastern.
+  --    Evening work (post ~7-8pm local = past UTC midnight) lands on the NEXT UTC date, so
+  --    "today"'s row gets pre-created with yesterday's plan and step 2's on-conflict-do-nothing
+  --    skips the reset -> dispatchers open a stale sheet (observed 2026-08-27, Montgomery).
+  --    Reset today's row ONLY when it is a DRAFT byte-identical (loads AND result) to the DC's
+  --    most-recent committed prior day — a redundant copy already safe in history. This is
+  --    lossless by construction: a divergent or evening-heavy plan differs and is LEFT ALONE
+  --    (fail safe — never commits an empty day or destroys real work). Dry-run over 30 days
+  --    before shipping: it flagged only the exact-dup bleed row, nothing real.
+  update public.dispatch_days t
+  set loads = (select jsonb_agg(0) from generate_series(1, greatest(jsonb_array_length(t.loads), 1))),
+      result = null, ad_hoc='[]'::jsonb, bucket_assignments='[]'::jsonb,
+      returned='{}'::jsonb, what_if='{}'::jsonb, updated_at=now()
+  where t.date = current_date and t.status = 'draft'
+    and exists (
+      select 1 from public.dispatch_days c
+      where c.dc_id = t.dc_id and c.status='committed'
+        and c.date = (select max(c2.date) from public.dispatch_days c2
+                        where c2.dc_id = t.dc_id and c2.status='committed' and c2.date < current_date)
+        and c.loads = t.loads and c.result is not distinct from t.result
+    );
+
   return v_count;
 end;
 $$;
