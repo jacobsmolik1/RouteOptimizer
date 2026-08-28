@@ -5668,15 +5668,29 @@ function renderAssignmentsTable(result) {
       <td style="font-size:11px;color:var(--gray-600);">${dest?dest.name:a.dest}</td>
       <td class="text-center" style="font-size:11px;">${(() => {
         const t = timings.get(a);
-        const depart = t ? minutesToHHMM(t.start) : (a.dispatchTime || '—');
-        const col = (t && t.actual) ? 'var(--green)' : 'var(--gray-700)';
-        const sub = (t && t.actual)
+        // Internal loads use the cascaded timeline; carrier/overflow loads have no timeline,
+        // so honor their stamped actual out-time directly (else fall back to planned dispatch).
+        let departMins = null, isActual = false;
+        if (t) { departMins = t.start; isActual = !!t.actual; }
+        else if (a.actualOutTime) { departMins = isoToMins(a.actualOutTime); isActual = true; }
+        else if (a.dispatchTime) { departMins = toMinutes(a.dispatchTime); }
+        const depart = departMins != null ? minutesToHHMM(departMins) : '—';
+        const col = isActual ? 'var(--green)' : 'var(--gray-700)';
+        const sub = isActual
           ? `<span style="display:block;font-size:9px;color:var(--green);">⏱ actual out</span>`
-          : (t && a.dispatchTime && minutesToHHMM(t.start) !== a.dispatchTime
+          : (departMins != null && a.dispatchTime && minutesToHHMM(departMins) !== a.dispatchTime
               ? `<span style="display:block;font-size:9px;color:var(--gray-400);">build ${a.dispatchTime}</span>` : '');
         return `<span style="font-weight:700;color:${col};">${depart}</span>${sub}`;
       })()}</td>
-      <td class="text-center" style="font-size:11px;font-weight:700;">${(() => { const t = timings.get(a); if(!t) return '<span style="color:var(--gray-700);">—</span>'; const anchored = t.actual; return `<span style="color:${anchored?'var(--green)':'var(--gray-700)'};">${minutesToHHMM(t.eta)}</span>`; })()}</td>
+      <td class="text-center" style="font-size:11px;font-weight:700;">${(() => {
+        const t = timings.get(a);
+        if (t) return `<span style="color:${t.actual?'var(--green)':'var(--gray-700)'};">${minutesToHHMM(t.eta)}</span>`;
+        // carrier/overflow: derive ETA from the actual out-time (or planned dispatch) + one-way drive
+        const baseMins = a.actualOutTime ? isoToMins(a.actualOutTime) : (a.dispatchTime ? toMinutes(a.dispatchTime) : null);
+        if (baseMins == null) return '<span style="color:var(--gray-700);">—</span>';
+        const eta = (baseMins + Math.round((a.hrs / 2) * 60)) % 1440;
+        return `<span style="color:${a.actualOutTime?'var(--green)':'var(--gray-700)'};">${minutesToHHMM(eta)}</span>`;
+      })()}</td>
       <td class="text-center">${dest ? (a.homeReturn ? dest.miles1Way : dest.miles1Way*2) : '—'}</td>
       <td class="text-center">${(a.homeReturn ? a.hrs/2 : a.hrs).toFixed(2)}</td>
       <td>${driverCell}</td>
