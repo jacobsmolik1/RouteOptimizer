@@ -2465,13 +2465,24 @@ const SupabaseSync = (() => {
       };
       set('loads',       data.loads,              'loads');
       // A reset/rolled-over day (nightly server rollover, or a coworker's "Start Over")
-      // carries a null result. We only reach here when the DB row is newer than our local
-      // copy, so honor it: clear the stale local plan instead of leaving yesterday's driver
-      // assignments sitting under today's freshly-zeroed loads.
+      // carries a null result AND zeroed loads — honor that by clearing the stale local plan
+      // so yesterday's assignments don't sit under today's freshly-zeroed loads.
+      // SAFETY (2026-08-28): do NOT let a *bare* remote null wipe a local plan that has real
+      // dispatch decisions on it (locked loads or stamped out-times). A transient/erroneous
+      // null-with-loads-still-present (e.g. a mid-day server-side edit or a race) must never
+      // destroy locked/dispatched work — that caused the Tifton wipe. Only clear when the remote
+      // day is genuinely reset (loads all zero) or when we have nothing dispatched to protect.
       if (data.result === null) {
-        state.lastResult = null;
-        localStorage.setItem(P + 'lastresult', 'null');
-        changed = true;
+        const remoteLoadsEmpty = !Array.isArray(data.loads) || data.loads.every(n => !n);
+        const localHasDispatched = !!(state.lastResult && (state.lastResult.assignments || [])
+          .some(a => a.locked || a.actualOutTime));
+        if (remoteLoadsEmpty || !localHasDispatched) {
+          state.lastResult = null;
+          localStorage.setItem(P + 'lastresult', 'null');
+          changed = true;
+        }
+        // else: remote result is null but loads are present AND we hold locked/out-stamped
+        // work → keep the local plan; treat the remote null as transient, not a reset.
       } else {
         set('lastResult', data.result, 'lastresult');
       }
