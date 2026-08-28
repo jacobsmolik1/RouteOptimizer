@@ -1,4 +1,4 @@
-const CACHE = 'route-optimizer-v120';
+const CACHE = 'route-optimizer-v121';
 // Relative so it works under whatever origin serves the app (routes.jacobsmolik.com via the
 // Cloudflare Worker, or github.io directly) — absolute github.io URLs would be cross-origin
 // and useless on routes.jacobsmolik.com.

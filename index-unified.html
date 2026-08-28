@@ -677,6 +677,20 @@ tr.phase-group-hdr td {
   padding: 5px 10px;
   border-bottom: none;
 }
+/* Repeated column-key row printed under EACH location band so the column labels
+   stay visible as dispatchers scroll (matches the top header; uses the same
+   col-detail / no-print classes so it hides/shows with the toggle and print). */
+tr.col-key td {
+  background: var(--black);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 4px 10px;
+  white-space: nowrap;
+  border-bottom: none;
+}
 
 /* ── DETAIL COLUMN TOGGLE ────────────────────────────────────────────── */
 .hide-details .col-detail { display: none; }
@@ -5629,7 +5643,22 @@ function renderAssignmentsTable(result) {
       const priorBadge = a.buildDay === 'prior'
         ? `<span style="font-size:10px;font-weight:700;background:#EDE7F6;color:#5C35A8;border-radius:3px;padding:1px 6px;margin-left:8px;vertical-align:middle;">◑ Prior Night</span>`
         : '';
-      separator = `<tr class="phase-group-hdr"><td colspan="13"><span class="tag ${DEST_TAGS[a.dest]}" style="margin-right:6px;">${a.dest}</span>${a.phase}${priorBadge}</td></tr>`;
+      separator = `<tr class="phase-group-hdr"><td colspan="13"><span class="tag ${DEST_TAGS[a.dest]}" style="margin-right:6px;">${a.dest}</span>${a.phase}${priorBadge}</td></tr>`
+        + `<tr class="col-key">
+            <td class="tbl-num">#</td>
+            <td>Build Phase</td>
+            <td>Destination</td>
+            <td>Depart</td>
+            <td>ETA</td>
+            <td>Miles</td>
+            <td>Hrs</td>
+            <td>Driver</td>
+            <td>Run</td>
+            <td class="col-detail">Trailer #</td>
+            <td class="col-detail">Carrier</td>
+            <td class="no-print">Override</td>
+            <td class="no-print">Status</td>
+          </tr>`;
       lastPhase = a.phase;
     }
 
