@@ -2272,7 +2272,12 @@ const SupabaseSync = (() => {
 
   async function _syncDay() {
     if (!db || !_user) return;
-    const today = new Date().toISOString().slice(0, 10);
+    // Key dispatch_days by the LOCAL (browser) date, not UTC. Each DC's dispatchers sit in
+    // that DC's timezone (Montgomery=Central, Tifton=Eastern), so local date = the operational
+    // day. Using UTC made evening work (past UTC midnight = ~7-8pm local) bleed onto the next
+    // day's row, blocking the nightly reset. The nightly cron runs 08:00 UTC = 3-4am local, when
+    // local date == UTC date, so client and cron stay aligned at the day boundary.
+    const today = todayLocal();
     try {
       const { error } = await db.rpc('save_dispatch_day', {
         p_dc_slug:            DC_CONFIG.id,
@@ -2440,7 +2445,7 @@ const SupabaseSync = (() => {
   // Returns true if state was updated (caller should re-render).
   async function loadDayFromDB() {
     if (!db || !_user) return false;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();   // LOCAL date key — matches _syncDay + planDate/rollover (see _syncDay)
     const P = DC_CONFIG.storagePrefix;
     try {
       const { data, error } = await db.rpc('get_dispatch_day', {
@@ -2611,7 +2616,7 @@ const SupabaseSync = (() => {
   // ── Commit day ───────────────────────────────────────────────────────────
   async function commitDay(dateOverride) {
     if (!db || !_user) return;
-    const date = dateOverride || new Date().toISOString().slice(0, 10);
+    const date = dateOverride || todayLocal();   // LOCAL date key (see _syncDay)
     const { error } = await db.rpc('commit_dispatch_day', {
       p_dc_slug: DC_CONFIG.id,
       p_date:    date,
@@ -3963,7 +3968,8 @@ function buildDriverRuns(assignments, adhocMoves, bucketAsgn) {
 function commitToHistory(dateOverride) {
   if (!state.lastResult) { if (!dateOverride) alert('Generate assignments first.'); return; }
   const now  = new Date();
-  const date = dateOverride || now.toISOString().slice(0, 10);
+  const date = dateOverride || todayLocal();   // LOCAL date key — was UTC while the label below
+  // was already local, an internal mismatch this also fixes (see _syncDay for the invariant).
   const dayLabel = dateOverride
     ? new Date(dateOverride + 'T12:00:00').toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'})
     : now.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric'});
