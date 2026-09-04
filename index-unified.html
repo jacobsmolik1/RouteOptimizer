@@ -3702,6 +3702,65 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
     }
   });
 
+  // ── RESCUE stranded Internal-Only loads (opt-in per DC: optimizer.rescueStrandedInternal) ──
+  // The greedy per-phase assignment can spend scarce driver/DOT capacity on overflow-eligible
+  // loads (which HAVE a carrier fallback) and then strand an Internal-Only load (which has NONE).
+  // Repair it: for each stranded load, yield an overflow-eligible internal load to the carrier to
+  // free a driver, then place the stranded load through the SAME finders (identical DOT + window +
+  // midnight checks). Reverts if the yield doesn't produce a valid, on-time placement — never makes
+  // a day worse. Runs BEFORE the deadhead/home-return post-process so that pass settles the final
+  // (post-rescue) load sets; yielded loads are marked sticky so minimizeShoreline can't re-grab them.
+  if (DC_CONFIG.optimizer?.rescueStrandedInternal) {
+    // Re-derive a driver's accumulator from their current internal loads (loads carry no homeReturn
+    // flag yet — that's set by the deadhead pass, which runs after us — so hours are full round-trips).
+    const rederive = (drv) => {
+      const S = ds[drv.id]; const pre = preLoads[drv.id] || {};
+      const loads = assignments.filter(a => a.internal && a.autoDriver === drv.name && a.driverLoadNum !== null)
+        .sort((a, b) => (toMinutes(a.dispatchTime) - toMinutes(b.dispatchTime)) || ((a.driverLoadNum||0) - (b.driverLoadNum||0)));
+      S.hours = S.morningDH + (pre.hours || 0) + loads.reduce((s, a) => s + a.hrs, 0);
+      S.loadCount = loads.length;
+      S.destCounts = {}; loads.forEach(a => S.destCounts[a.dest] = (S.destCounts[a.dest] || 0) + 1);
+      S.colCount = 0; loads.forEach(a => { const asd = DC_CONFIG.restrictions.find(r => r.type === 'assist' && r.destCode === a.dest); if (asd && drv.restriction === asd.value) S.colCount++; });
+      let ret = Math.max(drv.arrivalTime ? toMinutes(drv.arrivalTime) : 0, pre.returnMinutes || 0);
+      loads.forEach((a, i) => { const start = Math.max(toMinutes(a.dispatchTime), ret); ret = start + Math.round(a.hrs * 60); a.driverLoadNum = i + 1; });
+      S.returnMinutes = ret;
+    };
+    let guard = 0;
+    for (const L of assignments.filter(a => a.autoDriver === 'UNASSIGNED' && !a.override)) {
+      if (guard++ > 100) break;
+      // Overflow-eligible internal loads we may hand to the carrier — never a driver's own home run.
+      const yieldable = assignments.filter(M => M.internal && M.driverLoadNum !== null && !M.homePass
+        && destCanExternal(M.dest)
+        && (available.find(d => d.name === M.autoDriver)?.domicileDest !== M.dest));
+      for (const M of yieldable) {
+        const d = available.find(x => x.name === M.autoDriver);
+        if (!d) continue;
+        const snapM = { autoDriver: M.autoDriver, internal: M.internal, driverLoadNum: M.driverLoadNum, externalReason: M.externalReason };
+        const snapDs = JSON.parse(JSON.stringify(ds[d.id]));
+        const snapNums = assignments.filter(a => a.autoDriver === d.name).map(a => ({ ref: a, n: a.driverLoadNum }));
+        // Yield M to the carrier (sticky so minimizeShoreline won't re-pull it), free d's capacity.
+        M.autoDriver = DC_CONFIG.externalCarrier; M.internal = false; M.driverLoadNum = null;
+        M.externalReason = 'yielded_for_internal'; M.rescueYielded = true;
+        rederive(d);
+        // Place the stranded load through the real finders — DOT / window / midnight enforced identically.
+        phaseDispatchMins = toMinutes(L.dispatchTime);
+        const target = findGeneral(L.hrs, L.dest) || findAnyAvailable(L.hrs, L.dest);
+        if (target) {
+          ds[target.id].hours += L.hrs; ds[target.id].loadCount++;
+          ds[target.id].destCounts[L.dest] = (ds[target.id].destCounts[L.dest] || 0) + 1;
+          const disp = Math.max(phaseDispatchMins, ds[target.id].returnMinutes);
+          ds[target.id].returnMinutes = disp + Math.round(L.hrs * 60);
+          L.autoDriver = target.name; L.internal = true; L.externalReason = ''; L.driverLoadNum = ds[target.id].loadCount;
+          break;   // this stranded load is covered; on to the next
+        }
+        // No valid on-time placement — revert the yield and try a different overflow load.
+        M.autoDriver = snapM.autoDriver; M.internal = snapM.internal; M.driverLoadNum = snapM.driverLoadNum;
+        M.externalReason = snapM.externalReason; delete M.rescueYielded;
+        ds[d.id] = snapDs; snapNums.forEach(x => x.ref.driverLoadNum = x.n);
+      }
+    }
+  }
+
   // Post-process: settle evening deadhead and mark home-return loads.
   available.forEach(d => {
     if (!d.deadheadMiles || !d.domicileDest) return;
@@ -3734,6 +3793,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
   if (minimizeShoreline) {
     assignments.forEach(asgn => {
       if (asgn.autoDriver !== DC_CONFIG.externalCarrier) return;
+      if (asgn.rescueYielded) return;   // deliberately handed to the carrier to rescue an internal-only load — don't re-pull
 
       const msAssistDef = DC_CONFIG.restrictions.find(r => r.type === 'assist' && r.destCode === asgn.dest);
       const msCanExt    = destCanExternal(asgn.dest);
