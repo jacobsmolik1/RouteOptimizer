@@ -1292,6 +1292,17 @@ th.sortable:hover { background: var(--gray-100); }
 
       <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 2px;">
         <div class="toggle-wrap" style="flex-shrink:0;">
+          <label class="toggle" title="Protect a domicile driver's reserved home run: don't give them a late/far extra load if doing so would push their home delivery past midnight (which drops the home run and makes them deadhead home empty). Best paired with Rescue Stranded Loads so the freed-up load still gets covered.">
+            <input type="checkbox" id="protect-home-toggle" onchange="toggleProtectHome(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Protect Home Return</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);flex:1;">Don't over-load a domicile driver so late that their home run gets stranded past midnight. Pair with <strong>Rescue Stranded Loads</strong> so the displaced load still gets covered.</span>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 2px;">
+        <div class="toggle-wrap" style="flex-shrink:0;">
           <label class="toggle" title="General pool drivers cover overflow-eligible loads before falling back to the outside carrier">
             <input type="checkbox" id="minimize-shore-toggle" onchange="toggleMinimizeShoreline(this.checked)">
             <span class="slider"></span>
@@ -3165,6 +3176,12 @@ function toggleRescueStranded(checked) {
   applyOptimizerToggle();
 }
 
+function toggleProtectHome(checked) {
+  state.settings.protectHomeReturn = checked;
+  saveSettings_();
+  applyOptimizerToggle();
+}
+
 // Flattens the optimizer's phase-by-phase assignment into a single ordered list
 // of phase indices (one entry per load). With no blends configured this is exactly
 // phaseOrder expanded phase-by-phase (byte-identical to the old nested loop). When a
@@ -3222,6 +3239,12 @@ function buildBlendedLoadSequence(phaseOrder, counts) {
 function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
   const available = getAvailableDrivers();
   const dotMax    = state.settings.dotMaxHours;
+  // Protect Home Return (opt-in per DC). Settings toggle wins when set; else the DC's coded
+  // default. MUST match the checkbox-render expression in renderSettings exactly. When on, a
+  // reserved-home driver is only eligible for a non-home load if their reserved home run still
+  // delivers before midnight AFTER that load — so a late/far load can't strand their home leg.
+  const protectHomeReturn = state.settings.protectHomeReturn ?? !!DC_CONFIG.optimizer?.protectHomeReturn;
+  const reservedHomePhase = {};   // driver id → reserved home phase index (for the feasibility guard)
   const ds = {};
   available.forEach(d => {
     // Only charge morning deadhead upfront. Evening deadhead is reserved in the capacity
@@ -3291,6 +3314,25 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
 
   function candidateTimingAllowed(driver, hrs, dispatchMins = phaseDispatchMins) {
     return timingAllowed(getCandidateTiming(driver, hrs, dispatchMins));
+  }
+
+  // Home-return feasibility guard (opt-in via protectHomeReturn). A reserved-home driver may
+  // only take a NON-home load if, AFTER that load's round trip, their reserved home run still
+  // fits DOT and delivers before midnight. Mirrors the home-pass executor's canDoHomePass check
+  // exactly (same one-way home hrs = ds.homeHrs, same home-phase build time, same ≤1440 / DOT).
+  function homeReturnStaysFeasible(d, hrs, destCode, dispatchMins = phaseDispatchMins) {
+    if (!protectHomeReturn) return true;
+    if (!reservedForHome.has(d.id)) return true;      // no reserved home run to protect
+    if (d.domicileDest === destCode) return true;     // this IS a home-dest load — fine
+    const oneWay   = ds[d.id].homeHrs;                // one-way home hours (already /2)
+    const pi       = reservedHomePhase[d.id];
+    const homeBuild = pi != null ? toMinutes(state.phases[pi].dispatchTime) : 0;
+    const actualDisp  = Math.max(dispatchMins, ds[d.id].returnMinutes || 0);
+    const afterReturn = actualDisp + Math.round(hrs * 60);      // back at DC after this round-trip load
+    const homeDisp    = Math.max(homeBuild, afterReturn);
+    const dotOk      = (ds[d.id].hours + hrs + oneWay) <= dotMax;
+    const midnightOk = (homeDisp + Math.round(oneWay * 60)) <= 1440;
+    return dotOk && midnightOk;
   }
 
   function compareAvailability(a, b, hrs, dispatchMins = phaseDispatchMins) {
@@ -3364,6 +3406,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         if (blockAubFirst && def.type === 'first' && ds[d.id].loadCount === 0 && destCode !== def.destCode) return false;
         if (!allowExtraHome && reservedForHome.has(d.id) && d.domicileDest === destCode) return false;
         if ((ds[d.id].hours + hrs + ds[d.id].homeHrs) > dotMax) return false;
+        if (!homeReturnStaysFeasible(d, hrs, destCode)) return false;
         return candidateTimingAllowed(d, hrs);
       })
       .sort((a, b) => {
@@ -3429,6 +3472,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         }
         if (!allowExtraHome && reservedForHome.has(d.id) && d.domicileDest === destCode) return false;
         if ((ds[d.id].hours + hrs + ds[d.id].homeHrs) > dotMax) return false;
+        if (!homeReturnStaysFeasible(d, hrs, destCode)) return false;
         return candidateTimingAllowed(d, hrs);
       })
       .sort((a, b) => {
@@ -3478,6 +3522,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         if (d.restriction !== assistDef.value) return false;
         if (ds[d.id].colCount >= cap) return false;
         if ((ds[d.id].hours + hrs + ds[d.id].homeHrs) > dotMax) return false;
+        if (!homeReturnStaysFeasible(d, hrs, assistDef.destCode)) return false;
         return candidateTimingAllowed(d, hrs);
       })
       .sort((a, b) => {
@@ -3520,6 +3565,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
     if (pi === -1) return;
     counts[pi]--;
     reservedForHome.add(d.id);
+    reservedHomePhase[d.id] = pi;   // remember which phase holds their reserved home run (guard uses its build time)
     homePassQueue.push({driver: d, phaseIndex: pi});
     // Flag the reserved home slot so sort/filter treat this driver as if they
     // already have one load, without inflating loadCount (which drives display).
@@ -3822,6 +3868,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
       const msDispMins = toMinutes(asgn.dispatchTime);
       const baseFilter = d => {
         if ((ds[d.id].hours + hrs) > dotMax) return false;
+        if (!homeReturnStaysFeasible(d, hrs, asgn.dest, msDispMins)) return false;   // don't strand a reserved home run
         const actualDisp = Math.max(msDispMins, ds[d.id].returnMinutes);
         return (actualDisp + Math.round((hrs / 2) * 60)) <= 1440;
       };
@@ -3877,10 +3924,10 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
 
   return {assignments, workload};
 }
-  return { toggleMinimizeShoreline, togglePackOverflow, toggleWindowProtect, toggleFairness, toggleRescueStranded, runOptimizer };
+  return { toggleMinimizeShoreline, togglePackOverflow, toggleWindowProtect, toggleFairness, toggleRescueStranded, toggleProtectHome, runOptimizer };
 })();
 // Re-export to global scope — call sites remain unchanged during incremental migration.
-const { toggleMinimizeShoreline, togglePackOverflow, toggleWindowProtect, toggleFairness, toggleRescueStranded, runOptimizer } = Optimizer;
+const { toggleMinimizeShoreline, togglePackOverflow, toggleWindowProtect, toggleFairness, toggleRescueStranded, toggleProtectHome, runOptimizer } = Optimizer;
 
 // ════════════════════════════════════════════════════════════════════════════
 //  MODULE: TemplatesAndHistory
@@ -7025,6 +7072,9 @@ function renderSettings() {
   // Rescue fallback expression MUST match the runOptimizer read exactly.
   const rescue = document.getElementById('rescue-stranded-toggle');
   if (rescue) rescue.checked = state.settings.rescueStranded ?? !!DC_CONFIG.optimizer?.rescueStrandedInternal;
+  // Protect Home Return fallback expression MUST match the runOptimizer read exactly.
+  const protectHome = document.getElementById('protect-home-toggle');
+  if (protectHome) protectHome.checked = state.settings.protectHomeReturn ?? !!DC_CONFIG.optimizer?.protectHomeReturn;
   const mst2 = document.getElementById('minimize-shore-toggle');
   if (mst2) mst2.checked = !!state.settings.minimizeShoreline;
   const pot2 = document.getElementById('pack-overflow-toggle');
