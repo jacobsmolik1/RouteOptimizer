@@ -4237,6 +4237,23 @@ function renderEfficiencyPanel(entry) {
   </div>`;
 }
 
+// Per-location load counts for a committed day: aggregate the stored per-phase load
+// array by destination, using that day's phase snapshot (fallback to current phases).
+// Multiple phases to the same dest sum together. Returns [{code, count}] desc, zeros dropped.
+function historyLoadsByDest(entry) {
+  const loads = entry.loads;
+  if (!Array.isArray(loads) || !loads.length) return null;
+  const phases = (entry.snapshot && entry.snapshot.phases) || state.phases;
+  if (!Array.isArray(phases) || phases.length !== loads.length) return null;   // can't map reliably
+  const byDest = {};
+  loads.forEach((n, i) => {
+    const code = phases[i] && phases[i].dest;
+    if (!code || !n) return;
+    byDest[code] = (byDest[code] || 0) + n;
+  });
+  return Object.entries(byDest).map(([code, count]) => ({ code, count })).sort((a, b) => b.count - a.count);
+}
+
 function renderHistoryTab() {
   const el = document.getElementById('history-content');
   if (!el) return;
@@ -4314,6 +4331,13 @@ function renderHistoryTab() {
         <div class="hist-metric"><div class="hm-val" style="color:var(--green);">${entry.internal}</div><div class="hm-lbl">Internal</div></div>
         <div class="hist-metric"><div class="hm-val" style="color:var(--purple);">${entry.shoreline}</div><div class="hm-lbl">External</div></div>
       </div>
+      ${(() => {
+        const byDest = historyLoadsByDest(entry);
+        if (!byDest || !byDest.length) return '';
+        const chips = byDest.map(d => `<span class="tag ${DEST_TAGS[d.code] || ''}" style="font-weight:700;">${d.code} ${d.count}</span>`).join(' ');
+        return `<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--gray-100);">
+          <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--gray-400);margin-right:2px;">By Location</span>${chips}</div>`;
+      })()}
       <div class="hist-drivers">${summaryChips || '<span style="font-size:11px;color:var(--gray-400);">No driver data</span>'}</div>
       <div id="${uid}" class="hist-entry-detail">
         ${renderEfficiencyPanel(entry)}
