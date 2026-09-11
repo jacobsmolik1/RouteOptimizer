@@ -1,0 +1,194 @@
+k">
+      <div class="empty-state" style="background:white;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:40px;">
+        No days committed yet. Generate assignments and click <strong>📅 Commit Day</strong> to start logging.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS PANEL ════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="settings-modal" onclick="closeSettings(event)">
+  <div class="settings-panel" onclick="event.stopPropagation()">
+    <div class="settings-header">
+      <h2>⚙ Settings</h2>
+      <button class="modal-close" onclick="closeSettings()">&times;</button>
+    </div>
+    <div class="settings-body">
+
+      <div class="settings-section-title">Destinations</div>
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Edit one-way miles, or add/remove receiving locations. Round-trip and hours auto-calculate.</p>
+      <div class="tbl-wrap" style="margin-bottom:12px;">
+        <table class="dest-settings-table">
+          <thead><tr><th>Code</th><th>Location</th><th title="Miles, one-way">Mi&nbsp;1w</th><th title="Miles, round trip">RT</th><th title="Estimated hours">Hrs</th><th>Carrier</th><th>On</th><th></th></tr></thead>
+          <tbody id="dest-tbody"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-dark btn-sm mt-8" onclick="saveDestinations()" style="margin-bottom:8px;">Save Destinations</button>
+      <div id="add-dest-form" style="display:none;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px;margin-bottom:8px;">
+        <div class="field-group"><label>Code (2-4 chars)</label><input type="text" class="plain" id="new-dest-code" placeholder="e.g. LRY" maxlength="4" style="text-transform:uppercase;"></div>
+        <div class="field-group"><label>Full Name</label><input type="text" class="plain" id="new-dest-name" placeholder="e.g. Leroy, AL"></div>
+        <div class="field-group"><label>Address</label><input type="text" class="plain" id="new-dest-address" placeholder="e.g. 123 Main St, Leroy, AL 36548"></div>
+        <div class="field-group"><label>Miles (one-way)</label><input type="number" class="plain" id="new-dest-miles" min="1" placeholder="e.g. 90"></div>
+        <div class="field-group"><label>Carrier</label>
+          <select class="plain" id="new-dest-carrier">
+            <option value="Internal Only">Internal Only</option>
+            <option value="Internal/Shoreline">Internal / Shoreline (overflow)</option>
+          </select>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-dark btn-sm" onclick="addDestination()">Add</button>
+          <button class="btn btn-ghost btn-sm" onclick="hideAddDestForm()">Cancel</button>
+        </div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="showAddDestForm()" style="margin-bottom:24px;">+ Add Destination</button>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Phases (Build Order)</div>
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Each phase maps a destination to a dispatch time. A destination needs at least one phase before loads can be entered for it. Reorder &amp; set times on the dashboard.</p>
+      <div id="phase-mgmt-list" style="margin-bottom:12px;"></div>
+      <div id="add-phase-form" style="display:none;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px;margin-bottom:8px;">
+        <div class="field-group"><label>Label</label><input type="text" class="plain" id="new-phase-label" placeholder="e.g. Leroy (Bulk)"></div>
+        <div class="field-group"><label>Destination</label>
+          <select class="plain" id="new-phase-dest"></select>
+        </div>
+        <div class="field-group"><label>Dispatch Time</label><input type="time" class="plain" id="new-phase-time" value="07:00"></div>
+        <div class="btn-group">
+          <button class="btn btn-dark btn-sm" onclick="addPhase()">Add Phase</button>
+          <button class="btn btn-ghost btn-sm" onclick="hideAddPhaseForm()">Cancel</button>
+        </div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="showAddPhaseForm()" style="margin-bottom:24px;">+ Add Phase</button>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Load Blending</div>
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Assign loads to two locations in an alternating pattern instead of all of one then all of the other. The optimizer gives the chunk size to the first location, then the same to the second, and repeats until one runs out — then fills the rest with whatever remains. Example: chunk 2 = 2 Columbus, 2 Dothan, 2 Columbus, 2 Dothan…</p>
+      <div id="blend-list" style="margin-bottom:10px;"></div>
+      <button class="btn btn-outline btn-sm" onclick="addBlend()" style="margin-bottom:24px;">+ Add Blend</button>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Receiver Windows</div>
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Set each destination's receiving hours. Deliveries outside the window get a plan quality warning and are deprioritized in the optimizer. Leave blank for no constraint.</p>
+      <div class="tbl-wrap" style="margin-bottom:12px;">
+        <table>
+          <thead><tr><th>Code</th><th>Destination</th><th>Opens</th><th>Closes</th></tr></thead>
+          <tbody id="recv-window-tbody"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-dark btn-sm mt-8" onclick="saveReceiverWindows()" style="margin-bottom:24px;">Save Windows</button>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Operational Settings</div>
+      <div class="field-group"><label>Average Speed (mph)</label><input type="number" class="plain" id="set-avg-speed" min="20" max="75" step="1"></div>
+      <div class="field-group"><label>DOT Max Driving Hours</label><input type="number" class="plain" id="set-dot-max" min="8" max="11" step="0.5"></div>
+      <div class="field-group"><label>Default Delivery Window Target (hours)</label><input type="number" class="plain" id="set-delivery-window" min="1" max="12" step="0.5"></div>
+      <div class="field-group"><label>Driver Card Order</label>
+        <select class="plain" id="set-card-sort">
+          <option value="arrival">By arrival time (start time)</option>
+          <option value="name">By name / number</option>
+        </select>
+      </div>
+
+      <button class="btn btn-dark btn-sm" onclick="saveSettings()" style="margin-bottom:24px;">Save Settings</button>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Optimizer Tuning</div>
+      <p style="font-size:11px;color:var(--gray-400);margin:-4px 0 12px;">These apply immediately and re-generate the plan. No need to click Save Settings.</p>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 2px;">
+        <div class="toggle-wrap" style="flex-shrink:0;">
+          <label class="toggle" title="After assigning, shuffle loads between drivers to even out their hours. Note: this can pull a driver off the first-built loads and cause window misses — turn OFF if you want everyone to take the earliest-built loads first.">
+            <input type="checkbox" id="fairness-toggle" onchange="toggleFairness(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Balance Driver Hours</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);flex:1;">Evens out hours across drivers. <strong>Off</strong> = strictly dispatch loads in build order (everyone takes the earliest-built loads first).</span>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 2px;">
+        <div class="toggle-wrap" style="flex-shrink:0;">
+          <label class="toggle" title="When a higher-priority driver would deliver a load after its receiver window closes, let a lower-priority (overflow) truck take it if that truck delivers in-window. Defaults ON; toggle off to A/B test a plan without window protection.">
+            <input type="checkbox" id="window-protect-toggle" onchange="toggleWindowProtect(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Protect Windows</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);flex:1;">Prefer a truck that hits the receiver window over a higher-priority one that would deliver late. <strong>On by default</strong> — toggle off to compare plans.</span>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 2px;">
+        <div class="toggle-wrap" style="flex-shrink:0;">
+          <label class="toggle" title="If a load that can ONLY be run internally (no outside-carrier option) gets stranded because drivers ran out of hours, hand an overflow-eligible load to the outside carrier to free a driver and cover it. Only acts when it keeps the covered load on-time and within DOT.">
+            <input type="checkbox" id="rescue-stranded-toggle" onchange="toggleRescueStranded(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Rescue Stranded Loads</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);flex:1;">Never strand an internal-only load: yield an overflow load to the outside carrier to free a driver for it. On-time &amp; DOT are still enforced.</span>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:8px 2px;">
+        <div class="toggle-wrap" style="flex-shrink:0;">
+          <label class="toggle" title="Protect a domicile driver's reserved home run: don't give them a late/far extra load if doing so would push their home delivery past midnight (which drops the home run and makes them deadhead home empty). Best paired with Rescue Stranded Loads so the freed-up load still gets covered.">
+            <input type="checkbox" id="protect-home-toggle" onchange="toggleProtectHome(this.checked)">
+            <span class="slider"></span>
+          </label>
+          <span style="font-size:13px;font-weight:700;color:var(--gray-600);">Protect Home Return</span>
+        </div>
+        <span style="font-size:11px;color:var(--gray-400);flex:1;">Don't over-load a domicile driver so late that their home run gets stranded past midnight. Pair with <strong>Rescue Stranded Loads</strong> so the displaced load still gets covered.</span>
+      </div>
+
+      <div style="margin-bottom:24px;"></div>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Data</div>
+      <div class="btn-group" style="margin-bottom:10px;">
+        <button class="btn btn-green btn-sm" onclick="exportState()">📤 Export State</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file-input').click()">📥 Import State</button>
+        <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="btn btn-outline btn-sm" onclick="exportSheet()">📄 Export Sheet</button>
+      </div>
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:20px;">Export saves your drivers, settings &amp; loads. Import restores them on any machine.</p>
+
+      <div class="divider"></div>
+      <div class="settings-section-title">Danger Zone</div>
+      <div id="reset-confirm-box" class="confirm-box">
+        ⚠️ This will clear all local data and reload the latest version of the app. Driver roster, history, and settings will reset to defaults. Are you sure?
+        <div class="btn-group mt-8">
+          <button class="btn btn-danger btn-sm" onclick="hardReset()">Yes, Reset &amp; Update</button>
+          <button class="btn btn-ghost btn-sm" onclick="hideResetConfirm()">Cancel</button>
+        </div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="showResetConfirm()" id="reset-btn">↺ Reset &amp; Update App</button>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══ REASSIGN LOAD MODAL ══════════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="reassign-modal">
+  <div class="modal reassign-modal">
+    <div class="modal-header">
+      <span id="reassign-title">Reassign Load</span>
+      <button class="modal-close" onclick="closeReassignModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="reassign-load-info" style="background:var(--gray-50);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:12px;line-height:1.6;"></div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--gray-400);margin-bottom:8px;">Drivers — Remaining DOT Capacity</div>
+      <div id="reassign-driver-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ AD HOC MOVE MODAL ════════════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="adhoc-modal">
+  <div class="modal" style="width:480px;max-width:96vw;">
+    <div class="modal-header">
+      <span>Ad Hoc Move — <span id="adhoc-driver-label"></span></span>
+      <button class="modal-close" onclick="closeAdHocModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="adhoc-driver-hidden">
+      <div class="field-group">
+        <label>Destination</label>
+        <select id="adhoc-dest" onchange
