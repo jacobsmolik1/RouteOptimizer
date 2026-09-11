@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Route Optimizer — REVAMP PREVIEW (offline sample)</title>
+<style>
+  :root {
+    --red: #E61D2B;
+    --red-dark: #C41824;
+    --navy: #001F5B;
+    --black: #1a1a1a;
+    --gray-50: #f7f8fb;
+    --gray-100: #eef0f5;
+    --gray-200: #dde1ed;
+    --gray-400: #9199B4;
+    --gray-600: #4A5275;
+    --ok: #1e8449;
+    --warn: #b7791f;
+    --danger: #c0392b;
+    --amber-bg: #fff8e1;
+    --ok-bg: #eafaf1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--gray-50); color: var(--black); min-height: 100vh; padding-bottom: 80px; }
+  button, input, select { font-family: inherit; }
+  button { cursor: pointer; }
+  button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .mock-banner { background: #1a1a1a; color: #fff; text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; padding: 6px 12px; }
+  .mock-banner span { color: #f5c542; }
+
+  header { background: var(--red); color: white; display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; gap: 16px; position: sticky; top: 0; z-index: 40; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo { width: 34px; height: 34px; border-radius: 50%; background: white; color: var(--red); font-weight: 900; font-size: 10px; display:flex; align-items:center; justify-content:center; text-align:center; line-height:1.05; }
+  .brand h1 { font-size: 15px; font-weight: 800; }
+  .brand .sub { font-size: 11px; opacity: 0.9; display:flex; align-items:center; gap:8px; margin-top:2px; }
+  .dc-chip { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.35); border-radius: 999px; padding: 2px 10px; font-weight: 700; font-size: 11px; }
+  .hdr-right { display:flex; align-items:center; gap:10px; font-size: 12px; }
+  .pill { background: rgba(255,255,255,0.18); padding: 4px 8px; border-radius: 6px; }
+  .pill.ok { background: rgba(30,132,73,0.95); }
+  .ghost { background: transparent; border: 1px solid rgba(255,255,255,0.45); color: white; border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 600; }
+  .nav { background: white; border-bottom: 1px solid var(--gray-200); display:flex; gap: 4px; padding: 0 18px; }
+  .nav button { border:0; background:transparent; padding: 12px 14px; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--gray-400); border-bottom: 3px solid transparent; }
+  .nav button.active { color: var(--red); border-bottom-color: var(--red); }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 16px 18px 24px; display:flex; flex-direction:column; gap: 12px; }
+
+  .collapsed { background: white; border: 1px solid var(--gray-200); border-radius: 10px; padding: 12px 14px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .collapsed.hidden { display: none; }
+  .collapsed .left { display:flex; flex-direction:column; gap:6px; }
+  .collapsed .title { font-size: 12px; font-weight: 800; color: var(--gray-600); letter-spacing: 0.04em; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { background: var(--gray-100); border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; }
+  .chip.em { background: #fff0f1; color: var(--red); }
+  .linkish { border:0; background:transparent; color: var(--red); font-weight: 700; font-size: 12px; }
+
+  .edit-panel { background: white; border: 1px solid var(--gray-200); border-radius: 10px; padding: 14px; display: none; flex-direction: column; gap: 12px; }
+  .edit-panel.open { display: flex; }
+  .edit-panel .title { font-size: 12px; font-weight: 800; color: var(--gray-600); letter-spacing: 0.04em; }
+  .edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .edit-field label { display: block; font-size: 11px; font-weight: 700; color: var(--gray-600); margin-bottom: 4px; }
+  .edit-field input { width: 100%; border: 1.5px solid var(--gray-200); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-weight: 700; }
+  .edit-field input:focus { outline: 2px solid rgba(230,29,43,0.25); border-color: var(--red); }
+  .edit-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-sm { border:0; border-radius: 8px; padding: 8px 14px; font-weight: 800; font-size: 12px; }
+  .btn-sm-primary { background: var(--red); color: white; }
+  .btn-sm-ghost { background: white; border: 1.5px solid var(--gray-200); color: var(--black); }
+
+  .metrics { display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media (max-width: 720px) { .metrics { grid-template-columns: repeat(2, 1fr); } .cards { grid-template-columns: 1fr !important; } }
+  .metric { background: white; border: 1px solid var(--gray-200); border-radius: 10px; padding: 12px 14px; }
+  .metric .label { font-size: 10px; font-weight: 800; letter-spacing: 0.06em; color: var(--gray-400); }
+  .metric .value { font-size: 26px; font-weight: 800; margin-top: 4px; }
+  .metric .hint { font-size: 11px; color: var(--gray-600); margin-top: 2px; }
+  .metric.good .value { color: var(--ok); }
+
+  .needs { background: var(--amber-bg); border: 1px solid #f0d78c; border-radius: 10px; padding: 12px 14px; }
+  .needs h2 { font-size: 12px; font-weight: 800; letter-spacing: 0.05em; color: #8a6d00; margin-bottom: 8px; display:flex; justify-content:space-between; align-items:center; gap: 8px; flex-wrap: wrap; }
+  .needs-toggle { border:0; background: transparent; font-weight:600; font-size: 12px; color: #8a6d00; letter-spacing:0; cursor: pointer; display:inline-flex; align-items:center; gap:4px; }
+  .needs-toggle:hover { text-decoration: underline; }
+  .needs ul { list-style: none; display:flex; flex-direction:column; gap: 6px; }
+  .needs li { display:flex; gap:10px; align-items:flex-start; font-size: 13px; background: rgba(255,255,255,0.65); border-radius: 8px; padding: 8px 10px; }
+  .tag { font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; flex-shrink:0; margin-top:1px; }
+  .tag.warn { background: #ffe8a3; color: #8a6d00; }
+  .tag.info { background: #e8eefc; color: var(--navy); }
+  .jump { margin-left:auto; color: var(--red); font-weight: 700; font-size: 12px; white-space:nowrap; background:none; border:0; }
+  .unused-panel { display: none; margin-top: 8px; background: rgba(255,255,255,0.8); border-radius: 8px; padding: 10px; }
+  .unused-panel.open { display: block; }
+  .unused-panel .hint { font-size: 11px; color: var(--gray-600); margin-bottom: 8px; }
+  .unused-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .unused-chips .chip { background: white; border: 1px solid var(--gray-200); font-weight: 600; }
+
+  .section-head { display:flex; justify-content:space-between; align-items:center; margin-top: 4px; gap: 8px; flex-wrap: wrap; }
+  .section-head h2 { font-size: 13px; font-weight: 800; letter-spacing: 0.04em; }
+  .toggle { font-size: 12px; color: var(--gray-600); display:flex; align-items:center; gap:8px; cursor: pointer; user-select: none; }
+  .toggle input { accent-color: var(--red); }
+
+  .cards { display:grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .card { background: white; border: 1px solid var(--gray-200); border-radius: 12px; overflow:hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .card.empty { border-style: dashed; background: #fafbfe; opacity: 0.95; }
+  .card.empty .card-hd { background: #3a3a3a; }
+  .card.empty .card-bd { min-height: 72px; display:flex; align-items:center; justify-content:center; color: var(--gray-400); font-size: 12px; font-weight: 600; border: 1.5px dashed var(--gray-200); margin: 10px; border-radius: 8px; }
+  .card-hd { background: #111; color: white; padding: 10px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .who { display:flex; align-items:center; gap:8px; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--red); display:flex; align-items:center; justify-content:center; font-weight: 800; font-size: 12px; flex-shrink: 0; }
+  .avatar.muted { background: #666; }
+  .who strong { display:block; font-size: 13px; }
+  .who small { color: #bbb; font-size: 11px; }
+  .card-bd { padding: 12px; display:flex; flex-direction:column; gap: 8px; }
+  .run { display:inline-flex; align-items:center; gap:6px; background: #e8f8ef; color: var(--ok); font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 6px; width: fit-content; }
+  .meta { font-size: 12px; color: var(--gray-600); display:flex; gap:12px; flex-wrap:wrap; }
+  .card-ft { border-top: 1px solid var(--gray-100); padding: 10px 12px; display:flex; justify-content:space-between; align-items:center; font-size: 12px; gap:8px; flex-wrap: wrap; }
+  .dotok { color: var(--ok); font-weight: 800; }
+  .btn-out { background: white; border: 1.5px solid var(--gray-200); border-radius: 8px; padding: 6px 12px; font-weight: 700; font-size: 12px; }
+  .unused-link { text-align:center; font-size: 12px; color: var(--gray-600); padding: 4px; }
+  .unused-link button { color: var(--navy); font-weight: 700; background:none; border:0; font-size: 12px; }
+
+  details.details { background: white; border: 1px solid var(--gray-200); border-radius: 10px; padding: 10px 14px; }
+  details.details summary { cursor: pointer; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; color: var(--gray-600); list-style: none; }
+  details.details summary::-webkit-details-marker { display: none; }
+  details.details summary::before { content: '▶ '; font-size: 10px; }
+  details.details[open] summary::before { content: '▼ '; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+  th { text-align:left; color: var(--gray-400); font-size: 10px; letter-spacing: 0.05em; padding: 6px 4px; border-bottom: 1px solid var(--gray-200); }
+  td { padding: 8px 4px; border-bottom: 1px solid var(--gray-100); }
+  .status { font-weight: 800; color: var(--warn); }
+
+  .sticky-bar { position: fixed; left: 0; right: 0; bottom: 0; background: white; border-top: 1px solid var(--gray-200); box-shadow: 0 -6px 24px rgba(0,0,0,0.08); z-index: 50; }
+  .sticky-inner { max-width: 1100px; margin: 0 auto; padding: 10px 18px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap: wrap; }
+  .sticky-note { font-size: 12px; color: var(--gray-600); }
+  .actions { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+  .btn { border:0; border-radius: 8px; padding: 10px 14px; font-weight: 800; font-size: 13px; }
+  .btn-primary { background: var(--red); color: white; }
+  .btn-primary:hover { background: var(--red-dark); }
+  .btn-secondary { background: white; border: 1.5px solid var(--gray-200); color: var(--black); }
+  .btn-ghost { background: transparent; color: var(--gray-600); border: 1.5px solid transparent; }
+  .btn-ghost:hover { background: var(--gray-100); }
+
+  .footnote { text-align:center; font-size: 11px; color: var(--gray-400); padding: 8px; }
+
+  /* Toast */
+  .toast-wrap { position: fixed; top: 56px; right: 16px; z-index: 100; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast { pointer-events: auto; background: #111; color: white; padding: 12px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.2); max-width: 340px; animation: toastIn 0.25s ease; display: flex; align-items: flex-start; gap: 10px; }
+  .toast.success { background: #145a32; }
+  .toast.info { background: var(--navy); }
+  .toast.warn { background: #7d5a00; }
+  .toast .toast-x { margin-left: auto; background: none; border: 0; color: rgba(255,255,255,0.7); font-size: 16px; line-height: 1; padding: 0 0 0 8px; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+  @media print {
+    .mock-banner, .sticky-bar, .toast-wrap, .nav, .hdr-right .ghost, .linkish, .needs-toggle, .toggle, .unused-link { display: none !important; }
+    body { padding-bottom: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="mock-banner"><span>PREVIEW</span> — not connected to live routes.jacobsmolik.com</div>
+
+  <header>
+    <div class="brand">
+      <div class="logo">CCU</div>
+      <div>
+        <h1>Route Optimizer</h1>
+        <div class="sub">
+          <span class="dc-chip" title="Sample DC">Montgomery DC ▾</span>
+          <span>DOT Compliant</span>
+        </div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <span class="pill ok" id="savePill">Preview</span>
+      <span id="hdrDate">Fri Sep 11</span>
+      <button class="ghost" type="button" onclick="toast('Dispatchers — preview only', 'info')">Dispatchers</button>
+      <button class="ghost" type="button" onclick="toast('Sign Out — preview only', 'info')">Sign Out</button>
+    </div>
+  </header>
+
+  <nav class="nav" aria-label="Primary">
+    <button class="active" type="button" aria-selected="true">DASHBOARD</button>
+    <button type="button" onclick="toast('Drivers tab — preview only', 'info')">DRIVERS</button>
+    <button type="button" onclick="toast('History tab — preview only', 'info')">HISTORY</button>
+  </nav>
+
+  <main>
+    <!-- Collapsed daily input -->
+    <section class="collapsed" id="collapsedInput">
+      <div class="left">
+        <div class="title">DAILY LOAD INPUT · COLLAPSED</div>
+        <div class="chips" id="loadChips"></div>
+      </div>
+      <button class="linkish" type="button" id="btnEditCounts">Edit counts</button>
+    </section>
+
+    <!-- Edit panel (hidden by default) -->
+    <section class="edit-panel" id="editPanel" aria-label="Edit load counts">
+      <div class="title">DAILY LOAD INPUT · EDIT COUNTS</div>
+      <div class="edit-grid">
+        <div class="edit-field">
+          <label for="inpPan">Panama City (PAN)</label>
+          <input type="number" id="inpPan" min="0" max="20" value="1">
+        </div>
+        <div class="edit-field">
+          <label for="inpCol">Columbus (COL)</label>
+          <input type="number" id="inpCol" min="0" max="20" value="1">
+        </div>
+        <div class="edit-field">
+          <label for="inpMob">Mobile (MOB)</label>
+          <input type="number" id="inpMob" min="0" max="20" value="0">
+        </div>
+        <div class="edit-field">
+          <label for="inpTpl">Template</label>
+          <input type="text" id="inpTpl" value="Fri template" readonly style="font-weight:600; color:var(--gray-600);">
+        </div>
+      </div>
+      <div class="edit-actions">
+        <button class="btn-sm btn-sm-ghost" type="button" id="btnCancelEdit">Cancel</button>
+        <button class="btn-sm btn-sm-primary" type="button" id="btnApplyEdit">Apply</button>
+      </div>
+    </section>
+
+    <!-- Plan summary -->
+    <section class="metrics" aria-label="Plan summary">
+      <div class="metric">
+        <div class="label">TOTAL LOADS</div>
+        <div class="value" id="mTotal">2</div>
+        <div class="hint" id="mTotalHint">100% internal</div>
+      </div>
+      <div class="metric">
+        <div class="label">DRIVERS USED</div>
+        <div class="value" id="mDrivers">2</div>
+        <div class="hint" id="mDriversHint">of 19 available</div>
+      </div>
+      <div class="metric">
+        <div class="label">OVERFLOW</div>
+        <div class="value" id="mOverflow">0</div>
+        <div class="hint">external</div>
+      </div>
+      <div class="metric good">
+        <div class="label">DOT STATUS</div>
+        <div class="value" id="mDot">OK</div>
+        <div class="hint" id="mDotHint">0 over hours</div>
+      </div>
+    </section>
+
+    <!-- Needs attention — compact -->
+    <section class="needs" aria-label="Needs attention">
+      <h2>
+        <span>NEEDS ATTENTION · <span id="needsCount">2</span></span>
+        <button type="button" class="needs-toggle" id="btnUnusedToggle" aria-expanded="false">
+          <span id="unusedLabel">17 unused drivers</span> <span id="unusedChevron">▾</span>
+        </button>
+      </h2>
+      <ul id="needsList">
+        <li>
+          <span class="tag warn">HOURS</span>
+          <span id="hoursMsg">Hour spread 7.5h (JR Mesi) vs 0.0h unused — expected on a 2-load plan</span>
+          <button type="button" class="jump" onclick="toast('Review hours — preview only', 'info')">Review →</button>
+        </li>
+        <li>
+          <span class="tag info">INFO</span>
+          <span>Mobile, Leroy, Valparaiso… still disabled — excluded from plan</span>
+          <button type="button" class="jump" onclick="toast('Settings — preview only', 'info')">Settings →</button>
+        </li>
+      </ul>
+      <div class="unused-panel" id="unusedPanel">
+        <div class="hint">Sample unused pool (offline) — drag-assign is not wired in this preview.</div>
+        <div class="unused-chips" id="unusedChips"></div>
+      </div>
+    </section>
+
+    <!-- Pass-out cards: assigned first -->
+    <div class="section-head">
+      <h2 id="passoutHead">PASS-OUT · 2 ASSIGNED</h2>
+      <label class="toggle"><input type="checkbox" id="showAllDrivers"> Show all drivers</label>
+    </div>
+
+    <section class="cards" id="cards" aria-label="Pass-out cards"></section>
+    <p class="unused-link" id="unusedLinkWrap">
+      <button type="button" id="btnShowUnassigned">Show 17 unassigned drivers for drag-assign ▾</button>
+    </p>
+
+    <!-- Details secondary — collapsed by default -->
+    <details class="details" id="detailsSection">
+      <summary>DETAILS · Full load assignments table</summary>
+      <table>
+        <thead>
+          <tr><th>DRIVER</th><th>LOAD</th><th>DEST</th><th>ETA</th><th>STATUS</th></tr>
+        </thead>
+        <tbody id="detailsBody"></tbody>
+      </table>
+    </details>
+
+    <p class="footnote">Offline REVAMP PREVIEW · Montgomery Test sample data · no live Supabase · Commit does not save.</p>
+  </main>
+
+  <!-- Sticky commit bar: Commit primary / Re-run secondary -->
+  <div class="sticky-bar">
+    <div class="sticky-inner">
+      <div class="sticky-note" id="stickyNote">Plan ready · 2 loads · 0 DOT issues</div>
+      <div class="actions">
+        <button class="btn btn-ghost" type="button" id="btnRerun">Re-run</button>
+        <button class="btn btn-secondary" type="button" id="btnPrint">Print</button>
+        <button class="btn btn-secondary" type="button" id="btnCsv">CSV</button>
+        <button class="btn btn-primary" type="button" id="btnCommit">Commit Day</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+
+<script>
+(function () {
+  // —— Montgomery Test sample data (offline) ——
+  const TOTAL_AVAILABLE = 19;
+  const assigned = [
+    {
+      id: 'jr',
+      name: 'JR Mesi',
+      initial: 'J',
+      dest: 'Panama City, FL',
+      arrives: '11:30 AM',
+      run: 'RUN 1 · Panama City → Home',
+      eta: '3:16 PM',
+      drive: '3.76h drive',
+      deadhead: '+3.8h deadhead',
+      hours: '8.02 hrs',
+      load: 'PAN-1',
+      destShort: 'Panama City',
+      status: 'Pending'
+    },
+    {
+      id: 'gg',
+      name: 'Gabriel Gooch',
+      initial: 'G',
+      dest: 'Columbus, GA',
+      arrives: '12:15 PM',
+      run: 'RUN 1 · Columbus → Home',
+      eta: '4:02 PM',
+      drive: '4.10h drive',
+      deadhead: '+2.1h deadhead',
+      hours: '7.40 hrs',
+      load: 'COL-1',
+      destShort: 'Columbus',
+      status: 'Pending'
+    }
+  ];
+
+  const unusedDrivers = [
+    'Marcus Hale', 'Tina Brooks', 'Dev Patel', 'Amy Nguyen', 'Carlos Ruiz',
+    'Sara Klein', 'Ben Ortiz', 'Nina Park', 'Luke Anders', 'Priya Shah',
+    'Omar Diaz', 'Kelly Frost', 'Wes Harper', 'Jade Quinn', 'Ron Blake',
+    'Mia Torres', 'Chris Vance'
+  ];
+
+  let state = {
+    pan: 1,
+    col: 1,
+    mob: 0,
+    template: 'Fri template',
+    showAll: false,
+    unusedOpen: false,
+    rerunTick: 0
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  function toast(msg, kind) {
+    const wrap = $('toastWrap');
+    const el = document.createElement('div');
+    el.className = 'toast ' + (kind || '');
+    el.innerHTML = '<span></span><button type="button" class="toast-x" aria-label="Dismiss">×</button>';
+    el.querySelector('span').textContent = msg;
+    el.querySelector('.toast-x').onclick = () => el.remove();
+    wrap.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 3200);
+  }
+
+  function totalLoads() {
+    return (Number(state.pan) || 0) + (Number(state.col) || 0) + (Number(state.mob) || 0);
+  }
+
+  function driversUsed() {
+    // Sample: one driver per load, capped by available assigned demo cards + extras as overflow
+    return Math.min(totalLoads(), TOTAL_AVAILABLE);
+  }
+
+  function overflow() {
+    return Math.max(0, totalLoads() - TOTAL_AVAILABLE);
+  }
+
+  function unusedCount() {
+    return Math.max(0, TOTAL_AVAILABLE - driversUsed());
+  }
+
+  function renderChips() {
+    const chips = $('loadChips');
+    const t = totalLoads();
+    const parts = [];
+    parts.push('<span class="chip em">' + t + ' load' + (t === 1 ? '' : 's') + '</span>');
+    if (state.pan > 0) parts.push('<span class="chip">PAN ' + state.pan + '</span>');
+    if (state.col > 0) parts.push('<span class="chip">COL ' + state.col + '</span>');
+    if (state.mob > 0) parts.push('<span class="chip">MOB ' + state.mob + '</span>');
+    parts.push('<span class="chip">' + state.template + '</span>');
+    chips.innerHTML = parts.join('');
+  }
+
+  function renderMetrics() {
+    const t = totalLoads();
+    const used = Math.min(t, 2 + (t > 2 ? Math.min(t - 2, unusedCount()) : 0));
+    // Keep demo semantics: assigned cards stay 2 when pan+col cover them; metrics follow counts
+    const driversUsedVal = Math.min(t, TOTAL_AVAILABLE);
+    const overflowVal = overflow();
+    $('mTotal').textContent = String(t);
+    $('mTotalHint').textContent = t === 0 ? 'no loads' : '100% internal';
+    $('mDrivers').textContent = String(driversUsedVal);
+    $('mDriversHint').textContent = 'of ' + TOTAL_AVAILABLE + ' available';
+    $('mOverflow').textContent = String(overflowVal);
+    $('mDot').textContent = 'OK';
+    $('mDotHint').textContent = '0 over hours';
+    $('stickyNote').textContent = 'Plan ready · ' + t + ' load' + (t === 1 ? '' : 's') + ' · 0 DOT issues';
+    $('passoutHead').textContent = 'PASS-OUT · ' + Math.min(2, Math.max(driversUsedVal, t === 0 ? 0 : Math.min(2, t))) + ' ASSIGNED';
+    // Hours message
+    const hrs = (7.5 + state.rerunTick * 0.1).toFixed(1);
+    $('hoursMsg').textContent = 'Hour spread ' + hrs + 'h (JR Mesi) vs 0.0h unused — expected on a ' + t + '-load plan';
+    $('unusedLabel').textContent = unusedCount() + ' unused drivers';
+    $('btnShowUnassigned').textContent = 'Show ' + unusedCount() + ' unassigned drivers for drag-assign ▾';
+  }
+
+  function assignedForRender() {
+    const t = totalLoads();
+    if (t === 0) return [];
+    // Prefer PAN then COL for the two demo cards; if only one type, show one
+    const list = [];
+    if (state.pan > 0) list.push(assigned[0]);
+    if (state.col > 0) list.push(assigned[1]);
+    if (list.length === 0 && state.mob > 0) {
+      // synthetic for MOB-only
+      list.push({
+        id: 'mob',
+        name: 'Marcus Hale',
+        initial: 'M',
+        dest: 'Mobile, AL',
+        arrives: '1:00 PM',
+        run: 'RUN 1 · Mobile → Home',
+        eta: '5:10 PM',
+        drive: '4.50h drive',
+        deadhead: '+1.5h deadhead',
+        hours: '6.50 hrs',
+        load: 'MOB-1',
+        destShort: 'Mobile',
+        status: 'Pending'
+      });
+    }
+    return list.slice(0, Math.max(1, Math.min(2, t)));
+  }
+
+  function renderCards() {
+    const wrap = $('cards');
+    const shown = assignedForRender();
+    let html = '';
+    shown.forEach(function (d) {
+      html += '<article class="card" data-id="' + d.id + '">' +
+        '<div class="card-hd"><div class="who"><div class="avatar">' + d.initial + '</div><div>' +
+        '<strong>' + d.name + '</strong><small>' + d.dest + ' · Arrives ' + d.arrives + '</small></div></div>' +
+        '<button class="ghost" type="button" style="padding:4px 8px;font-size:11px;" onclick="toast(\'+ Ad Hoc — preview only\',\'info\')">+ Ad Hoc</button></div>' +
+        '<div class="card-bd"><div class="run">● ' + d.run + '</div>' +
+        '<div class="meta"><span>ETA ~' + d.eta + '</span><span>' + d.drive + '</span><span>' + d.deadhead + '</span></div></div>' +
+        '<div class="card-ft"><span><strong>' + d.hours + '</strong> incl 30m break</span>' +
+        '<span class="dotok">✓ DOT OK</span><button class="btn-out" type="button" onclick="toast(\'Marked Out — preview only\',\'info\')">Out</button></div></article>';
+    });
+
+    if (state.showAll) {
+      const emptyCount = unusedCount();
+      for (let i = 0; i < emptyCount; i++) {
+        const name = unusedDrivers[i] || ('Driver ' + (i + 1));
+        const initial = name.charAt(0);
+        html += '<article class="card empty">' +
+          '<div class="card-hd"><div class="who"><div class="avatar muted">' + initial + '</div><div>' +
+          '<strong>' + name + '</strong><small>Unassigned · drop zone</small></div></div></div>' +
+          '<div class="card-bd">Drop a load here</div></article>';
+      }
+    }
+
+    wrap.innerHTML = html || '<p style="grid-column:1/-1;color:var(--gray-600);font-size:13px;padding:12px;background:white;border:1px dashed var(--gray-200);border-radius:10px;text-align:center;">No loads — edit counts to add PAN / COL / MOB.</p>';
+    $('unusedLinkWrap').style.display = state.showAll || shown.length === 0 ? 'none' : '';
+  }
+
+  function renderDetails() {
+    const body = $('detailsBody');
+    const rows = assignedForRender();
+    body.innerHTML = rows.map(function (d) {
+      return '<tr><td>' + d.name + '</td><td>' + d.load + '</td><td>' + d.destShort + '</td><td>' + d.eta + '</td><td class="status">' + d.status + '</td></tr>';
+    }).join('') || '<tr><td colspan="5" style="color:var(--gray-400)">No assignments</td></tr>';
+  }
+
+  function renderUnusedChips() {
+    const box = $('unusedChips');
+    box.innerHTML = unusedDrivers.slice(0, unusedCount()).map(function (n) {
+      return '<span class="chip">' + n + '</span>';
+    }).join('');
+  }
+
+  function refresh() {
+    renderChips();
+    renderMetrics();
+    renderCards();
+    renderDetails();
+    renderUnusedChips();
+  }
+
+  // —— Interactions ——
+  $('btnEditCounts').onclick = function () {
+    $('inpPan').value = state.pan;
+    $('inpCol').value = state.col;
+    $('inpMob').value = state.mob;
+    $('inpTpl').value = state.template;
+    $('collapsedInput').classList.add('hidden');
+    $('editPanel').classList.add('open');
+  };
+
+  $('btnCancelEdit').onclick = function () {
+    $('editPanel').classList.remove('open');
+    $('collapsedInput').classList.remove('hidden');
+  };
+
+  $('btnApplyEdit').onclick = function () {
+    state.pan = Math.max(0, parseInt($('inpPan').value, 10) || 0);
+    state.col = Math.max(0, parseInt($('inpCol').value, 10) || 0);
+    state.mob = Math.max(0, parseInt($('inpMob').value, 10) || 0);
+    state.template = $('inpTpl').value || 'Fri template';
+    $('editPanel').classList.remove('open');
+    $('collapsedInput').classList.remove('hidden');
+    refresh();
+    toast('Load counts updated (preview)', 'success');
+  };
+
+  $('btnUnusedToggle').onclick = function () {
+    state.unusedOpen = !state.unusedOpen;
+    $('unusedPanel').classList.toggle('open', state.unusedOpen);
+    $('unusedChevron').textContent = state.unusedOpen ? '▴' : '▾';
+    $('btnUnusedToggle').setAttribute('aria-expanded', state.unusedOpen ? 'true' : 'false');
+  };
+
+  $('showAllDrivers').onchange = function () {
+    state.showAll = this.checked;
+    renderCards();
+  };
+
+  $('btnShowUnassigned').onclick = function () {
+    state.showAll = true;
+    $('showAllDrivers').checked = true;
+    renderCards();
+    toast('Showing empty drop-zone cards', 'info');
+  };
+
+  $('btnRerun').onclick = function () {
+    state.rerunTick += 1;
+    // slight ETA/drive tweak on assigned demo data
+    assigned.forEach(function (d, i) {
+      const baseEta = i === 0 ? 16 + state.rerunTick : 2 + state.rerunTick;
+      // cosmetic only in hours message / sticky
+    });
+    if (assigned[0]) {
+      const drive = (3.76 + state.rerunTick * 0.02).toFixed(2);
+      assigned[0].drive = drive + 'h drive';
+      assigned[0].hours = (8.02 + state.rerunTick * 0.03).toFixed(2) + ' hrs';
+    }
+    if (assigned[1]) {
+      const drive = (4.10 + state.rerunTick * 0.02).toFixed(2);
+      assigned[1].drive = drive + 'h drive';
+      assigned[1].hours = (7.40 + state.rerunTick * 0.02).toFixed(2) + ' hrs';
+    }
+    refresh();
+    toast('Re-ran optimizer (fake) — plan tweaked slightly', 'info');
+  };
+
+  $('btnPrint').onclick = function () {
+    toast('Opening print dialog…', 'info');
+    setTimeout(function () {
+      try { window.print(); } catch (e) { toast('Print stub — use browser Print', 'warn'); }
+    }, 200);
+  };
+
+  $('btnCsv').onclick = function () {
+    toast('CSV export — preview only (no file downloaded)', 'info');
+  };
+
+  $('btnCommit').onclick = function () {
+    $('savePill').textContent = 'Committed*';
+    toast('Day committed (preview) — not saved to any server', 'success');
+  };
+
+  // Init
+  refresh();
+})();
+</script>
+</body>
+</html>
