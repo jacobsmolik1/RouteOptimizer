@@ -1,6 +1,15 @@
 # Route Optimizer — REVAMP PREVIEW
 
-Offline, self-contained interactive preview matching the liked concept mockup (`route-optimizer-revamp-concept.png`).
+Offline interactive preview matching the liked concept mockup (`route-optimizer-revamp-concept.png`).
+
+## Files on this branch
+
+- `index.html` — small loader (fetches + gunzips the payload in-browser)
+- `index.html.gz.b64` — gzip+base64 of the exact single-file v2 HTML from disk  
+  (sha256 `a609e0a47a8843179aa6875c631cffa89562eea6e9c2982123d6731b7a1db4f6`)
+- This README
+
+> Open via a local static server (not `file://`) so `fetch('index.html.gz.b64')` works.
 
 ## What works (real client-side state — not toasts-only)
 
@@ -17,33 +26,16 @@ Offline, self-contained interactive preview matching the liked concept mockup (`
 11. **DC dropdown** — Montgomery DC / Montgomery Test (label + subtitle)  
 12. **Date control** — changes the header date string  
 
-## Files
-
-- `index.html` — single-file app (inline CSS/JS, no build step, no Supabase)
-- This README
-
 ## How to open
 
-**Option A — file URL**
-
 ```bash
-# macOS
-open /workspace/ux-review/mockup/preview/index.html
-
-# Linux (example)
-xdg-open /workspace/ux-review/mockup/preview/index.html
-```
-
-Or open `file:///…/ux-review/mockup/preview/index.html` in a browser.
-
-**Option B — local static server**
-
-```bash
-cd /workspace/ux-review/mockup/preview
+cd preview   # or clone this branch and cd into preview/
 python3 -m http.server 8765
 ```
 
 Then visit http://localhost:8765/
+
+Requires a recent Chrome / Firefox / Safari (`DecompressionStream`).
 
 ## What this is
 
