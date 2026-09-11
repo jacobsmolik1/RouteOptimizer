@@ -1,6 +1,6 @@
 # Route Optimizer — REVAMP PREVIEW (real app + packaging)
 
-This preview is the **real production Route Optimizer** (`main/index.html`) with **revamp chrome only** — not the thin offline stub.
+This preview loads the **real production Route Optimizer** from `main/index.html` and applies **revamp chrome only** (local `css/revamp.css` + `js/revamp.js`). It is **not** the thin offline stub.
 
 It keeps auth, Supabase, DC switcher, Daily Load Input, templates, generate algorithm, Drivers / History / Settings, print/CSV, multi-DC, etc.
 
@@ -8,7 +8,7 @@ It does **not** replace the production deploy until you choose to promote it. De
 
 ## What the packaging changes
 
-Feature-flagged with `REVAMP_PREVIEW = true` (top of `js/prod-01.js`). Implemented as CSS + small JS wrappers (`css/revamp.css`, `js/revamp.js`) — optimizer logic is not rewritten.
+Feature-flagged with `REVAMP_PREVIEW = true` (injected into the production script). Implemented as CSS + small JS wrappers — optimizer logic is not rewritten.
 
 1. **UNIFIED test banner hidden** by default (black PREVIEW banner instead)
 2. **Sticky action bar** after generate: **Commit Day** primary, **Re-run** secondary (Generate demoted when a plan exists)
@@ -23,19 +23,17 @@ When signing in / switching DCs, pick **Montgomery Test** so you do not touch li
 
 | Path | Role |
 |------|------|
-| `index.html` | Entry — production HTML shell + links to CSS/JS |
-| `css/prod.css` | Production styles (extracted from `main/index.html`) |
+| `index.html` | Loader — fetches production `main/index.html`, injects revamp flag + chrome |
 | `css/revamp.css` | Revamp packaging styles |
-| `js/prod-01.js` … `prod-06.js` | Production app JS (split for GitHub size limits) |
 | `js/revamp.js` | Packaging wrappers (sticky bar, Needs Attention, card filter) |
 
-## How to open (ZIP — no Python required)
+## How to open (ZIP)
 
 1. On GitHub: branch `preview/revamp-dashboard` → **Code** → **Download ZIP**
-2. Unzip and open `preview/index.html` in Chrome / Edge / Firefox  
-   (`File → Open`, or double-click the file)
+2. Unzip and open `preview/index.html` in Chrome / Edge / Firefox
+3. **Network required once** so the loader can download production `main/index.html` (jsDelivr / raw GitHub). Packaging CSS/JS are local beside `index.html`.
 
-Relative `css/` and `js/` loads work from `file://` when the folder structure is kept.
+No Python required.
 
 ### Optional local server
 
