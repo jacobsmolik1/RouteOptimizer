@@ -3,88 +3,113 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CCBCU | Route Optimizer - REVAMP PREVIEW (loading...)</title>
-<link rel="stylesheet" href="css/revamp.css">
+<title>CCBCU | Route Optimizer — REVAMP PREVIEW (offline)</title>
 <style>
-  html, body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #F8F9FC; color: #1a1a1a; }
-  #boot { max-width: 520px; margin: 12vh auto; padding: 24px; background: #fff; border: 1px solid #E2E5EF; border-radius: 12px; box-shadow: 0 4px 16px rgba(26,32,64,.08); }
-  #boot h1 { font-size: 18px; margin: 0 0 8px; }
-  #boot p { font-size: 13px; color: #6B7394; line-height: 1.45; margin: 0 0 10px; }
-  #boot code { font-size: 12px; background: #EEF0F5; padding: 2px 6px; border-radius: 4px; }
-  #boot .err { color: #C41824; font-weight: 600; }
+  html, body { margin: 0; font-family: Inter, system-ui, -apple-system, sans-serif; background: #F8F9FC; color: #1a1a1a; }
+  .card { max-width: 560px; margin: 10vh auto; padding: 28px; background: #fff; border: 1px solid #E2E5EF; border-radius: 12px; box-shadow: 0 4px 16px rgba(26,32,64,.08); }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #0B5FFF; background: #E8F0FF; padding: 3px 8px; border-radius: 999px; margin-bottom: 12px; }
+  p { font-size: 14px; color: #4A5168; line-height: 1.5; margin: 0 0 12px; }
+  ol { margin: 0 0 16px; padding-left: 20px; color: #4A5168; font-size: 14px; line-height: 1.55; }
+  code { font-size: 12px; background: #EEF0F5; padding: 2px 6px; border-radius: 4px; }
+  .fast { background: #F0FFF4; border: 1px solid #B7E4C7; border-radius: 8px; padding: 14px 16px; margin: 16px 0; }
+  .fast strong { color: #146C2E; }
+  a.btn { display: inline-block; margin: 4px 8px 4px 0; padding: 10px 16px; background: #0B5FFF; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 600; }
+  a.btn.secondary { background: #fff; color: #0B5FFF; border: 1px solid #0B5FFF; }
+  a.btn.muted { background: #EEF0F5; color: #4A5168; border: 1px solid #D5D9E4; font-weight: 500; }
+  .note { font-size: 12px; color: #6B7394; margin-top: 18px; }
+  details { margin-top: 14px; font-size: 13px; color: #6B7394; }
+  details summary { cursor: pointer; color: #0B5FFF; font-weight: 600; }
 </style>
 </head>
 <body>
-<div id="boot">
+<div class="card">
+  <div class="badge">OFFLINE-FIRST · NO CDN BY DEFAULT</div>
   <h1>REVAMP PREVIEW</h1>
-  <p>Loading the <strong>real production app</strong> from <code>main/index.html</code>, then applying local revamp packaging chrome...</p>
-  <p id="boot-status">Fetching...</p>
+  <p>Real production Route Optimizer with revamp packaging chrome, shipped as a baked local file.</p>
+
+  <div class="fast">
+    <strong>FAST path (recommended)</strong>
+    <p style="margin:8px 0 0">Open <code>app.html</code> directly if it is already present in this folder.</p>
+    <p style="margin:8px 0 0">If not, run <code>join.bat</code> (Windows) or <code>sh join.sh</code> (Mac/Linux) once, then open <code>app.html</code>.</p>
+  </div>
+
+  <p>
+    <a class="btn" href="app.html">Open app.html</a>
+    <a class="btn secondary" href="join.bat" download>join.bat</a>
+    <a class="btn secondary" href="join.sh" download>join.sh</a>
+  </p>
+
+  <ol>
+    <li>Download the ZIP from branch <code>preview/revamp-dashboard</code></li>
+    <li>Unzip → open the <code>preview</code> folder</li>
+    <li>Double-click <code>join.bat</code> (Windows) or run <code>sh join.sh</code> (Mac/Linux)</li>
+    <li>Open <code>app.html</code> in Chrome / Edge / Firefox</li>
+  </ol>
+
+  <p><strong>No Python. No network required</strong> after the ZIP download — the app is already baked into the part files.</p>
+
+  <details>
+    <summary>Optional network fallback (slow — not recommended)</summary>
+    <p style="margin-top:10px">Only if local parts are missing, you can fetch production <code>index.html</code> from the network. Prefer the FAST path above.</p>
+    <p><a class="btn muted" href="#" id="net-fallback">Fetch from network (jsDelivr / GitHub)</a></p>
+    <p id="boot-status" style="font-size:12px;color:#6B7394"></p>
+  </details>
+
+  <p class="note">Use <strong>Montgomery Test</strong> DC when signing in so you do not touch live data.</p>
 </div>
 <script>
-(async function () {
-  var status = document.getElementById('boot-status');
-  var SOURCES = [
-    'https://cdn.jsdelivr.net/gh/jacobsmolik1/RouteOptimizer@main/index.html',
-    'https://raw.githubusercontent.com/jacobsmolik1/RouteOptimizer/main/index.html'
-  ];
-  var html = null;
-  var lastErr = null;
-  for (var i = 0; i < SOURCES.length; i++) {
-    try {
-      status.textContent = 'Fetching production index... (' + (i + 1) + '/' + SOURCES.length + ')';
-      var res = await fetch(SOURCES[i] + '?revamp=' + Date.now(), { cache: 'no-store' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      html = await res.text();
-      if (!html || html.length < 10000) throw new Error('Unexpected short payload (' + (html && html.length) + ' bytes)');
-      break;
-    } catch (e) {
-      lastErr = e;
-      html = null;
+(function () {
+  var btn = document.getElementById('net-fallback');
+  if (!btn) return;
+  btn.addEventListener('click', async function (e) {
+    e.preventDefault();
+    var status = document.getElementById('boot-status');
+    status.textContent = 'Fetching (slow)...';
+    var SOURCES = [
+      'https://cdn.jsdelivr.net/gh/jacobsmolik1/RouteOptimizer@main/index.html',
+      'https://raw.githubusercontent.com/jacobsmolik1/RouteOptimizer/main/index.html'
+    ];
+    var html = null, lastErr = null;
+    for (var i = 0; i < SOURCES.length; i++) {
+      try {
+        var res = await fetch(SOURCES[i] + '?revamp=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        html = await res.text();
+        if (!html || html.length < 10000) throw new Error('short payload');
+        break;
+      } catch (err) { lastErr = err; html = null; }
     }
-  }
-  if (!html) {
-    status.className = 'err';
-    status.innerHTML = 'Could not download production <code>index.html</code>. Network access to GitHub/jsDelivr is required for this preview entry.<br><br>' +
-      String(lastErr || 'unknown error');
-    return;
-  }
-
-  html = html.replace(/<title>[^<]*<\/title>/, '<title>CCBCU | Route Optimizer - REVAMP PREVIEW</title>');
-
-  if (html.indexOf('href="css/revamp.css"') === -1) {
-    html = html.replace('</head>', '<link rel="stylesheet" href="css/revamp.css">\n</head>');
-  }
-
-  if (html.indexOf('REVAMP_PREVIEW') === -1) {
-    var marker = '<' + 'script>';
-    var idx = -1;
-    var searchFrom = 0;
-    while (true) {
-      var at = html.indexOf(marker, searchFrom);
-      if (at < 0) break;
-      var tagEnd = html.indexOf('>', at);
-      var openTag = html.substring(at, tagEnd + 1);
-      if (openTag.indexOf('src=') === -1) { idx = tagEnd + 1; break; }
-      searchFrom = tagEnd + 1;
+    if (!html) {
+      status.style.color = '#C41824';
+      status.textContent = 'Network fetch failed: ' + String(lastErr || 'unknown');
+      return;
     }
-    if (idx > 0) {
-      var inject = '\n/* REVAMP_PREVIEW packaging flag - real production app with revamp chrome */\nconst REVAMP_PREVIEW = true;\nwindow.REVAMP_PREVIEW = true;\n';
-      html = html.slice(0, idx) + inject + html.slice(idx);
+    html = html.replace(/<title>[^<]*<\/title>/, '<title>CCBCU | Route Optimizer - REVAMP PREVIEW</title>');
+    if (html.indexOf('href="css/revamp.css"') === -1) {
+      html = html.replace('</head>', '<link rel="stylesheet" href="css/revamp.css">\n</head>');
     }
-  }
-
-  if (html.indexOf('src="js/revamp.js"') === -1) {
-    html = html.replace('</body>', '<' + 'script src="js/revamp.js"></' + 'script>\n</body>');
-  }
-
-  status.textContent = 'Booting production UI...';
-  document.open();
-  document.write(html);
-  document.close();
-})().catch(function (e) {
-  var status = document.getElementById('boot-status');
-  if (status) { status.className = 'err'; status.textContent = String(e); }
-});
+    if (html.indexOf('REVAMP_PREVIEW') === -1) {
+      var marker = '<' + 'script>';
+      var idx = -1, searchFrom = 0;
+      while (true) {
+        var at = html.indexOf(marker, searchFrom);
+        if (at < 0) break;
+        var tagEnd = html.indexOf('>', at);
+        var openTag = html.substring(at, tagEnd + 1);
+        if (openTag.indexOf('src=') === -1) { idx = tagEnd + 1; break; }
+        searchFrom = tagEnd + 1;
+      }
+      if (idx > 0) {
+        html = html.slice(0, idx) + '\nconst REVAMP_PREVIEW = true;\nwindow.REVAMP_PREVIEW = true;\n' + html.slice(idx);
+      }
+    }
+    if (html.indexOf('src="js/revamp.js"') === -1) {
+      html = html.replace('</body>', '<' + 'script src="js/revamp.js"></' + 'script>\n</body>');
+    }
+    document.open(); document.write(html); document.close();
+  });
+})();
 </script>
 </body>
 </html>
