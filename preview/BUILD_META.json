@@ -1,0 +1,7 @@
+{
+  "entry": "preview/index.html",
+  "source": "main/index.html production",
+  "packaging": "css/revamp.css + js/revamp.js wrappers",
+  "js_parts": 6,
+  "note": "This preview is the REAL app with revamp chrome; use Montgomery Test DC; does not replace production deploy."
+}

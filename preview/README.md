@@ -1,45 +1,50 @@
-# Route Optimizer — REVAMP PREVIEW
+# Route Optimizer — REVAMP PREVIEW (real app + packaging)
 
-Offline interactive preview matching the liked concept mockup (`route-optimizer-revamp-concept.png`).
+This preview is the **real production Route Optimizer** (`main/index.html`) with **revamp chrome only** — not the thin offline stub.
 
-## Files on this branch
+It keeps auth, Supabase, DC switcher, Daily Load Input, templates, generate algorithm, Drivers / History / Settings, print/CSV, multi-DC, etc.
 
-- `index.html` — small loader (fetches + gunzips the payload in-browser)
-- `index.html.gz.b64` — gzip+base64 of the exact single-file v2 HTML from disk  
-  (sha256 `a609e0a47a8843179aa6875c631cffa89562eea6e9c2982123d6731b7a1db4f6`)
-- This README
+It does **not** replace the production deploy until you choose to promote it. Default live behavior on `main` is unchanged.
 
-> Open via a local static server (not `file://`) so `fetch('index.html.gz.b64')` works.
+## What the packaging changes
 
-## What works (real client-side state — not toasts-only)
+Feature-flagged with `REVAMP_PREVIEW = true` (top of `js/prod-01.js`). Implemented as CSS + small JS wrappers (`css/revamp.css`, `js/revamp.js`) — optimizer logic is not rewritten.
 
-1. **Needs Attention** — expand/collapse; dismiss an issue updates the count / hides the banner when empty  
-2. **Unused Drivers** — expand/collapse name chips; click a chip to assign to an unassigned load (modal picker)  
-3. **Daily Load Input** — open panel, change PAN/COL/MOB, Apply regenerates assignment cards from the driver pool  
-4. **Assigned driver cards** — click Pending ↔ Out; badge color and Details table update  
-5. **Click / drag assign** — × on a card unassigns a load; then select/drag load chips onto unused drivers or empty cards (Show all)
-6. **Show all / empty cards** — toggle appears when unused drivers exist; default is assigned-only  
-7. **Re-run Optimizer** — reshuffles assignments among drivers with a flash animation; nudges ETAs  
-8. **Print Pass-outs** — `window.print()` with print CSS that hides chrome  
-9. **Export CSV** — downloads a real `.csv` of current assignments  
-10. **Commit Day** — locks edits + shows committed pill; **Unlock Day** re-enables editing (still offline)  
-11. **DC dropdown** — Montgomery DC / Montgomery Test (label + subtitle)  
-12. **Date control** — changes the header date string  
+1. **UNIFIED test banner hidden** by default (black PREVIEW banner instead)
+2. **Sticky action bar** after generate: **Commit Day** primary, **Re-run** secondary (Generate demoted when a plan exists)
+3. **Needs Attention** compact strip (restyles Plan Quality; long unused-driver lists collapse)
+4. **Assigned pass-out cards first**; **Show all drivers** toggle when empty cards exist
 
-## How to open
+## Use Montgomery Test DC
+
+When signing in / switching DCs, pick **Montgomery Test** so you do not touch live Montgomery DC data while evaluating the chrome.
+
+## Files
+
+| Path | Role |
+|------|------|
+| `index.html` | Entry — production HTML shell + links to CSS/JS |
+| `css/prod.css` | Production styles (extracted from `main/index.html`) |
+| `css/revamp.css` | Revamp packaging styles |
+| `js/prod-01.js` … `prod-06.js` | Production app JS (split for GitHub size limits) |
+| `js/revamp.js` | Packaging wrappers (sticky bar, Needs Attention, card filter) |
+
+## How to open (ZIP — no Python required)
+
+1. On GitHub: branch `preview/revamp-dashboard` → **Code** → **Download ZIP**
+2. Unzip and open `preview/index.html` in Chrome / Edge / Firefox  
+   (`File → Open`, or double-click the file)
+
+Relative `css/` and `js/` loads work from `file://` when the folder structure is kept.
+
+### Optional local server
 
 ```bash
-cd preview   # or clone this branch and cd into preview/
+cd preview
 python3 -m http.server 8765
+# then http://localhost:8765/
 ```
 
-Then visit http://localhost:8765/
+## Branch note
 
-Requires a recent Chrome / Firefox / Safari (`DecompressionStream`).
-
-## What this is
-
-- **Offline sample data** only (Montgomery DC / Montgomery Test).
-- **Not connected** to live `routes.jacobsmolik.com` or Supabase.
-- Visual target: red Coca-Cola UNITED top bar, metric cards with icons, yellow Needs Attention banner, assigned-driver row cards, sticky Commit Day bar.
-- Black **PREVIEW** banner stays on screen.
+Update **only** `preview/revamp-dashboard`. Do not change `main` / live `index.html` as the default deploy from this work.
