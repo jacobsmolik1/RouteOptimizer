@@ -3,6 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Route Optimizer — REVAMP PREVIEW (offline sample)</title>
-<!-- CONTENT_CONTINUES_IN_FULL_PUSH: see /workspace/mcp-push-args.json -->
-</head><body><p>Loading full v2 content…</p></body></html>
+<title>Route Optimizer — REVAMP PREVIEW (loading…)</title>
+</head>
+<body>
+<div style="font:14px system-ui;padding:24px;color:#444">Loading REVAMP PREVIEW v2…</div>
+<script>
+(async () => {
+  if (typeof DecompressionStream === 'undefined') {
+    document.body.innerHTML = '<p style="font:14px system-ui;padding:24px">Needs DecompressionStream (recent Chrome/Firefox/Safari).</p>';
+    return;
+  }
+  const b64 = (await (await fetch('index.html.gz.b64')).text()).trim();
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const html = await new Response(stream).text();
+  document.open(); document.write(html); document.close();
+})().catch(err => {
+  document.body.innerHTML = '<pre style="padding:24px;color:#c00">' + String(err) +
+    '\n\nOpen via local server: python3 -m http.server 8765 (from preview/)</pre>';
+});
+</script>
+</body>
+</html>
