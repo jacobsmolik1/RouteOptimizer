@@ -3,210 +3,88 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Route Optimizer — REVAMP PREVIEW (offline sample)</title>
-<link rel="stylesheet" href="style1.css">
-<link rel="stylesheet" href="style2.css">
+<title>CCBCU | Route Optimizer - REVAMP PREVIEW (loading...)</title>
+<link rel="stylesheet" href="css/revamp.css">
+<style>
+  html, body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #F8F9FC; color: #1a1a1a; }
+  #boot { max-width: 520px; margin: 12vh auto; padding: 24px; background: #fff; border: 1px solid #E2E5EF; border-radius: 12px; box-shadow: 0 4px 16px rgba(26,32,64,.08); }
+  #boot h1 { font-size: 18px; margin: 0 0 8px; }
+  #boot p { font-size: 13px; color: #6B7394; line-height: 1.45; margin: 0 0 10px; }
+  #boot code { font-size: 12px; background: #EEF0F5; padding: 2px 6px; border-radius: 4px; }
+  #boot .err { color: #C41824; font-weight: 600; }
+</style>
 </head>
 <body>
-  <div class="mock-banner"><span>PREVIEW</span> — not connected to live routes.jacobsmolik.com</div>
+<div id="boot">
+  <h1>REVAMP PREVIEW</h1>
+  <p>Loading the <strong>real production app</strong> from <code>main/index.html</code>, then applying local revamp packaging chrome...</p>
+  <p id="boot-status">Fetching...</p>
+</div>
+<script>
+(async function () {
+  var status = document.getElementById('boot-status');
+  var SOURCES = [
+    'https://cdn.jsdelivr.net/gh/jacobsmolik1/RouteOptimizer@main/index.html',
+    'https://raw.githubusercontent.com/jacobsmolik1/RouteOptimizer/main/index.html'
+  ];
+  var html = null;
+  var lastErr = null;
+  for (var i = 0; i < SOURCES.length; i++) {
+    try {
+      status.textContent = 'Fetching production index... (' + (i + 1) + '/' + SOURCES.length + ')';
+      var res = await fetch(SOURCES[i] + '?revamp=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      html = await res.text();
+      if (!html || html.length < 10000) throw new Error('Unexpected short payload (' + (html && html.length) + ' bytes)');
+      break;
+    } catch (e) {
+      lastErr = e;
+      html = null;
+    }
+  }
+  if (!html) {
+    status.className = 'err';
+    status.innerHTML = 'Could not download production <code>index.html</code>. Network access to GitHub/jsDelivr is required for this preview entry.<br><br>' +
+      String(lastErr || 'unknown error');
+    return;
+  }
 
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-logo"><span class="cola">Coca-Cola</span> UNITED</div>
-      <div class="brand-divider"></div>
-      <div class="brand-app">
-        <h1>Route Optimizer</h1>
-        <div class="sub" id="brandSub">Montgomery DC Logistics Dispatch Tool</div>
-      </div>
-      <span class="committed-pill" id="committedPill">✓ COMMITTED</span>
-    </div>
-    <div class="dc-dropdown-wrap">
-      <button type="button" class="dc-btn" id="dcBtn" aria-haspopup="listbox" aria-expanded="false">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
-        <span id="dcLabel">Montgomery DC</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-      </button>
-      <div class="dc-menu" id="dcMenu" role="listbox">
-        <button type="button" class="active" data-dc="Montgomery DC" data-sub="Montgomery DC Logistics Dispatch Tool">Montgomery DC</button>
-        <button type="button" data-dc="Montgomery Test" data-sub="Montgomery Test · sample offline data">Montgomery Test</button>
-      </div>
-    </div>
-  </header>
+  html = html.replace(/<title>[^<]*<\/title>/, '<title>CCBCU | Route Optimizer - REVAMP PREVIEW</title>');
 
-  <main>
-    <div class="page-hd">
-      <div class="page-hd-left">
-        <h2>Route Optimizer</h2>
-        <button type="button" class="date-control editable-only" id="dateBtn">
-          Generated loads for
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-          <span class="date-val" id="dateVal">May 20, 2025</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
-        </button>
-        <input type="date" class="date-picker-hidden" id="dateInput" value="2025-05-20">
-      </div>
-      <div class="page-hd-right">
-        <button type="button" class="load-input-btn editable-only" id="btnLoadInput">
-          Daily Load Input
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <div class="load-chips" id="loadChips"></div>
-      </div>
-    </div>
+  if (html.indexOf('href="css/revamp.css"') === -1) {
+    html = html.replace('</head>', '<link rel="stylesheet" href="css/revamp.css">\n</head>');
+  }
 
-    <section class="edit-panel editable-only" id="editPanel" aria-label="Edit load counts">
-      <div class="ep-title">DAILY LOAD INPUT · EDIT COUNTS</div>
-      <div class="edit-grid">
-        <div class="edit-field">
-          <label for="inpPan">Panama City (PAN)</label>
-          <input type="number" id="inpPan" min="0" max="20" value="1">
-        </div>
-        <div class="edit-field">
-          <label for="inpCol">Columbus (COL)</label>
-          <input type="number" id="inpCol" min="0" max="20" value="1">
-        </div>
-        <div class="edit-field">
-          <label for="inpMob">Mobile (MOB)</label>
-          <input type="number" id="inpMob" min="0" max="20" value="0">
-        </div>
-      </div>
-      <div class="edit-actions">
-        <button class="btn-sm btn-sm-ghost" type="button" id="btnCancelEdit">Cancel</button>
-        <button class="btn-sm btn-sm-primary" type="button" id="btnApplyEdit">Apply</button>
-      </div>
-    </section>
+  if (html.indexOf('REVAMP_PREVIEW') === -1) {
+    var marker = '<' + 'script>';
+    var idx = -1;
+    var searchFrom = 0;
+    while (true) {
+      var at = html.indexOf(marker, searchFrom);
+      if (at < 0) break;
+      var tagEnd = html.indexOf('>', at);
+      var openTag = html.substring(at, tagEnd + 1);
+      if (openTag.indexOf('src=') === -1) { idx = tagEnd + 1; break; }
+      searchFrom = tagEnd + 1;
+    }
+    if (idx > 0) {
+      var inject = '\n/* REVAMP_PREVIEW packaging flag - real production app with revamp chrome */\nconst REVAMP_PREVIEW = true;\nwindow.REVAMP_PREVIEW = true;\n';
+      html = html.slice(0, idx) + inject + html.slice(idx);
+    }
+  }
 
-    <section class="metrics" aria-label="Plan summary">
-      <div class="metric">
-        <div class="metric-icon red">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-        </div>
-        <div>
-          <div class="label">TOTAL LOADS</div>
-          <div class="value" id="mTotal">2</div>
-        </div>
-      </div>
-      <div class="metric">
-        <div class="metric-icon red">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        </div>
-        <div>
-          <div class="label">DRIVERS USED</div>
-          <div class="value" id="mDrivers">2</div>
-        </div>
-      </div>
-      <div class="metric">
-        <div class="metric-icon gray">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-        </div>
-        <div>
-          <div class="label">OVERFLOW</div>
-          <div class="value" id="mOverflow">0</div>
-        </div>
-      </div>
-      <div class="metric good">
-        <div class="metric-icon green">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-        </div>
-        <div>
-          <div class="label">DOT STATUS</div>
-          <div class="value" id="mDot">OK</div>
-        </div>
-      </div>
-    </section>
+  if (html.indexOf('src="js/revamp.js"') === -1) {
+    html = html.replace('</body>', '<' + 'script src="js/revamp.js"></' + 'script>\n</body>');
+  }
 
-    <section class="needs editable-only" id="needsSec" aria-label="Needs attention">
-      <button type="button" class="needs-hd" id="needsToggle" aria-expanded="false">
-        <div class="needs-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 4l7.53 13H4.47L12 6zm-1 5v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
-        </div>
-        <div>
-          <div class="needs-title">Needs Attention <span class="needs-pill" id="needsPill">2 items</span></div>
-          <div class="needs-sub" id="needsSub">2 unassigned or conflicted items require review.</div>
-        </div>
-        <svg class="needs-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
-      </button>
-      <div class="needs-body" id="needsBody"></div>
-    </section>
-
-    <section class="unused-sec editable-only" id="unusedSec">
-      <button type="button" class="unused-hd" id="unusedToggle" aria-expanded="false">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        Unused Drivers
-        <span class="unused-count"><span id="unusedCountLabel">0 drivers</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
-        </span>
-      </button>
-      <div class="unused-body">
-        <div class="unused-hint">Click a driver to assign them to an unassigned load, or drag a load chip onto an empty card.</div>
-        <div class="unused-chips" id="unusedChips"></div>
-      </div>
-    </section>
-
-    <div class="unassigned-loads" id="unassignedLoads">
-      <span class="ulabel">UNASSIGNED LOADS</span>
-    </div>
-
-    <div class="section-head">
-      <div>
-        <h3>Assigned Drivers</h3>
-        <div class="sub" id="assignedSub">2 drivers assigned • All loads placed</div>
-      </div>
-      <label class="toggle" id="showAllWrap" style="display:none">
-        <input type="checkbox" id="showAllDrivers"> Show all / empty cards
-      </label>
-    </div>
-
-    <section class="driver-list" id="driverList" aria-label="Assigned drivers"></section>
-
-    <details class="details-sec" id="detailsSection">
-      <summary>DETAILS · Full load assignments table</summary>
-      <table>
-        <thead>
-          <tr><th>DRIVER</th><th>LOAD</th><th>DEST</th><th>ETA</th><th>STATUS</th></tr>
-        </thead>
-        <tbody id="detailsBody"></tbody>
-      </table>
-    </details>
-
-    <p class="footnote">Offline REVAMP PREVIEW · Montgomery sample data · no live Supabase · Commit stays on this page only. Download the whole preview/ folder as a ZIP from GitHub (Code → Download ZIP on this branch).</p>
-  </main>
-
-  <div class="sticky-bar">
-    <div class="sticky-inner">
-      <div class="sticky-actions">
-        <button type="button" class="act editable-only" id="btnRerun">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Re-run Optimizer
-        </button>
-        <div class="sep"></div>
-        <button type="button" class="act" id="btnPrint">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          Print Pass-outs
-        </button>
-        <div class="sep"></div>
-        <button type="button" class="act" id="btnCsv">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>
-          Export CSV
-        </button>
-      </div>
-      <button type="button" class="btn-commit" id="btnCommit">Commit Day <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></button>
-      <button type="button" class="btn-unlock" id="btnUnlock">Unlock Day</button>
-    </div>
-  </div>
-
-  <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
-
-  <div class="modal-backdrop" id="assignModal" role="dialog" aria-modal="true">
-    <div class="modal">
-      <h4 id="assignModalTitle">Assign driver</h4>
-      <p id="assignModalSub">Select an unassigned load for this driver.</p>
-      <div class="modal-loads" id="assignModalLoads"></div>
-      <button type="button" class="modal-cancel" id="assignModalCancel">Cancel</button>
-    </div>
-  </div>
-
-<script src="app1.js"></script>
-<script src="app2.js"></script>
+  status.textContent = 'Booting production UI...';
+  document.open();
+  document.write(html);
+  document.close();
+})().catch(function (e) {
+  var status = document.getElementById('boot-status');
+  if (status) { status.className = 'err'; status.textContent = String(e); }
+});
+</script>
 </body>
 </html>
