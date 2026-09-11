@@ -1,0 +1,231 @@
+═
+//  SUPABASE — Config + client
+//  Replace SUPABASE_URL and SUPABASE_ANON_KEY with values from your project:
+//  Supabase Dashboard → Project Settings → API → URL / anon public key
+// ════════════════════════════════════════════════════════════════════════════
+const SUPABASE_URL      = 'https://ryqsxtnjdrltuocqszge.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_inW_Tg6O_bKA3u0d2hc6dQ_CtRQKWn0';
+const db = (SUPABASE_URL !== 'YOUR_SUPABASE_URL')
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true }
+    })
+  : null;   // null = offline / unconfigured mode — auth gate skips to login form
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ALL DC CONFIGURATIONS — swap ALL_DC_CONFIGS to add a new location
+// ════════════════════════════════════════════════════════════════════════════
+
+const ALL_DC_CONFIGS = {
+
+  montgomery: {
+    id:             'montgomery',
+    name:           'Montgomery DC',
+    city:           'Montgomery, AL',
+    storagePrefix:  'ccu_',
+    externalCarrier: 'SHORELINE',
+
+    optimizer: {
+      loadCapMode: 'hours',
+      requireFinalDomicileReturn: true,
+      allowExternalFallback: true,
+      minimizeExternalCarrierDefault: false,
+      assignExternalEligibleToInternal: true,
+      prioritizeInternalOnlyDestinations: true,
+      allowExtraHomeDestinationBeforeReturn: true,
+      preferMultiLoadInternalDrivers: true,
+      preferMixedDestinationPackages: true,
+      fullDayLoadThresholdHours: 7.5,
+      deliveryWindowHours: 5,
+      windowPriorityOverPackShort: true,
+      fairness: {
+        enabled: true,
+        targetMinUtilization: 0.35,
+        highUtilization: 0.9,
+        maxHourSpread: 2.0,
+        warnUnusedDrivers: true,
+      },
+      specialRules: [
+        {
+          type: 'exclusivePhaseCap',
+          destCode: 'COL',
+          phaseLabelIncludes: 'Small Store',
+          maxLoadsPerDriver: 1,
+        },
+      ],
+    },
+
+    settings: { avgSpeed: 45, dotMaxHours: 10 },
+
+    destinations: [
+      { code:'PAN', name:'Panama City, FL', address:'2825 Forester Trail, Panama City, FL 32405',  miles1Way:188, carrier:'Internal/Shoreline' },
+      { code:'COL', name:'Columbus, GA',    address:'6055 Coca-Cola Blvd, Columbus, GA 31909',      miles1Way:105, carrier:'Internal Only' },
+      { code:'DOT', name:'Dothan, AL',      address:'3936 Napier Field Road, Dothan, AL 36303',     miles1Way:104, carrier:'Internal Only' },
+      { code:'EVG', name:'Evergreen, AL',   address:'14230 U.S. Highway 84, Evergreen, AL 36460',   miles1Way:78,  carrier:'Internal Only' },
+      { code:'AUB', name:'Auburn, AL',      address:'511 W Veterans Blvd, Auburn, AL 36832',         miles1Way:55,  carrier:'Internal Only' },
+      // ── Mobile / Gulf-coast contingency set (disabled by default; toggle On in Settings → Destinations) ──
+      // Miles derived from the round-trip hours captured in live dispatch drafts; addresses TBD — confirm & fill in.
+      { code:'MOB', name:'Mobile, AL',      address:'',  miles1Way:170, carrier:'Internal/Shoreline', disabled:true },
+      { code:'LRY', name:'Leroy, AL',       address:'',  miles1Way:152, carrier:'Internal/Shoreline', disabled:true },
+      { code:'VAL', name:'Valparaiso, FL',  address:'',  miles1Way:160, carrier:'Internal/Shoreline', disabled:true },
+      { code:'ROB', name:'Robertsdale, AL', address:'',  miles1Way:160, carrier:'Internal/Shoreline', disabled:true },
+      { code:'PEN', name:'Pensacola, FL',   address:'',  miles1Way:166, carrier:'Internal/Shoreline', disabled:true },
+    ],
+
+    phases: [
+      // One build per location (OFS/Bulk merged). PAN/COL use the later (07:30)
+      // time — the whole location builds together now.
+      { label:'Panama City', dest:'PAN', dispatchTime:'07:30', buildDay:'prior' },
+      { label:'Columbus',    dest:'COL', dispatchTime:'07:30', buildDay:'prior' },
+      { label:'Dothan',      dest:'DOT', dispatchTime:'08:00' },
+      { label:'Auburn',      dest:'AUB', dispatchTime:'08:30' },
+      { label:'Evergreen',   dest:'EVG', dispatchTime:'09:00' },
+      // ── Mobile / Gulf-coast contingency phases (dests disabled by default; enable to activate) ──
+      { label:'Mobile',                    dest:'MOB', dispatchTime:'07:00' },
+      { label:'Leroy',                     dest:'LRY', dispatchTime:'07:00' },
+      { label:'Valparaiso',                dest:'VAL', dispatchTime:'07:00' },
+      { label:'Robertsdale',               dest:'ROB', dispatchTime:'07:00' },
+      { label:'Pensacola',                 dest:'PEN', dispatchTime:'07:00' },
+    ],
+
+    restrictions: [
+      { value:'Any',              type:'any'                                        },
+      { value:'Any + Columbus',   type:'assist', destCode:'COL', cap:1              },
+      { value:'Auburn First',     type:'first',  destCode:'AUB'                     },
+      { value:'Panama City ONLY', type:'only',   destCode:'PAN', bypassDot:true     },
+      { value:'Columbus ONLY',    type:'only',   destCode:'COL', bypassDot:true     },
+      { value:'Dothan ONLY',      type:'only',   destCode:'DOT'                     },
+      { value:'Auburn ONLY',      type:'only',   destCode:'AUB'                     },
+      { value:'Evergreen ONLY',   type:'only',   destCode:'EVG'                     },
+    ],
+  },
+
+  tifton: {
+    id:             'tifton',
+    name:           'Tifton Crossdock',
+    city:           'Tifton, GA',
+    storagePrefix:  'tif_',
+    externalCarrier: 'COWAN',
+
+    optimizer: {
+      loadCapMode:                         'hours',
+      requireFinalDomicileReturn:           true,
+      allowExternalFallback:                true,
+      minimizeExternalCarrierDefault:       false,
+      assignExternalEligibleToInternal:     true,
+      allowExtraHomeDestinationBeforeReturn: true,   // domicile drivers (e.g. Tallahassee) can run TWO home-dest loads, not just the reserved home-return
+      fullDayDestinationCodes:              ['SAV'],
+      preferMultiLoadInternalDrivers:       true,
+      fullDayLoadThresholdHours:            7.5,
+      deliveryWindowHours:                  5,
+      fairness: {
+        enabled:              true,
+        targetMinUtilization: 0.35,
+        highUtilization:      0.85,
+        maxHourSpread:        2.0,
+        warnUnusedDrivers:    true,
+      },
+      specialRules: [],
+    },
+
+    settings: { avgSpeed: 45, dotMaxHours: 10 },
+
+    destinations: [
+      { code:'SAV', name:'Savannah, GA',    address:'', miles1Way:190,  carrier:'Internal/Cowan' },
+      { code:'STS', name:'Statesboro, GA',  address:'', miles1Way:140,  carrier:'Internal/Cowan' },
+      { code:'BRW', name:'Brunswick, GA',   address:'', miles1Way:132,  carrier:'Internal/Cowan' },
+      { code:'WAY', name:'Waycross, GA',    address:'', miles1Way:72,   carrier:'Internal/Cowan' },
+      { code:'MCR', name:'McRae, GA',       address:'', miles1Way:71,   carrier:'Internal/Cowan' },
+      { code:'TAL', name:'Tallahassee, FL', address:'', miles1Way:94.5, carrier:'Internal/Cowan' },
+    ],
+
+    phases: [
+      { label:'Savannah',    dest:'SAV', dispatchTime:'07:30' },
+      { label:'Statesboro',  dest:'STS', dispatchTime:'10:00' },
+      { label:'Brunswick',   dest:'BRW', dispatchTime:'11:30' },
+      { label:'Waycross',    dest:'WAY', dispatchTime:'12:30' },
+      { label:'McRae',       dest:'MCR', dispatchTime:'13:15' },
+      { label:'Tallahassee', dest:'TAL', dispatchTime:'13:45' },
+    ],
+
+    restrictions: [
+      { value:'Any', type:'any' },
+    ],
+  },
+
+  birmingham: {
+    id:             'birmingham',
+    name:           'Birmingham Crossdock',
+    city:           'Birmingham, AL',
+    storagePrefix:  'bhm_',
+    externalCarrier: 'COWAN',
+
+    optimizer: {
+      loadCapMode:                         'hours',
+      requireFinalDomicileReturn:           true,
+      allowExternalFallback:                true,
+      minimizeExternalCarrierDefault:       false,
+      assignExternalEligibleToInternal:     true,
+      allowExtraHomeDestinationBeforeReturn: false,
+      preferMixedDestinationPackages:       true,
+      avoidConsecutiveDestinationCodes:     ['FLO'],
+      preferEarliestAvailableDriver:        true,
+      preferMultiLoadInternalDrivers:       false,
+      deliveryWindowHours:                  5,
+      fairness: {
+        enabled:              true,
+        targetMinUtilization: 0.35,
+        highUtilization:      0.85,
+        maxHourSpread:        2.0,
+        warnUnusedDrivers:    true,
+      },
+      specialRules: [],
+    },
+
+    settings: { avgSpeed: 45, dotMaxHours: 10 },
+
+    destinations: [
+      { code:'FLO', name:'Florence, AL',    address:'', miles1Way:125, carrier:'Internal/Cowan' },
+      { code:'OXF', name:'Oxford, AL',      address:'', miles1Way:57,  carrier:'Internal/Cowan' },
+      { code:'TUS', name:'Tuscaloosa, AL',  address:'', miles1Way:58,  carrier:'Internal/Cowan' },
+      { code:'CAR', name:'Carbon Hill, AL', address:'', miles1Way:60,  carrier:'Internal/Cowan' },
+      { code:'CUL', name:'Cullman, AL',     address:'', miles1Way:48,  carrier:'Internal/Cowan' },
+    ],
+
+    phases: [
+      { label:'Florence',    dest:'FLO', dispatchTime:'07:00' },
+      { label:'Oxford',      dest:'OXF', dispatchTime:'08:30' },
+      { label:'Tuscaloosa',  dest:'TUS', dispatchTime:'10:00' },
+      { label:'Carbon Hill', dest:'CAR', dispatchTime:'11:00' },
+      { label:'Cullman',     dest:'CUL', dispatchTime:'12:00' },
+    ],
+
+    restrictions: [
+      { value:'Any', type:'any' },
+    ],
+  },
+
+};
+
+// ── Driver rosters — indexed by DC id ──────────────────────────────────────
+const ALL_DC_DRIVERS = {
+
+  montgomery: [
+    {id:'D001',name:'JR Mesi',            homeBase:'Panama City, FL', restriction:'Panama City ONLY', onVacation:false, arrivalTime:'',    deadheadMiles:188, domicileDest:'PAN', notes:'Panama City ONLY · 1 load/day · 188mi deadhead'},
+    {id:'D002',name:'Marcus Hood',        homeBase:'Columbus, GA',    restriction:'Columbus ONLY',    onVacation:false, arrivalTime:'',    deadheadMiles:105, domicileDest:'COL', notes:'Columbus ONLY · 2 loads/day · 105mi deadhead'},
+    {id:'D018',name:'Robert Pride',       homeBase:'Columbus, GA',    restriction:'Columbus ONLY',    onVacation:false, arrivalTime:'',    deadheadMiles:105, domicileDest:'COL', notes:'Columbus ONLY · 2 loads/day · 105mi deadhead'},
+    {id:'D013',name:'Mcarthure Newman II',homeBase:'Dothan, AL',      restriction:'Any',              onVacation:false, arrivalTime:'10:30', deadheadMiles:104, domicileDest:'DOT', notes:'Domicile: Dothan · 104mi deadhead'},
+    {id:'D017',name:'Wilmer Mixon',       homeBase:'Evergreen, AL',   restriction:'Any',              onVacation:false, arrivalTime:'11:00', deadheadMiles:78,  domicileDest:'EVG', notes:'Domicile: Evergreen · 78mi deadhead'},
+    {id:'D005',name:'Charles Carmack',    homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'11:30', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'D012',name:'Javoris Williams',   homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'12:00', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'D014',name:'Michael Cook',       homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'12:00', deadheadMiles:0,   domicileDest:'',    notes:'Training Brittnee Woods'},
+    {id:'D019',name:'Brittnee Woods',     homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'12:00', deadheadMiles:0,   domicileDest:'',    notes:'Trainee — mirrors Cook'},
+    {id:'D009',name:'Elkanie Moorer',     homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'12:30', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'D016',name:'Sean Tellis',        homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'12:30', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'D011',name:'James Gilmore',      homeBase:'Auburn, AL',      restriction:'Any',              onVacation:false, arrivalTime:'12:30', deadheadMiles:55,  domicileDest:'AUB', notes:'Domicile: Auburn · 55mi deadhead'},
+    {id:'D003',name:'Aaron Smith',        homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'13:00', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'D006',name:'Chauma Bowman',      homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'13:30', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'D015',name:'Quad Whatley',       homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'13:30', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'D008',name:'David Gadsden',      homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'14:00', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'D007',name:'Cleveland Gamble',   homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'14:00', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'D010',name:'Frederick Young',    homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'14:00', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'D004',name:'Braxton "
