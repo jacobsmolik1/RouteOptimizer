@@ -1,0 +1,233 @@
+ m[1] };
+  }
+  return { type:'any' };
+}
+function getExclusivePhaseCapRule(phase) {
+  return (DC_CONFIG.optimizer?.specialRules || []).find(r =>
+    r.type === 'exclusivePhaseCap'
+    && r.destCode === phase.dest
+    && (!r.phaseLabelIncludes || phase.label.includes(r.phaseLabelIncludes))
+  ) || null;
+}
+// Does this destination fall back to the external carrier?
+function destCanExternal(destCode) {
+  const d = (typeof state !== 'undefined' && state.destinations?.find(x => x.code === destCode))
+            || DC_CONFIG.destinations.find(x => x.code === destCode);
+  if (!DC_CONFIG.externalCarrier || !d?.carrier) return false;
+  return d.carrier.toLowerCase().includes(DC_CONFIG.externalCarrier.toLowerCase());
+}
+// Is this destination run ONLY by the outside carrier (no internal drivers)?
+// True when the carrier names the external carrier but not "internal"
+// (e.g. "Shoreline Only" / "Cowan Only"), as opposed to "Internal/Shoreline".
+function destIsExternalOnly(destCode) {
+  if (!destCanExternal(destCode)) return false;
+  const d = (typeof state !== 'undefined' && state.destinations?.find(x => x.code === destCode))
+            || DC_CONFIG.destinations.find(x => x.code === destCode);
+  return !(d?.carrier || '').toLowerCase().includes('internal');
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  MODULE: StateManager
+//  Default seed data, localStorage persistence, and state initialisation.
+//  DEST_COLORS / DEST_TAGS are Montgomery-specific UI hints; they will move
+//  to a DcConfig module in a future extraction step.
+// ════════════════════════════════════════════════════════════════════════════
+const StateManager = (() => {
+
+// ── Seed defaults ────────────────────────────────────────────────────────
+const DEFAULT_DRIVERS = (ALL_DC_DRIVERS[DC_CONFIG.id] || []).map(d => ({...d}));
+
+// Destinations and phases come from DC_CONFIG — no duplicate hardcoding here.
+const DEFAULT_DESTINATIONS = DC_CONFIG.destinations.map(d => ({...d}));
+const DEFAULT_PHASES       = DC_CONFIG.phases.map(p => ({...p}));
+const DEFAULT_SETTINGS = {
+  avgSpeed:            DC_CONFIG.settings?.avgSpeed    ?? 45,
+  dotMaxHours:         DC_CONFIG.settings?.dotMaxHours ?? 10,
+  minimizeShoreline:   DC_CONFIG.optimizer?.minimizeExternalCarrierDefault ?? false,
+  deliveryWindowHours: DC_CONFIG.optimizer?.deliveryWindowHours ?? 5,
+  receiverWindows:     {},
+  packOverflow:        false,   // pack overflow-tier drivers onto fewest trucks (opt-in, per DC)
+  windowProtect:       false,   // let an in-window truck beat a higher-priority late one (opt-in, per DC)
+  blends:              (DC_CONFIG.settings?.blends || []).map(b => ({ dests: (b.dests||[]).slice(), chunk: b.chunk|0 })),
+  cardSort:            DC_CONFIG.settings?.cardSort || 'arrival',   // pass-out card order: 'arrival' (by start time) | 'name'
+};
+
+// Dest → CSS class maps — index-based so any DC's dest codes work without CSS changes.
+// Palette slots: tag-dest-0 … tag-dest-7 (8 colors, wraps if a DC has more than 8 dests).
+const DEST_COLORS = Object.fromEntries(DC_CONFIG.destinations.map((d, i) => [d.code, `dest-${i % 8}`]));
+const DEST_TAGS   = Object.fromEntries(DC_CONFIG.destinations.map((d, i) => [d.code, `tag-dest-${i % 8}`]));
+function destTagClass(code) {
+  const i = DC_CONFIG.destinations.findIndex(d => d.code === code);
+  return i >= 0 ? `tag-dest-${i % 8}` : '';
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+function deepCopy(x) { return JSON.parse(JSON.stringify(x)); }
+
+// ── Load ─────────────────────────────────────────────────────────────────
+function load() {
+  const P = DC_CONFIG.storagePrefix;
+  try {
+    const savedPhases  = JSON.parse(localStorage.getItem(P + 'phases'));
+    const phaseCountOk = savedPhases && savedPhases.length === DEFAULT_PHASES.length;
+    const phases       = phaseCountOk ? savedPhases : deepCopy(DEFAULT_PHASES);
+
+    const savedLoads = JSON.parse(localStorage.getItem(P + 'loads'));
+    const loads = (savedLoads && savedLoads.length === DEFAULT_PHASES.length)
+      ? savedLoads : Array(DEFAULT_PHASES.length).fill(0);
+
+    // Templates are phase-index-coupled — discard if phase count changed
+    const savedTemplates = JSON.parse(localStorage.getItem(P + 'templates')) || {};
+    const templates = phaseCountOk ? savedTemplates : {};
+    if (!phaseCountOk) localStorage.removeItem(P + 'templates');
+
+    return {
+      drivers:     JSON.parse(localStorage.getItem(P + 'drivers'))    || deepCopy(DEFAULT_DRIVERS),
+      destinations:JSON.parse(localStorage.getItem(P + 'dests'))      || deepCopy(DEFAULT_DESTINATIONS),
+      settings:    JSON.parse(localStorage.getItem(P + 'settings'))   || deepCopy(DEFAULT_SETTINGS),
+      phases, loads, templates,
+      lastResult:  JSON.parse(localStorage.getItem(P + 'lastresult')) || null,
+      returned:    JSON.parse(localStorage.getItem(P + 'returned'))   || {},
+      history:     JSON.parse(localStorage.getItem(P + 'history'))    || [],
+      whatIf:      JSON.parse(localStorage.getItem(P + 'whatif'))     || {},
+      bucketAsgn:  JSON.parse(localStorage.getItem(P + 'basgn'))      || [],
+      adhocMoves:  JSON.parse(localStorage.getItem(P + 'adhoc'))      || [],
+    };
+  } catch(e) {
+    return {
+      drivers:deepCopy(DEFAULT_DRIVERS), destinations:deepCopy(DEFAULT_DESTINATIONS),
+      settings:deepCopy(DEFAULT_SETTINGS), phases:deepCopy(DEFAULT_PHASES),
+      loads:Array(DEFAULT_PHASES.length).fill(0), lastResult:null,
+      returned:{}, templates:{}, history:[], whatIf:{}, bucketAsgn:[], adhocMoves:[],
+    };
+  }
+}
+
+// ── Save ─────────────────────────────────────────────────────────────────
+// Close over the global `state` variable — safe because these are only
+// called after `state` is initialised below.
+function saveDrivers()    { localStorage.setItem(DC_CONFIG.storagePrefix + 'drivers',    JSON.stringify(state.drivers));    SupabaseSync.queueDriverSync(); }
+function saveDests()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'dests',      JSON.stringify(state.destinations)); SupabaseSync.queueConfigSync(); }
+function saveSettings_()  { localStorage.setItem(DC_CONFIG.storagePrefix + 'settings',   JSON.stringify(state.settings));    SupabaseSync.queueSync(); SupabaseSync.queueConfigSync(); }
+function savePhases()     { localStorage.setItem(DC_CONFIG.storagePrefix + 'phases',     JSON.stringify(state.phases));      SupabaseSync.queueConfigSync(); }
+function saveLoads()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'loads',      JSON.stringify(state.loads));       stampPlanToday(); SupabaseSync.queueSync(); }
+function saveResult()     { if (state.lastResult) state.lastResult.snapshot = buildPlanSnapshot(); localStorage.setItem(DC_CONFIG.storagePrefix + 'lastresult', JSON.stringify(state.lastResult));  stampPlanToday(); SupabaseSync.queueSync(); }
+function saveReturned()   { localStorage.setItem(DC_CONFIG.storagePrefix + 'returned',   JSON.stringify(state.returned));    SupabaseSync.queueSync(); }
+function saveTemplates()  { localStorage.setItem(DC_CONFIG.storagePrefix + 'templates',  JSON.stringify(state.templates));   SupabaseSync.queueSync(); }
+function saveHistory()    { localStorage.setItem(DC_CONFIG.storagePrefix + 'history',    JSON.stringify(state.history)); }
+function saveWhatIf()     { localStorage.setItem(DC_CONFIG.storagePrefix + 'whatif',     JSON.stringify(state.whatIf));      SupabaseSync.queueSync(); }
+function saveBucketAsgn() { localStorage.setItem(DC_CONFIG.storagePrefix + 'basgn',      JSON.stringify(state.bucketAsgn));  SupabaseSync.queueSync(); }
+function saveAdhocMoves() { localStorage.setItem(DC_CONFIG.storagePrefix + 'adhoc',      JSON.stringify(state.adhocMoves));  SupabaseSync.queueSync(); }
+
+return {
+  load, deepCopy,
+  defaults: { DEFAULT_DRIVERS, DEFAULT_DESTINATIONS, DEFAULT_SETTINGS, DEFAULT_PHASES, DEST_COLORS, DEST_TAGS },
+  save: { saveDrivers, saveDests, saveSettings_, savePhases, saveLoads, saveResult,
+          saveReturned, saveTemplates, saveHistory, saveWhatIf, saveBucketAsgn, saveAdhocMoves },
+};
+})();
+
+// Re-export to global scope — all call sites remain unchanged during migration.
+const { deepCopy } = StateManager;
+const { DEFAULT_DRIVERS, DEFAULT_DESTINATIONS, DEFAULT_SETTINGS, DEFAULT_PHASES,
+        DEST_COLORS, DEST_TAGS } = StateManager.defaults;
+const { saveDrivers, saveDests, saveSettings_, savePhases, saveLoads, saveResult,
+        saveReturned, saveTemplates, saveHistory, saveWhatIf,
+        saveBucketAsgn, saveAdhocMoves } = StateManager.save;
+let state = StateManager.load();
+
+// Config + roster as-of the current plan, stamped onto the result so History can recompute
+// a comparable "ideal" plan later even after phases/destinations/roster drift (config sync).
+function buildPlanSnapshot() {
+  return {
+    phases:       deepCopy(state.phases),
+    destinations: deepCopy(state.destinations),
+    settings:     deepCopy(state.settings),
+    drivers:      deepCopy(state.drivers),
+  };
+}
+
+// Rebuild the dest→CSS-class maps from the live (editable) destination list so
+// destinations added/removed at runtime get correct colors everywhere. The maps
+// are the same object refs used across all render code, so we mutate in place.
+function rebuildDestMaps() {
+  Object.keys(DEST_COLORS).forEach(k => delete DEST_COLORS[k]);
+  Object.keys(DEST_TAGS).forEach(k => delete DEST_TAGS[k]);
+  (state.destinations || []).forEach((d, i) => {
+    DEST_COLORS[d.code] = `dest-${i % 8}`;
+    DEST_TAGS[d.code]   = `tag-dest-${i % 8}`;
+  });
+}
+rebuildDestMaps();
+
+// Flat 30-min DOT rest break folded into every working driver's DISPLAYED total time
+// and workload bar (all DCs). Display-only: the optimizer's load assignments are
+// unchanged. Adjust here to tune the break length.
+const BREAK_HRS = 0.5;
+
+// Effective restriction list = DC-configured restrictions whose destination still
+// exists, plus an auto-generated "{CODE} ONLY" for every destination not already
+// covered by a configured 'only' rule. Used by the driver dropdowns and rules panel.
+function getEffectiveRestrictions() {
+  const destCodes = new Set((state.destinations || []).map(d => d.code));
+  const configured = DC_CONFIG.restrictions.filter(r =>
+    (!r.destCode  || destCodes.has(r.destCode)) &&
+    (!r.destCodes || r.destCodes.some(c => destCodes.has(c))));   // keep a group if any of its dests still exists
+  const covered = new Set(configured.filter(r => r.type === 'only').map(r => r.destCode));
+  const synthesized = (state.destinations || [])
+    .filter(d => !covered.has(d.code))
+    .map(d => ({ value: `${d.code} ONLY`, type: 'only', destCode: d.code }));
+  return configured.concat(synthesized);
+}
+let shoreExpanded = false;
+
+// ════════════════════════════════════════════════════════════════════════════
+//  MODULE: SupabaseSync
+//  Auth, per-change debounced day sync, and driver roster sync.
+//  All network calls fail gracefully so the app works fully offline.
+// ════════════════════════════════════════════════════════════════════════════
+const SupabaseSync = (() => {
+  let _user        = null;
+  let _committed   = false;
+  let _dayTimer    = null;
+  let _driverTimer = null;
+  let _configTimer = null;
+
+  // ── Auth ────────────────────────────────────────────────────────────────
+  async function init() {
+    if (!db) return false;
+    try {
+      const { data: { session } } = await db.auth.getSession();
+      if (!session) return false;
+      // Force-restore session so the REST client attaches the JWT on file:// origin.
+      await db.auth.setSession({
+        access_token:  session.access_token,
+        refresh_token: session.refresh_token,
+      });
+      _user = session.user;
+      return true;
+    } catch(e) { return false; }
+  }
+
+  async function signIn(email, password) {
+    if (!db) throw new Error('Supabase not configured.');
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    _user = data.user;
+    return _user;
+  }
+
+  // Self-registration. On signup the DB trigger auto-grants any pending invites
+  // for this email. If email confirmation is on, session may be null until confirmed.
+  async function signUp(email, password) {
+    if (!db) throw new Error('Supabase not configured.');
+    const redirect = location.protocol.startsWith('http') ? location.origin : 'https://routes.jacobsmolik.com';
+    const { data, error } = await db.auth.signUp({ email, password, options: { emailRedirectTo: redirect } });
+    if (error) throw error;
+    if (data.session) _user = data.user;   // auto-confirmed → signed in
+    return { user: data.user, session: data.session };
+  }
+
+  async function signOut() {
+    if (!db) return;
+    await db.auth.signOut().catch(()

@@ -1,0 +1,6 @@
+{
+  "entry": "preview/index.html",
+  "source": "main/index.html (fetched at runtime from jsDelivr / raw GitHub)",
+  "packaging": "css/revamp.css + js/revamp.js wrappers",
+  "note": "REAL app with revamp chrome; use Montgomery Test DC; does not replace production deploy."
+}

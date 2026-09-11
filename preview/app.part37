@@ -1,0 +1,98 @@
+══
+function updateHeaderDate() {
+  const now = new Date();
+  const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const ds = `${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+  document.getElementById('hdr-date').textContent      = ds;
+  document.getElementById('hdr-day').textContent       = days[now.getDay()];
+  document.getElementById('print-date-hdr').textContent = ds + ' — ' + days[now.getDay()];
+}
+
+function populateRestrictionDropdowns() {
+  const resEl  = document.getElementById('drv-restriction');
+  const homeEl = document.getElementById('drv-home');
+  const domEl  = document.getElementById('drv-domiciledest');
+
+  if (resEl) {
+    resEl.innerHTML = getEffectiveRestrictions().map(r => {
+      const destName = (state.destinations.find(d => d.code === r.destCode)?.name || r.destCode || '').split(',')[0];
+      const groupNames = (r.destCodes || [])
+        .map(c => (state.destinations.find(d => d.code === c)?.name || c).split(',')[0])
+        .join(' / ');
+      const label = r.type === 'any'       ? `${r.value} — Any route`
+                  : r.type === 'assist'    ? `${r.value} — Any route + ${r.destCode} assist (cap ${r.cap ?? 1})`
+                  : r.type === 'first'     ? `${r.value} — ${r.destCode} first, then any`
+                  : r.type === 'only'      ? `${r.value} — ${destName} only`
+                  : r.type === 'onlyGroup' ? `${r.value} — ${groupNames} only`
+                  : r.value;
+      return `<option value="${r.value}">${label}</option>`;
+    }).join('');
+  }
+
+  if (homeEl) {
+    const dcCity = DC_CONFIG.city || 'DC';
+    homeEl.innerHTML = `<option value="${dcCity}">${dcCity} (Internal)</option>`
+      + state.destinations.map(d => `<option value="${d.name.split(',')[0]}, ${d.name.split(',')[1]?.trim() || ''}">${d.name}</option>`).join('')
+      + `<option value="Other">Other</option>`;
+  }
+
+  if (domEl) {
+    domEl.innerHTML = `<option value="">— None (${DC_CONFIG.city}-based) —</option>`
+      + state.destinations.map(d => `<option value="${d.code}">${d.name}</option>`).join('');
+  }
+}
+
+function init() {
+  rebuildDestMaps();
+  populateRestrictionDropdowns();
+  updateHeaderDate();
+  const sub = document.getElementById('hdr-dc-subtitle');
+  if (sub) sub.textContent = `${DC_CONFIG.name} · DOT Compliant`;
+  document.title = `CCBCU | Route Optimizer — ${DC_CONFIG.name}`;
+  renderPhaseInputs();
+  renderTemplateDays();
+  renderDriverRules();
+  updateMetricsAvail();
+  renderMetrics(state.lastResult);
+  renderLoadBucket();
+  if (state.lastResult) {
+    renderWorkload(state.lastResult);
+    renderShoreline(state.lastResult);
+    renderDriverCards(state.lastResult);
+    renderAssignmentsTable(state.lastResult);
+  } else {
+    renderWorkload(null);
+    renderShoreline(null);
+    renderAllDriverCards();
+  }
+  startupAuth(); // async: checks auth, pulls from Supabase, re-renders if needed
+}
+
+init();
+
+// ── Service worker: network-first auto-update ────────────────────────────────
+// Register the network-first SW (sw.js) so getting on the site pulls the newest build
+// automatically — no manual "Reset & Update". When an updated SW takes control we reload
+// once to apply it, but ONLY under three guards so a dispatcher is never yanked mid-shift:
+//   1) there was already a controller (an UPDATE, not a brand-new visitor's first install),
+//   2) at most once per tab session (loop protection if a proxy ever serves a varying sw.js),
+//   3) only shortly after load (fresh-at-open) — the ~24h background SW check that fires while
+//      a tab sits open all day is ignored; that tab keeps working and updates on its next open.
+if ('serviceWorker' in navigator) {
+  const _swLoadTime = Date.now();
+  const _swHadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!_swHadController) return;                                  // new visitor — already fresh
+    if (sessionStorage.getItem('_swReloaded')) return;             // one reload per tab session
+    if (Date.now() - _swLoadTime > 60000) return;                  // late (24h check) — don't yank
+    sessionStorage.setItem('_swReloaded', '1');
+    location.reload();
+  });
+}
+</script>
+<!-- Service worker intentionally removed: file:// protocol does not support SW -->
+</body>
+</html>
+
