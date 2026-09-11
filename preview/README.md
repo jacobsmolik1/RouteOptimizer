@@ -35,7 +35,7 @@ When signing in / switching DCs, pick **Montgomery Test** so you do not touch li
 
 | Path | Role |
 |------|------|
-| `app.part01` … `app.part19` | Baked app chunks (join → `app.html`) |
+| `app.part01` … `app.part37` | Baked app chunks (join → `app.html`) |
 | `join.bat` / `join.sh` | One-click join (Windows / Mac-Linux) — no Python |
 | `app.html` | Full offline app (after join, or if shipped) |
 | `index.html` | Landing page — points to FAST offline path; network fetch is optional only |
