@@ -1,14 +1,26 @@
-# Route Optimizer — REVAMP PREVIEW (real app + packaging)
+# Route Optimizer — REVAMP PREVIEW (offline-first)
 
-This preview loads the **real production Route Optimizer** from `main/index.html` and applies **revamp chrome only** (local `css/revamp.css` + `js/revamp.js`). It is **not** the thin offline stub.
+This preview ships the **real production Route Optimizer** with **revamp packaging chrome** already baked into `app.html` (assembled from `app.part*` files). It is **not** the thin offline stub.
 
 It keeps auth, Supabase, DC switcher, Daily Load Input, templates, generate algorithm, Drivers / History / Settings, print/CSV, multi-DC, etc.
 
 It does **not** replace the production deploy until you choose to promote it. Default live behavior on `main` is unchanged.
 
+## How to open (ZIP) — FAST, no network
+
+1. On GitHub: branch `preview/revamp-dashboard` → **Code** → **Download ZIP**
+2. Unzip and open the `preview` folder
+3. **Windows:** double-click `join.bat`  
+   **Mac / Linux:** run `sh join.sh`
+4. Open `app.html` in Chrome / Edge / Firefox
+
+**No Python. Network is not required** after the ZIP download — the app is already in the part files.
+
+If `app.html` is already present in the folder, you can skip the join step and open it directly.
+
 ## What the packaging changes
 
-Feature-flagged with `REVAMP_PREVIEW = true` (injected into the production script). Implemented as CSS + small JS wrappers — optimizer logic is not rewritten.
+Feature-flagged with `REVAMP_PREVIEW = true`. Implemented as CSS + small JS wrappers — optimizer logic is not rewritten.
 
 1. **UNIFIED test banner hidden** by default (black PREVIEW banner instead)
 2. **Sticky action bar** after generate: **Commit Day** primary, **Re-run** secondary (Generate demoted when a plan exists)
@@ -23,25 +35,16 @@ When signing in / switching DCs, pick **Montgomery Test** so you do not touch li
 
 | Path | Role |
 |------|------|
-| `index.html` | Loader — fetches production `main/index.html`, injects revamp flag + chrome |
-| `css/revamp.css` | Revamp packaging styles |
-| `js/revamp.js` | Packaging wrappers (sticky bar, Needs Attention, card filter) |
+| `app.part01` … `app.part19` | Baked app chunks (join → `app.html`) |
+| `join.bat` / `join.sh` | One-click join (Windows / Mac-Linux) — no Python |
+| `app.html` | Full offline app (after join, or if shipped) |
+| `index.html` | Landing page — points to FAST offline path; network fetch is optional only |
+| `css/revamp.css` | Revamp packaging styles (also inlined in `app.html`) |
+| `js/revamp.js` | Packaging wrappers (also inlined in `app.html`) |
 
-## How to open (ZIP)
+## Optional network fallback
 
-1. On GitHub: branch `preview/revamp-dashboard` → **Code** → **Download ZIP**
-2. Unzip and open `preview/index.html` in Chrome / Edge / Firefox
-3. **Network required once** so the loader can download production `main/index.html` (jsDelivr / raw GitHub). Packaging CSS/JS are local beside `index.html`.
-
-No Python required.
-
-### Optional local server
-
-```bash
-cd preview
-python3 -m http.server 8765
-# then http://localhost:8765/
-```
+`index.html` does **not** auto-fetch from jsDelivr/GitHub. There is an optional “Fetch from network” control only if local parts are missing. Prefer the FAST offline path.
 
 ## Branch note
 
