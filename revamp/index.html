@@ -4523,6 +4523,493 @@ body.revamp-preview #assignments-table tr.phase-group-hdr td {
   line-height: 1.25;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Responsive Wave R1 — 2026-09-16 (packaging only)
+   phone ≤640 · tablet 641–960 · desktop ≥961 (dense Belize preserved)
+   Media queries only tighten small screens; no desktop regression.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Touch / coarse pointer — reduce hover-only affordances */
+@media (hover: none), (pointer: coarse) {
+  body.revamp-preview .run-row .out-btn[onclick*="toggleLock"] {
+    opacity: 0.85 !important;
+    filter: none;
+    pointer-events: auto;
+  }
+  body.revamp-preview .run-row .out-btn[onclick*="toggleLock"].stamped {
+    opacity: 0.9 !important;
+  }
+  body.revamp-preview .run-row .run-move {
+    width: 22px;
+    height: 18px;
+    min-width: 22px;
+  }
+  body.revamp-preview #tab-fleet tbody td.no-print .btn-ghost,
+  body.revamp-preview #tab-fleet tbody td.no-print .btn-danger,
+  body.revamp-preview #tab-fleet .btn-group .btn-ghost,
+  body.revamp-preview #tab-fleet .btn-group .btn-danger {
+    opacity: 0.72;
+  }
+}
+
+/* Phase count steppers (packaging +/-) — wrap always visible; +/- only on phone */
+.revamp-phase-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.revamp-phase-stepper .revamp-step-btn {
+  display: none; /* desktop: input only */
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--revamp-border);
+  background: var(--revamp-page-alt);
+  color: var(--revamp-text);
+  border-radius: var(--revamp-radius-sm);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+.revamp-phase-stepper .revamp-step-btn:focus-visible {
+  outline: 2px solid rgba(230, 29, 43, 0.5);
+  outline-offset: 2px;
+}
+
+/* Header More toggle — packaging; hidden until phone MQ */
+.revamp-hdr-more {
+  display: none;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: var(--revamp-radius-sm);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+}
+.revamp-hdr-more:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+body.revamp-preview.revamp-hdr-utils-open .revamp-hdr-more {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+/* ── Tablet 641–960 ── */
+@media (max-width: 960px) and (min-width: 641px) {
+  body.revamp-preview .driver-cards-grid,
+  body.revamp-preview.has-plan #driver-cards-section .driver-cards-grid,
+  body.revamp-preview #driver-cards-grid.driver-cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  body.revamp-preview.has-plan .revamp-plan-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  body.revamp-preview #assignments-section .tbl-wrap,
+  body.revamp-preview #assignments-section .tbl-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .revamp-sticky-bar {
+    padding: 8px 12px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .revamp-sticky-bar .actions {
+    gap: 6px;
+  }
+  .revamp-filter-tokens {
+    flex-wrap: wrap;
+  }
+}
+
+/* ── Phone ≤640 ── */
+@media (max-width: 640px) {
+  /* Page shell + safe area for sticky thumb bar */
+  body.revamp-preview {
+    padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  body.revamp-preview .stack {
+    padding-left: 10px;
+    padding-right: 10px;
+    gap: 10px;
+  }
+
+  /* Header — compact; DC chip reachable; utilities fold */
+  body.revamp-preview header {
+    height: auto;
+    min-height: 48px;
+    padding: 6px 10px;
+    padding-top: calc(6px + env(safe-area-inset-top, 0px));
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  body.revamp-preview .hdr-logo {
+    padding-right: 8px;
+    gap: 6px;
+  }
+  body.revamp-preview .hdr-logo-badge { display: none; }
+  body.revamp-preview .hdr-title { font-size: 12px; }
+  body.revamp-preview .hdr-sub,
+  body.revamp-preview #revamp-hdr-sub-rest { display: none !important; }
+  body.revamp-preview .revamp-dc-chip,
+  body.revamp-preview .revamp-dc-slot .revamp-dc-chip {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  body.revamp-preview .hdr-settings-btn {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 16px !important;
+  }
+  .revamp-hdr-more { display: inline-flex; align-items: center; justify-content: center; }
+  /* Fold utilities behind More unless open */
+  body.revamp-preview:not(.revamp-hdr-utils-open) header .hdr-date,
+  body.revamp-preview:not(.revamp-hdr-utils-open) header #hdr-day,
+  body.revamp-preview:not(.revamp-hdr-utils-open) header #hdr-dispatchers-btn,
+  body.revamp-preview:not(.revamp-hdr-utils-open) header #hdr-user-email,
+  body.revamp-preview:not(.revamp-hdr-utils-open) header .hdr-user-email,
+  body.revamp-preview:not(.revamp-hdr-utils-open) header #hdr-logout-btn {
+    display: none !important;
+  }
+  body.revamp-preview.revamp-hdr-utils-open header .hdr-right,
+  body.revamp-preview.revamp-hdr-utils-open header .hdr-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 4px;
+  }
+  body.revamp-preview.revamp-hdr-utils-open header .hdr-date,
+  body.revamp-preview.revamp-hdr-utils-open header #hdr-dispatchers-btn,
+  body.revamp-preview.revamp-hdr-utils-open header #hdr-user-email,
+  body.revamp-preview.revamp-hdr-utils-open header #hdr-logout-btn {
+    display: inline-flex !important;
+    opacity: 0.9 !important;
+    font-size: 11px !important;
+    min-height: 36px;
+    align-items: center;
+  }
+
+  /* Tabs — scrollable, thumb-friendly */
+  body.revamp-preview .tabs,
+  body.revamp-preview .tab-bar,
+  body.revamp-preview nav.tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+  body.revamp-preview .tab-btn {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  /* Preview banner — shorter on phone */
+  .revamp-preview-banner {
+    font-size: 9px;
+    padding: 3px 8px;
+    text-align: left;
+  }
+
+  /* ── Daily Load Input / Edit counts — editable, not glance-only ── */
+  body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-row,
+  body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 10px 12px;
+  }
+  body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-label,
+  body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-label {
+    grid-column: 1;
+    font-size: 14px;
+  }
+  /* Steppers + input on second cell */
+  body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-input,
+  body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-input {
+    width: 56px;
+    min-width: 56px;
+    min-height: 44px;
+    font-size: 16px; /* avoid iOS zoom */
+    padding: 8px 6px;
+  }
+  .revamp-phase-stepper {
+    display: inline-flex;
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .revamp-phase-stepper .revamp-step-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+  }
+  /* When advanced on phone, stack secondary controls under label */
+  body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-reorder,
+  body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-time,
+  body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-hrs,
+  body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-buildday-btn {
+    grid-column: 1 / -1;
+  }
+  body.revamp-preview .revamp-edit-counts,
+  body.revamp-preview #input-toggle-btn,
+  body.revamp-preview #revamp-input-advanced-toggle {
+    min-height: 44px !important;
+    min-width: 44px;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+  }
+  .revamp-input-chips {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+  .revamp-input-chips .revamp-edit-counts {
+    width: 100%;
+    justify-content: center;
+  }
+  body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) > .card-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .totals-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Generate — full-width mid-page; sticky owns post-plan actions */
+  body.revamp-preview .btn-generate {
+    width: 100% !important;
+    min-height: 48px;
+    font-size: 15px;
+    padding: 14px 16px;
+  }
+
+  /* Sticky action bar — thumb-friendly, safe-area, stacked */
+  .revamp-sticky-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08) !important;
+  }
+  .revamp-sticky-bar .left {
+    min-width: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .revamp-sticky-bar .actions {
+    margin-left: 0;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .revamp-sticky-bar .btn-rerun,
+  .revamp-sticky-bar .btn-fresh,
+  .revamp-sticky-bar .btn-ghost,
+  .revamp-sticky-bar .btn-commit-primary,
+  .revamp-sticky-bar .btn-open-dashboard {
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+    padding: 10px 8px !important;
+    font-size: 13px !important;
+  }
+  .revamp-sticky-bar .btn-commit-primary {
+    grid-column: 1 / -1;
+    min-height: 48px !important;
+    font-size: 14px !important;
+    padding: 12px 14px !important;
+  }
+  /* Soft sticky (Drivers/History): Open Dashboard full width */
+  body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .actions {
+    grid-template-columns: 1fr;
+  }
+  body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .btn-open-dashboard {
+    grid-column: 1 / -1;
+  }
+  /* Hide Print/CSV on phone sticky to reduce clutter (still in mid/header elsewhere if needed) */
+  .revamp-sticky-bar #revamp-print-btn,
+  .revamp-sticky-bar #revamp-csv-btn {
+    display: none !important;
+  }
+
+  /* Pass-out cards — 1 column */
+  body.revamp-preview .driver-cards-grid,
+  body.revamp-preview.has-plan #driver-cards-section .driver-cards-grid,
+  body.revamp-preview #driver-cards-grid.driver-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Filters — wrap + horizontal scroll fallback */
+  .revamp-cards-toolbar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  .revamp-filter-tokens {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .revamp-filter-token {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+
+  /* Shore Expand + Out — reachable touch targets */
+  body.revamp-preview .driver-card.is-shore .revamp-shore-expand-cta {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  body.revamp-preview .driver-card.is-shore .revamp-shore-footer-cta {
+    min-height: 44px;
+    padding: 12px 10px;
+    font-size: 12px;
+  }
+  body.revamp-preview .run-row .out-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  /* Reorder chevrons — stable size, no thrash (already non-hover layout; enlarge for touch) */
+  body.revamp-preview .run-row .run-reorder {
+    width: 28px;
+    min-width: 28px;
+    max-width: 32px;
+    gap: 4px;
+  }
+  body.revamp-preview .run-row .run-move {
+    width: 28px;
+    height: 22px;
+    min-width: 28px;
+    min-height: 22px;
+  }
+  body.revamp-preview .run-row {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  /* Plan summary — 2-col max on phone */
+  body.revamp-preview.has-plan .revamp-plan-summary {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px;
+    margin: 8px 10px;
+  }
+  body.revamp-preview #plan-quality-panel.revamp-needs {
+    margin: 0 10px 10px;
+  }
+
+  /* Assignments · detailed — horizontal scroll + sticky first column (no 9-col squash) */
+  body.revamp-preview #assignments-section .tbl-wrap,
+  body.revamp-preview #assignments-section .card .tbl-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  body.revamp-preview #assignments-section table,
+  body.revamp-preview #assignments-table {
+    min-width: 720px;
+    width: max-content;
+    max-width: none;
+  }
+  body.revamp-preview #assignments-section thead th:first-child,
+  body.revamp-preview #assignments-section tbody td:first-child,
+  body.revamp-preview #assignments-table thead th:first-child,
+  body.revamp-preview #assignments-table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #f7f7f7;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+  }
+  body.revamp-preview #assignments-section tbody td:first-child,
+  body.revamp-preview #assignments-table tbody td:first-child {
+    background: #ffffff;
+  }
+  body.revamp-preview #assignments-section tbody tr:nth-child(even) td:first-child,
+  body.revamp-preview #assignments-table tbody tr:nth-child(even) td:first-child {
+    background: #fafafa;
+  }
+  body.revamp-preview #assignments-section thead th,
+  body.revamp-preview #assignments-table thead th {
+    text-transform: none !important; /* sentence-case already; lock on phone */
+    white-space: nowrap;
+  }
+  body.revamp-preview #assignments-section .card-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  body.revamp-preview #assignments-section #detail-toggle-btn,
+  body.revamp-preview #assignments-section #revamp-details-toggle {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+
+  /* Needs Attention rows — larger jump targets */
+  body.revamp-preview #plan-quality-panel.revamp-needs .pq-view-driver,
+  body.revamp-preview #plan-quality-panel.revamp-needs a,
+  body.revamp-preview #plan-quality-panel.revamp-needs button {
+    min-height: 40px;
+  }
+
+  /* Settings modal — full-bleed phone */
+  body.revamp-preview #settings-modal .modal,
+  body.revamp-preview .modal {
+    width: 100% !important;
+    max-width: 100vw !important;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  /* Drivers / History tables — scroll */
+  body.revamp-preview #tab-fleet .tbl-wrap,
+  body.revamp-preview #tab-history .tbl-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Desktop ≥961 — explicit preserve dense multi-col (no change vs baseline) */
+@media (min-width: 961px) {
+  body.revamp-preview .driver-cards-grid,
+  body.revamp-preview.has-plan #driver-cards-section .driver-cards-grid {
+    /* prod default is 3-col; leave alone */
+  }
+  .revamp-phase-stepper .revamp-step-btn { display: none !important; }
+  .revamp-hdr-more { display: none !important; }
+}
+
 </style>
 </head>
 <body>
@@ -16476,6 +16963,160 @@ if (false && 'serviceWorker' in navigator) {
   setTimeout(syncHistoryAuditChrome, 0);
   setTimeout(syncHistoryAuditChrome, 800);
   setTimeout(syncHistoryAuditChrome, 2000);
+
+
+  /* ── Responsive Wave R1 (packaging): sticky phone bar / filter wrap / touch steppers ── */
+  function ensureRevampResponsiveR1() {
+    syncRevampViewportClasses();
+    ensureHdrMoreToggle();
+    enhancePhaseSteppers();
+  }
+
+  function syncRevampViewportClasses() {
+    var w = window.innerWidth || document.documentElement.clientWidth || 0;
+    var phone = w <= 640;
+    var tablet = w > 640 && w <= 960;
+    document.body.classList.toggle('revamp-vp-phone', phone);
+    document.body.classList.toggle('revamp-vp-tablet', tablet);
+    document.body.classList.toggle('revamp-vp-desktop', w >= 961);
+    try {
+      var coarse = window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches;
+      document.body.classList.toggle('revamp-touch', !!coarse);
+    } catch (e) {}
+    // Extra bottom padding when sticky visible on phone (cards clear bar)
+    if (phone && document.body.classList.contains('has-plan')) {
+      document.body.style.setProperty('--revamp-sticky-pad', '128px');
+    }
+  }
+
+  function ensureHdrMoreToggle() {
+    var header = document.querySelector('body.revamp-preview header') || document.querySelector('header');
+    if (!header) return;
+    var right = header.querySelector('.hdr-right') || header.querySelector('.hdr-actions') || header;
+    var btn = document.getElementById('revamp-hdr-more');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'revamp-hdr-more';
+      btn.className = 'revamp-hdr-more no-print';
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', 'More header utilities');
+      btn.textContent = 'More';
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var open = document.body.classList.toggle('revamp-hdr-utils-open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.textContent = open ? 'Less' : 'More';
+      });
+      // Prefer after DC chip / settings cluster
+      var settings = header.querySelector('.hdr-settings-btn');
+      if (settings && settings.parentNode) {
+        settings.parentNode.insertBefore(btn, settings.nextSibling);
+      } else if (right) {
+        right.appendChild(btn);
+      } else {
+        header.appendChild(btn);
+      }
+    }
+  }
+
+  function enhancePhaseSteppers() {
+    var root = document.getElementById('phase-inputs');
+    if (!root) return;
+    var inputs = root.querySelectorAll('input.phase-input');
+    for (var i = 0; i < inputs.length; i++) {
+      (function (inp) {
+        if (inp.__revampStepper) return;
+        inp.__revampStepper = true;
+        // Skip if already wrapped
+        if (inp.parentNode && inp.parentNode.classList && inp.parentNode.classList.contains('revamp-phase-stepper')) {
+          return;
+        }
+        var wrap = document.createElement('div');
+        wrap.className = 'revamp-phase-stepper no-print';
+        wrap.setAttribute('data-revamp-r1', '1');
+        var minus = document.createElement('button');
+        minus.type = 'button';
+        minus.className = 'revamp-step-btn';
+        minus.setAttribute('aria-label', 'Decrease load count');
+        minus.textContent = '−';
+        var plus = document.createElement('button');
+        plus.type = 'button';
+        plus.className = 'revamp-step-btn';
+        plus.setAttribute('aria-label', 'Increase load count');
+        plus.textContent = '+';
+        var parent = inp.parentNode;
+        parent.insertBefore(wrap, inp);
+        wrap.appendChild(minus);
+        wrap.appendChild(inp);
+        wrap.appendChild(plus);
+
+        function bump(delta) {
+          var id = inp.id || '';
+          var m = id.match(/phase-input-(\d+)/);
+          var idx = m ? parseInt(m[1], 10) : -1;
+          var cur = Math.max(0, parseInt(inp.value, 10) || 0);
+          var next = Math.max(0, Math.min(99, cur + delta));
+          inp.value = String(next);
+          if (idx >= 0 && typeof window.updateLoad === 'function') {
+            window.updateLoad(idx, next);
+          } else {
+            try {
+              inp.dispatchEvent(new Event('input', { bubbles: true }));
+              inp.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (e2) {}
+          }
+        }
+        minus.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          bump(-1);
+        });
+        plus.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          bump(1);
+        });
+      })(inputs[i]);
+    }
+  }
+
+  // Re-enhance steppers when phase inputs re-render (engine untouched)
+  (function watchPhaseInputsForSteppers() {
+    var root = document.getElementById('phase-inputs');
+    if (!root || root.__revampStepperMo) return;
+    try {
+      var mo = new MutationObserver(function () {
+        enhancePhaseSteppers();
+      });
+      mo.observe(root, { childList: true, subtree: true });
+      root.__revampStepperMo = mo;
+    } catch (e) {}
+  })();
+
+  // Also wrap renderPhaseInputs if present (belt)
+  (function wrapRenderPhaseInputsR1() {
+    var orig = window.renderPhaseInputs;
+    if (typeof orig !== 'function' || orig.__revampR1Steppers) return;
+    var wrapped = function () {
+      var ret = orig.apply(this, arguments);
+      try { enhancePhaseSteppers(); } catch (e) {}
+      return ret;
+    };
+    wrapped.__revampWrapped = true;
+    wrapped.__revampR1Steppers = true;
+    wrapped.__revampOrig = orig.__revampOrig || orig;
+    window.renderPhaseInputs = wrapped;
+  })();
+
+  ensureRevampResponsiveR1();
+  window.addEventListener('resize', function () {
+    syncRevampViewportClasses();
+  });
+  setTimeout(ensureRevampResponsiveR1, 0);
+  setTimeout(ensureRevampResponsiveR1, 400);
+  setTimeout(enhancePhaseSteppers, 800);
 
   console.info('[REVAMP_PREVIEW] packaging layer active - production features unchanged · ready-gate TP#3 · enterprise-audit TP#2 · commit-audit TP#5');
 })();
