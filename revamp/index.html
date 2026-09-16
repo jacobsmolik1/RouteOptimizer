@@ -4661,13 +4661,29 @@ body.revamp-preview.revamp-hdr-utils-open .revamp-hdr-more {
   }
   body.revamp-preview .hdr-logo-badge { display: none; }
   body.revamp-preview .hdr-title { font-size: 12px; }
-  body.revamp-preview .hdr-sub,
+  /* Keep .hdr-sub visible — it hosts the DC chip; only hide DOT rest text */
   body.revamp-preview #revamp-hdr-sub-rest { display: none !important; }
+  body.revamp-preview .hdr-sub {
+    display: inline-flex !important;
+    align-items: center;
+    margin-top: 0 !important;
+    opacity: 1 !important;
+    font-size: inherit;
+  }
+  body.revamp-preview .revamp-dc-slot {
+    display: inline-flex !important;
+    margin-right: 0;
+  }
   body.revamp-preview .revamp-dc-chip,
   body.revamp-preview .revamp-dc-slot .revamp-dc-chip {
+    display: inline-flex !important;
     min-height: 44px;
     padding: 8px 12px;
     font-size: 12px;
+    max-width: min(52vw, 200px);
+  }
+  body.revamp-preview .revamp-dc-chip-name {
+    max-width: min(42vw, 160px);
   }
   body.revamp-preview .hdr-settings-btn {
     width: 44px !important;
