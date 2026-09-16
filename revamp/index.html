@@ -3211,33 +3211,62 @@ body.revamp-preview .run-row:focus-within .out-btn[onclick*="toggleLock"].stampe
   background: var(--revamp-ok-bg) !important;
 }
 
-/* Reorder ▲▼: reserve width always — opacity/visibility fade only (no layout thrash) */
+/* Reorder: always-visible CSS chevrons (no opacity/visibility hover thrash) */
 body.revamp-preview .run-row .run-reorder {
-  opacity: 0;
-  visibility: hidden;
-  width: 18px;
-  min-width: 18px;
-  max-width: 28px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 16px;
+  min-width: 16px;
+  max-width: 18px;
   flex-shrink: 0;
-  overflow: hidden;
-  pointer-events: none;
-  transition: opacity 0.12s ease, visibility 0.12s ease;
-}
-body.revamp-preview .run-row:hover .run-reorder,
-body.revamp-preview .run-row:focus-within .run-reorder {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+  overflow: visible;
 }
 body.revamp-preview .run-row .run-move {
-  border-color: var(--revamp-border-soft);
+  border: 1px solid var(--revamp-border-soft);
   background: var(--revamp-surface);
-  color: var(--revamp-text-muted);
+  color: transparent; /* hide any leftover glyph text */
+  font-size: 0;
+  line-height: 0;
+  width: 14px;
+  height: 11px;
+  padding: 0;
+  border-radius: 2px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+body.revamp-preview .run-row .run-move::before {
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-bottom: 4.5px solid var(--revamp-text-muted);
+}
+body.revamp-preview .run-row .run-move[data-dir="later"]::before {
+  border-bottom: 0;
+  border-top: 4.5px solid var(--revamp-text-muted);
 }
 body.revamp-preview .run-row .run-move:hover {
   background: var(--revamp-red);
   border-color: var(--revamp-red);
-  color: #fff;
+  color: transparent;
+}
+body.revamp-preview .run-row .run-move:hover::before {
+  border-bottom-color: #fff;
+}
+body.revamp-preview .run-row .run-move[data-dir="later"]:hover::before {
+  border-top-color: #fff;
+  border-bottom-color: transparent;
 }
 
 /* Quieter What-if panel title / labels */
@@ -4028,7 +4057,7 @@ body.revamp-preview .revamp-quiet-note__mark {
 }
 body.revamp-preview .revamp-quiet-note__body { flex: 1 1 auto; min-width: 0; }
 body.revamp-preview .revamp-quiet-note__title {
-  font-weight: 650;
+  font-weight: 600;
   color: #52565a;
   margin: 0 0 2px;
 }
@@ -4073,7 +4102,7 @@ body.revamp-preview .revamp-audit-preview-chip {
   background: #f8f9fa;
   color: #89919a;
   font-size: 10px;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: .02em;
   white-space: nowrap;
   cursor: help;
@@ -4106,7 +4135,7 @@ body.revamp-preview .revamp-commit-audit__meta {
   color: #52565a;
 }
 body.revamp-preview .revamp-commit-audit__meta strong {
-  font-weight: 650;
+  font-weight: 600;
   color: #32363a;
 }
 body.revamp-preview .revamp-commit-audit__who {
@@ -4127,7 +4156,7 @@ body.revamp-preview .revamp-audit-chip {
   border: 1px solid #e5e9ec;
   background: #fff;
   font-size: 10px;
-  font-weight: 650;
+  font-weight: 600;
   color: #52565a;
   line-height: 1.4;
 }
@@ -4179,22 +4208,34 @@ body.revamp-preview #assignments-section .card {
   box-shadow: none !important;
   background: var(--revamp-surface);
 }
-body.revamp-preview #assignments-section .card-header {
+body.revamp-preview #assignments-section .card-header,
+body.revamp-preview #assignments-section.revamp-assignments .card-header {
   background: var(--revamp-page-alt) !important;
   border-bottom: 1px solid var(--revamp-border-soft);
+  border-left: 3px solid var(--revamp-red);
   color: var(--revamp-text);
-  padding: 10px 14px;
+  padding: 8px 12px;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.01em;
+  text-transform: none !important; /* kill prod .card-header uppercase */
 }
 body.revamp-preview #assignments-section .card-header .card-title,
-body.revamp-preview #assignments-section .card-title {
+body.revamp-preview #assignments-section .card-title,
+body.revamp-preview #assignments-section .revamp-assignments-title {
   font-size: 13px !important;
   font-weight: 600 !important;
   color: var(--revamp-text) !important;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.01em !important;
   text-transform: none !important;
+}
+body.revamp-preview #assignments-section #revamp-details-toggle,
+body.revamp-preview #revamp-details-toggle {
+  text-transform: none !important;
+  letter-spacing: 0.01em;
+  font-weight: 600;
+  color: var(--revamp-text-secondary);
+  font-size: 12px;
 }
 body.revamp-preview #assignments-section .tbl-wrap {
   border: 0;
@@ -4311,6 +4352,70 @@ body.revamp-preview #dot-compliance-banner,
 body.revamp-preview .warn-banner.dot-banner,
 body.revamp-preview [id*="dot"][class*="banner"] {
   font-variant-emoji: text;
+}
+
+/* ═══ 2026-09-16 Round2 — Jacob screenshot packaging ═══ */
+
+/* Pass-out denser Belize (headers + run rows only; engine untouched) */
+body.revamp-preview .driver-card-header,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header {
+  padding: 5px 8px !important;
+  gap: 6px !important;
+  min-height: 0;
+}
+body.revamp-preview .driver-card-header .drv-name,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-name {
+  font-size: 11px !important;
+  font-weight: 600;
+  line-height: 1.25;
+}
+body.revamp-preview .driver-card-header .drv-base,
+body.revamp-preview .driver-card-header .drv-base span,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-base,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-base span {
+  font-size: 9.5px !important;
+  line-height: 1.25;
+}
+body.revamp-preview .drv-initial,
+body.revamp-preview.has-plan #driver-cards-section .drv-initial {
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 10px !important;
+}
+body.revamp-preview .run-row {
+  padding: 3px 8px !important;
+  gap: 5px !important;
+  min-height: 0;
+}
+body.revamp-preview .run-label {
+  font-size: 8px !important;
+  padding: 1px 4px !important;
+  opacity: 0.78;
+  letter-spacing: 0.03em;
+}
+body.revamp-preview .run-hrs {
+  font-size: 11px !important;
+  font-weight: 700;
+}
+body.revamp-preview .driver-card-footer {
+  padding: 4px 8px !important;
+}
+body.revamp-preview .card-total-hrs {
+  font-size: 10px !important;
+}
+body.revamp-preview .card-dot-status,
+body.revamp-preview .driver-card-footer .card-dot-status {
+  font-size: 9.5px !important;
+  padding: 1px 7px !important;
+  font-variant-emoji: text;
+}
+
+/* Workload toggle — sentence case skin like Details */
+body.revamp-preview #revamp-workload-toggle,
+body.revamp-preview .revamp-workload-toggle {
+  text-transform: none !important;
+  letter-spacing: 0.01em;
+  font-weight: 600;
 }
 
 </style>
@@ -11882,6 +11987,10 @@ if (false && 'serviceWorker' in navigator) {
       .replace(/👆/g, '')
       .replace(/👥/g, '')
       .replace(/⚡/g, '')
+      .replace(/✓/g, '')
+      .replace(/✔/g, '')
+      .replace(/▲/g, '')
+      .replace(/▼/g, '')
       .replace(/[\uFE0F\u200D]/g, '')
       .replace(/[ \t]{2,}/g, ' ');
   }
@@ -12925,17 +13034,39 @@ if (false && 'serviceWorker' in navigator) {
       section.classList.add('revamp-assignments');
       var header = section.querySelector('.card-header');
       if (header) {
+        header.style.textTransform = 'none';
+        header.style.letterSpacing = '0.01em';
+        var titleEl = header.querySelector('.revamp-assignments-title');
+        if (!titleEl) {
+          titleEl = document.createElement('span');
+          titleEl.className = 'revamp-assignments-title';
+          titleEl.textContent = 'Assignments · detailed';
+          var toggle = document.getElementById('revamp-details-toggle');
+          if (toggle && toggle.parentNode === header) {
+            if (toggle.nextSibling) header.insertBefore(titleEl, toggle.nextSibling);
+            else header.appendChild(titleEl);
+          } else {
+            header.insertBefore(titleEl, header.firstChild);
+          }
+        } else {
+          titleEl.textContent = 'Assignments · detailed';
+        }
+        // Strip leftover prod title text nodes / emoji bullets
         Array.prototype.forEach.call(header.childNodes, function (n) {
+          if (n === titleEl) return;
           if (n.nodeType === 3) {
             var tx = (n.nodeValue || '').replace(/\s+/g, ' ').trim();
-            if (/Full Load Assignments|Assignments · detailed/i.test(tx) || /Detailed View/i.test(tx)) {
-              n.nodeValue = ' Assignments · detailed ';
+            if (!tx || /Full Load Assignments|Assignments|Detailed View|ASSIGNMENTS/i.test(tx)) {
+              n.nodeValue = ' ';
             }
-          } else if (n.nodeType === 1 && !n.id && n.tagName !== 'BUTTON' &&
-              !(n.classList && n.classList.contains('revamp-collapse-toggle'))) {
+          } else if (n.nodeType === 1 && n.tagName !== 'BUTTON' &&
+              !(n.classList && (n.classList.contains('revamp-collapse-toggle') ||
+                n.classList.contains('revamp-assignments-title') ||
+                n.id === 'detail-toggle-btn' || n.id === 'revamp-details-toggle'))) {
             var ht = (n.textContent || '').replace(/\s+/g, ' ').trim();
-            if (/Full Load Assignments/i.test(ht) && !n.querySelector('button, input, table')) {
-              n.textContent = 'Assignments · detailed';
+            if (/Full Load Assignments|ASSIGNMENTS|Detailed View/i.test(ht) &&
+                !n.querySelector('button, input, table')) {
+              n.textContent = '';
             }
           }
         });
@@ -12946,6 +13077,12 @@ if (false && 'serviceWorker' in navigator) {
         var cleaned = stripEmojiChars(raw).trim();
         if (/hide/i.test(cleaned)) detBtn.textContent = 'Hide Trailer / Carrier';
         else detBtn.textContent = 'Show Trailer / Carrier';
+      }
+      var detailsToggle = document.getElementById('revamp-details-toggle');
+      if (detailsToggle) {
+        var dtx = (detailsToggle.textContent || '').replace(/\s+/g, ' ').trim();
+        if (/hide/i.test(dtx)) detailsToggle.textContent = 'Hide details';
+        else if (/detail/i.test(dtx) || /▶|▼|▾/.test(dtx)) detailsToggle.textContent = 'Details';
       }
     } catch (eA) {}
   }
@@ -12980,7 +13117,7 @@ if (false && 'serviceWorker' in navigator) {
     wrap.classList.toggle('revamp-collapsed', has && !workloadOpen);
     var toggle = document.getElementById('revamp-workload-toggle');
     if (toggle) {
-      toggle.textContent = (has && !workloadOpen) ? '▶ Driver Workload' : '▼ Driver Workload';
+      toggle.textContent = (has && !workloadOpen) ? 'Driver Workload' : 'Hide workload';
       toggle.setAttribute('aria-expanded', (has && workloadOpen) ? 'true' : 'false');
     }
   }
@@ -14380,6 +14517,7 @@ if (false && 'serviceWorker' in navigator) {
     applyEmptyCardFilter();
     syncEmptyStates();
     try { purgePackagingEmojis(); } catch (eP) {}
+    try { polishRunReorderChrome(); } catch (eR) {}
   });
   wrap('toggleDetailCols', function () {
     try { polishAssignmentsChrome(); } catch (eD) {}
@@ -14720,6 +14858,36 @@ if (false && 'serviceWorker' in navigator) {
     }
   }
 
+  function polishRunReorderChrome() {
+    var grid = document.getElementById('driver-cards-grid');
+    if (!grid) return;
+    Array.prototype.forEach.call(grid.querySelectorAll('.run-row'), function (row) {
+      var tip = row.getAttribute('title') || '';
+      var hasReorder = !!row.querySelector('.run-reorder, .run-move');
+      if (hasReorder || /reorder|reassign|▲|▼/i.test(tip)) {
+        row.setAttribute('title', 'Reorder runs · Click row to reassign');
+      }
+      Array.prototype.forEach.call(row.querySelectorAll('.run-move'), function (btn) {
+        var t = (btn.getAttribute('title') || '') + ' ' + (btn.textContent || '');
+        var later = /later|\+|▼|down/i.test(t) || /moveRun\([^,]+,\s*1\)/.test(btn.getAttribute('onclick') || '') ||
+          /moveAdhoc\([^,]+,\s*1\)/.test(btn.getAttribute('onclick') || '');
+        var earlier = /earlier|-|▲|up/i.test(t) || /moveRun\([^,]+,\s*-1\)/.test(btn.getAttribute('onclick') || '') ||
+          /moveAdhoc\([^,]+,\s*-1\)/.test(btn.getAttribute('onclick') || '');
+        if (later) {
+          btn.setAttribute('data-dir', 'later');
+          btn.setAttribute('title', 'Move later');
+          btn.setAttribute('aria-label', 'Move later');
+        } else if (earlier) {
+          btn.setAttribute('data-dir', 'earlier');
+          btn.setAttribute('title', 'Move earlier');
+          btn.setAttribute('aria-label', 'Move earlier');
+        }
+        // Empty visible text — CSS triangles via ::before
+        if ((btn.textContent || '').trim() !== '') btn.textContent = '';
+      });
+    });
+  }
+
   function polishCardEmojiChrome() {
     var grid = document.getElementById('driver-cards-grid');
     if (!grid) return;
@@ -14737,15 +14905,31 @@ if (false && 'serviceWorker' in navigator) {
         if (btn.textContent !== label) btn.textContent = label;
       } else if (/openOutModal|openBucketOutModal|openAdhocOutModal/.test(oc) || /\bOut\b/i.test(raw)) {
         var stamped = btn.classList.contains('stamped') || /^✓/.test(raw);
-        var next = stamped ? '✓ Out' : 'Out';
+        var next = 'Out'; // plain text; stamped class keeps green chrome
         if (btn.textContent !== next) btn.textContent = next;
+        if (stamped) btn.classList.add('stamped');
       }
+    });
+    // DOT / Near Limit / Over — plain text badges only (no ⚡ ✓ ⚠️)
+    Array.prototype.forEach.call(grid.querySelectorAll('.card-dot-status'), function (el) {
+      if (el.getAttribute('data-revamp-status-calm') === '1') return;
+      var raw = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      var clean = stripEmojiChars(raw).replace(/[✓✔⚡⚠︎⚠️]/g, '').replace(/\s+/g, ' ').trim();
+      var next = clean;
+      if (/over/i.test(clean)) next = 'Over DOT limit';
+      else if (/near/i.test(clean)) next = 'Near Limit';
+      else if (/dot\s*ok|sitting out|^ok$/i.test(clean)) next = /sitting/i.test(clean) ? 'Sitting out' : 'DOT OK';
+      else if (/needs a driver/i.test(clean)) next = 'Needs a driver';
+      else if (/external|drag to reassign/i.test(clean)) next = /drag/i.test(clean) ? 'Drag to reassign' : 'External';
+      else if (/none waiting/i.test(clean)) next = 'None waiting';
+      if (next && el.textContent !== next) el.textContent = next;
     });
     // drv-base locked count emoji
     Array.prototype.forEach.call(grid.querySelectorAll('.driver-card.is-shore .drv-base'), function (el) {
       var t = el.textContent || '';
       if (/🔒|📋|👆/.test(t)) el.textContent = stripEmojiChars(t).replace(/·\s*$/,'').trim();
     });
+    try { polishRunReorderChrome(); } catch (eR) {}
   }
 
   if (!document.documentElement.__revampCardMoreDoc) {
