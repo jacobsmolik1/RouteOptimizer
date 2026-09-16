@@ -4999,13 +4999,106 @@ body.revamp-preview.revamp-hdr-utils-open .revamp-hdr-more {
     min-height: 40px;
   }
 
-  /* Settings modal — full-bleed phone */
+
+/* ═══ Settings exit affordance (mobile + z-index above sticky Commit) ═══ */
+body.revamp-preview #settings-modal.modal-overlay,
+body.revamp-preview #settings-modal {
+  z-index: 10050 !important;
+}
+body.revamp-preview.revamp-settings-open .revamp-sticky-bar {
+  display: none !important;
+}
+body.revamp-preview #settings-modal .settings-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 5 !important;
+  flex-shrink: 0 !important;
+}
+body.revamp-preview #settings-modal .settings-header .modal-close,
+body.revamp-preview #settings-modal .settings-header .revamp-settings-close {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px !important;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18) !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  line-height: 1;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+body.revamp-preview #settings-modal .settings-header .modal-close:hover,
+body.revamp-preview #settings-modal .settings-header .revamp-settings-close:hover {
+  background: rgba(0, 0, 0, 0.28) !important;
+  color: #fff !important;
+}
+body.revamp-preview #settings-modal .settings-section-title {
+  scroll-margin-top: 64px;
+}
+body.revamp-preview #settings-modal .revamp-settings-done {
+  display: none;
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  margin: 16px -18px -28px;
+  padding: 10px 18px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: #fff;
+  border-top: 1px solid #e7e7e7;
+  box-shadow: 0 -4px 16px rgba(50, 54, 58, 0.08);
+}
+body.revamp-preview #settings-modal .revamp-settings-done-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 10px;
+  background: #E61D2B;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+body.revamp-preview #settings-modal .revamp-settings-done-btn:focus-visible {
+  outline: 2px solid rgba(230, 29, 43, 0.55);
+  outline-offset: 2px;
+}
+
+  /* Settings modal — full-bleed phone + sticky exit */
   body.revamp-preview #settings-modal .modal,
   body.revamp-preview .modal {
     width: 100% !important;
     max-width: 100vw !important;
     max-height: 100vh;
     border-radius: 0;
+  }
+  body.revamp-preview #settings-modal .settings-panel {
+    width: 100% !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+  }
+  body.revamp-preview #settings-modal .settings-header {
+    padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: 10px !important;
+  }
+  body.revamp-preview #settings-modal .settings-header .modal-close::before,
+  body.revamp-preview #settings-modal .settings-header .revamp-settings-close::before {
+    content: '←';
+    font-weight: 700;
+    margin-right: 2px;
+  }
+  body.revamp-preview #settings-modal .revamp-settings-done {
+    display: block !important;
+  }
+  body.revamp-preview #settings-modal .settings-body {
+    padding-bottom: 12px !important;
   }
 
   /* Drivers / History tables — scroll */
@@ -14276,7 +14369,7 @@ if (false && 'serviceWorker' in navigator) {
         (modal && modal.querySelector('#dest-tbody'));
       var scroller = body || modal;
       if (target && scroller && typeof target.scrollIntoView === 'function') {
-        try { target.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e2) {
+        try { target.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e2) {
           try { target.scrollIntoView(true); } catch (e3) {}
         }
       } else if (target && scroller) {
@@ -15153,7 +15246,8 @@ if (false && 'serviceWorker' in navigator) {
   });
   wrap('renderPlanQuality', restylePlanQuality);
   wrap('renderDomicileWarnings', restylePlanQuality);
-  wrap('openSettings', function () { try { ensureSettingsQuieting(); } catch (eS) {} });
+  wrap('openSettings', function () { try { ensureSettingsQuieting(); ensureSettingsExitChrome(); syncSettingsOpenClass(); } catch (eS) {} });
+  wrap('closeSettings', function () { try { syncSettingsOpenClass(); } catch (eCl) {} });
   wrap('updateDisabledBanner', function () { restylePlanQuality(); try { syncDcReadyGate(); } catch (e) {} });
   wrap('renderMetrics', updatePlanSummary);
   // S1-2: packaging gate — block Commit while stale banner/body class active
@@ -15951,10 +16045,81 @@ if (false && 'serviceWorker' in navigator) {
     });
   }
 
+
+  function syncSettingsOpenClass() {
+    try {
+      var modal = document.getElementById('settings-modal');
+      var open = !!(modal && modal.classList.contains('open'));
+      document.body.classList.toggle('revamp-settings-open', open);
+    } catch (e) {}
+  }
+
+  function ensureSettingsExitChrome() {
+    try {
+      var modal = document.getElementById('settings-modal');
+      if (!modal) return;
+      syncSettingsOpenClass();
+
+      var closeBtn = modal.querySelector('.settings-header .modal-close, .settings-header .revamp-settings-close');
+      if (closeBtn) {
+        closeBtn.classList.add('revamp-settings-close');
+        closeBtn.setAttribute('aria-label', 'Close settings');
+        closeBtn.setAttribute('title', 'Close settings');
+        var label = (closeBtn.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!label || /^[\u00d7\u2715\u2716xX]$/.test(label)) {
+          closeBtn.textContent = 'Close';
+        }
+        if (closeBtn.getAttribute('data-revamp-close-wired') !== '1') {
+          closeBtn.setAttribute('data-revamp-close-wired', '1');
+          closeBtn.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            try {
+              if (typeof closeSettings === 'function') closeSettings();
+              else modal.classList.remove('open');
+            } catch (eC) { modal.classList.remove('open'); }
+            syncSettingsOpenClass();
+          });
+        }
+      }
+
+      var bodyEl = modal.querySelector('.settings-body');
+      if (bodyEl && !bodyEl.querySelector('.revamp-settings-done')) {
+        var foot = document.createElement('div');
+        foot.className = 'revamp-settings-done no-print';
+        var done = document.createElement('button');
+        done.type = 'button';
+        done.className = 'revamp-settings-done-btn';
+        done.textContent = 'Done';
+        done.setAttribute('aria-label', 'Close settings');
+        done.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          try {
+            if (typeof closeSettings === 'function') closeSettings();
+            else modal.classList.remove('open');
+          } catch (eD) { modal.classList.remove('open'); }
+          syncSettingsOpenClass();
+        });
+        foot.appendChild(done);
+        bodyEl.appendChild(foot);
+      }
+
+      if (modal.getAttribute('data-revamp-settings-obs') !== '1') {
+        modal.setAttribute('data-revamp-settings-obs', '1');
+        try {
+          var mo = new MutationObserver(function () { syncSettingsOpenClass(); });
+          mo.observe(modal, { attributes: true, attributeFilter: ['class'] });
+        } catch (eO) {}
+      }
+    } catch (e) {}
+  }
+
   function quietSettingsChrome() {
     var modal = document.getElementById('settings-modal');
     if (!modal) return;
     modal.classList.add('revamp-settings');
+    try { ensureSettingsExitChrome(); } catch (eExit) {}
     var body = modal.querySelector('.settings-body');
     if (!body) return;
 
