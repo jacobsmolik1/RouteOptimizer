@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCBCU | Route Optimizer — REVAMP PREVIEW</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" onerror="window.__SUPABASE_CDN_FAILED=true"></script>
+<!-- manifest.json intentionally removed: PWA install requires HTTPS, not file:// -->
+<meta name="theme-color" content="#E61D2B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Route Optimizer">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --red:       #E61D2B;
+  --red-dark:  #B2001B;
+  --red-deep:  #820013;
+  --black:     #0A0A0A;
+  --gray-50:   #F5F5F5;
+  --gray-100:  #EBEBEB;
+  --gray-200:  #D4D4D4;
+  --gray-400:  #8C8C8C;
+  --gray-600:  #484848;
+  --white:     #FFFFFF;
+  --green:     #1A7A32;
+  --green-bg:  #E4F5EA;
+  --amber:     #C24400;
+  --amber-bg:  #FFF0E3;
+  --danger:    #C01717;
+  --danger-bg: #FDECEA;
+  --purple:    #4A148C;
+  --purple-bg: #F1E5FB;
+  --blue:      #1557B0;
+  --blue-bg:   #E1EEF9;
+  --radius:    8px;
+  --radius-lg: 12px;
+  --shadow:    0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.13);
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+  background: var(--gray-50);
+  color: var(--black);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────────── */
+header {
+  background: linear-gradient(155deg, var(--red-dark) 0%, var(--red) 58%, #F02535 100%);
+  color: var(--white);
+  height: 66px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 0 var(--red-deep), 0 6px 20px rgba(182,0,27,0.32);
+}
+.hdr-left { display: flex; align-items: center; gap: 16px; }
+.hdr-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  padding-right: 20px;
+  border-right: 1.5px solid rgba(255,255,255,0.22);
+}
+.hdr-logo-badge {
+  background: rgba(255,255,255,0.13);
+  border: 1.5px solid rgba(255,255,255,0.32);
+  color: white;
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: 2px;
+  padding: 5px 9px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.hdr-logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.hdr-logo-coke {
+  color: white;
+  font-weight: 900;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+}
+.hdr-logo-united {
+  color: rgba(255,255,255,0.68);
+  font-weight: 600;
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+.hdr-title { font-size: 15px; font-weight: 800; letter-spacing: 0.1px; }
+.hdr-sub { font-size: 10px; opacity: 0.62; margin-top: 2px; letter-spacing: 0.2px; font-weight: 500; }
+.hdr-right { display: flex; align-items: center; gap: 16px; }
+.hdr-date { text-align: right; font-size: 11px; opacity: 0.72; font-weight: 500; }
+.hdr-date strong { display: block; font-size: 13px; opacity: 1; font-weight: 700; }
+.hdr-settings-btn {
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.hdr-settings-btn:hover { background: rgba(0,0,0,0.32); border-color: rgba(255,255,255,0.4); }
+
+/* ── DC SWITCHER DROPDOWN ──────────────────────────────────────────
