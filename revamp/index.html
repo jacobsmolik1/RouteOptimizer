@@ -4418,6 +4418,111 @@ body.revamp-preview .revamp-workload-toggle {
   font-weight: 600;
 }
 
+/* ═══ 2026-09-16 — FIX_EXPAND_ASSIGN (Shore expand + Assignments table) ═══ */
+
+/* Collapsed shore summary rows: look + feel clickable (JS wires toggleShoreCard) */
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row.revamp-shore-summary,
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row[data-revamp-shore-summary="1"] {
+  cursor: pointer;
+}
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row.revamp-shore-summary:hover,
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row[data-revamp-shore-summary="1"]:hover {
+  background: #f7f5fb;
+}
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row.revamp-shore-summary:focus-visible,
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row[data-revamp-shore-summary="1"]:focus-visible {
+  outline: 2px solid rgba(230, 29, 43, 0.45);
+  outline-offset: 1px;
+}
+
+/* Never CSS-hide expanded shore runs (Out/Lock + drag must remain visible) */
+body.revamp-preview .driver-card.is-shore .driver-card-runs,
+body.revamp-preview .driver-card.is-shore.is-shore-expanded .driver-card-runs {
+  display: block !important;
+  visibility: visible !important;
+  max-height: none !important;
+  overflow: visible !important;
+  opacity: 1 !important;
+}
+
+/* Assignments thead — kill prod uppercase (Jacob ALL CAPS headers) */
+body.revamp-preview #assignments-section thead th,
+body.revamp-preview #assignments-section.revamp-assignments thead th,
+body.revamp-preview #assignments-table thead th {
+  text-transform: none !important;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--revamp-text-secondary) !important;
+  background: #f7f7f7 !important;
+}
+
+/* Repeated col-key band under each destination group — same sentence case */
+body.revamp-preview #assignments-section tr.col-key td,
+body.revamp-preview #assignments-table tr.col-key td {
+  text-transform: none !important;
+  letter-spacing: 0.02em;
+  background: #f7f7f7 !important;
+  color: var(--revamp-text-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 4px 8px !important;
+  border-bottom: 1px solid var(--revamp-border) !important;
+}
+
+/* Shoreline body rows — neutralize purple/pink to Belize neutrals */
+body.revamp-preview #assignments-section tbody tr.row-shore,
+body.revamp-preview #assignments-table tbody tr.row-shore,
+body.revamp-preview #assignments-section tbody tr.row-shore.revamp-zebra-a,
+body.revamp-preview #assignments-table tbody tr.row-shore.revamp-zebra-a {
+  background: #ffffff !important;
+  box-shadow: inset 2px 0 0 #e61d2b; /* thin Coke accent only */
+}
+body.revamp-preview #assignments-section tbody tr.row-shore.revamp-zebra-b,
+body.revamp-preview #assignments-table tbody tr.row-shore.revamp-zebra-b {
+  background: #fafafa !important;
+  box-shadow: inset 2px 0 0 #e61d2b;
+}
+body.revamp-preview #assignments-section tbody tr.row-shore:hover,
+body.revamp-preview #assignments-table tbody tr.row-shore:hover {
+  background: #f5f5f5 !important;
+}
+
+/* Quieter DRIVER cell for Shoreline */
+body.revamp-preview #assignments-section .badge-shore,
+body.revamp-preview #assignments-section .badge-shore.revamp-badge-shore-quiet,
+body.revamp-preview #assignments-table .badge-shore {
+  background: transparent !important;
+  color: var(--revamp-text-secondary) !important;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 0 !important;
+  letter-spacing: 0.02em;
+  font-variant-emoji: text;
+}
+
+/* Tighten assignment body density */
+body.revamp-preview #assignments-section tbody td,
+body.revamp-preview #assignments-table tbody td {
+  padding: 4px 8px !important;
+  font-size: 12px;
+  vertical-align: middle;
+}
+body.revamp-preview #assignments-section thead th,
+body.revamp-preview #assignments-table thead th {
+  padding: 6px 8px !important;
+}
+
+/* Destination group bar — keep Coke red, denser/cleaner */
+body.revamp-preview #assignments-section tr.phase-group-hdr td,
+body.revamp-preview #assignments-table tr.phase-group-hdr td {
+  padding: 3px 8px !important;
+  font-size: 10px !important;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
 </style>
 </head>
 <body>
@@ -13084,6 +13189,24 @@ if (false && 'serviceWorker' in navigator) {
         if (/hide/i.test(dtx)) detailsToggle.textContent = 'Hide details';
         else if (/detail/i.test(dtx) || /▶|▼|▾/.test(dtx)) detailsToggle.textContent = 'Details';
       }
+      // Quiet Shoreline DRIVER cells (drop truck emoji) + zebra classes for CSS
+      var shoreRows = section.querySelectorAll('tbody tr.row-shore');
+      var zi = 0;
+      Array.prototype.forEach.call(shoreRows, function (tr) {
+        tr.classList.toggle('revamp-zebra-b', (zi % 2) === 1);
+        tr.classList.toggle('revamp-zebra-a', (zi % 2) === 0);
+        zi++;
+        Array.prototype.forEach.call(tr.querySelectorAll('.badge-shore'), function (badge) {
+          var raw = (badge.textContent || '').replace(/\s+/g, ' ').trim();
+          var clean = stripEmojiChars(raw).trim();
+          if (clean && clean !== raw) badge.textContent = clean;
+          badge.classList.add('revamp-badge-shore-quiet');
+        });
+      });
+      // Sentence-case repeated col-key labels (prod paints Title Case then CSS uppercases)
+      Array.prototype.forEach.call(section.querySelectorAll('tr.col-key td'), function (td) {
+        td.style.textTransform = 'none';
+      });
     } catch (eA) {}
   }
 
@@ -14799,11 +14922,19 @@ if (false && 'serviceWorker' in navigator) {
     if (!shore) return;
     var expanded = false;
     try { expanded = !!(typeof shoreExpanded !== 'undefined' && shoreExpanded); } catch (e0) {}
-    // DOM fallback: expanded shore has Out buttons
-    if (shore.querySelector('.out-btn[onclick*="openOutModal"], .out-btn[onclick*="openBucketOutModal"]')) {
+    // DOM fallback: expanded shore has Out / Lock buttons or draggable load rows
+    if (shore.querySelector('.out-btn[onclick*="openOutModal"], .out-btn[onclick*="openBucketOutModal"], .out-btn[onclick*="toggleLock"], .run-row[draggable="true"]')) {
       expanded = true;
     }
     shore.classList.toggle('is-shore-expanded', !!expanded);
+
+    function activateShoreExpand(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (typeof toggleShoreCard === 'function') toggleShoreCard();
+    }
 
     var hdr = shore.querySelector('.driver-card-header');
     if (hdr) {
@@ -14856,6 +14987,39 @@ if (false && 'serviceWorker' in navigator) {
         fcta.remove();
       }
     }
+
+    // Collapsed DEST × N summary rows look interactive but had no expand handler —
+    // only header / Expand CTA called toggleShoreCard(). Wire click + keyboard.
+    // When expanded, leave individual load rows alone (Out/Lock + drag-to-reassign).
+    var runs = shore.querySelectorAll('.driver-card-runs .run-row');
+    Array.prototype.forEach.call(runs, function (row) {
+      if (expanded) {
+        row.classList.remove('revamp-shore-summary');
+        row.removeAttribute('data-revamp-shore-summary');
+        if (row.getAttribute('role') === 'button' && !row.getAttribute('draggable')) {
+          row.removeAttribute('role');
+          row.removeAttribute('tabindex');
+        }
+        return;
+      }
+      // Summary rows: no Out/Lock, not draggable, no openReassignModal
+      var isLoad = row.getAttribute('draggable') === 'true' ||
+        !!row.querySelector('.out-btn') ||
+        /openReassignModal|openOutModal|toggleLock/.test(row.getAttribute('onclick') || '');
+      if (isLoad) return;
+      row.classList.add('revamp-shore-summary');
+      row.setAttribute('data-revamp-shore-summary', '1');
+      row.style.cursor = 'pointer';
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
+      row.setAttribute('title', 'Expand to set Out times / drag loads onto drivers');
+      if (row.getAttribute('data-revamp-shore-bound') === '1') return;
+      row.setAttribute('data-revamp-shore-bound', '1');
+      row.addEventListener('click', activateShoreExpand);
+      row.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') activateShoreExpand(e);
+      });
+    });
   }
 
   function polishRunReorderChrome() {
