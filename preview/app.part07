@@ -1,0 +1,229 @@
+r" style="background:var(--black);color:white;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">Daily Load Input<button class="input-toggle-btn" id="input-toggle-btn" onclick="toggleInputCard()">▲ Collapse</button></div><div style="font-size:11px;font-weight:400;opacity:0.6;margin-top:2px;"><span id="phase-count-label">7</span>-phase build order</div>
+        </div>
+        <div id="disabled-loc-banner" class="no-print" style="display:none;align-items:center;gap:8px;background:#fef3c7;color:#92400e;font-size:12px;padding:8px 14px;border-bottom:1px solid #fcd34d;"></div>
+        <div id="phase-inputs"></div>
+        <div class="collapsed-summary" id="collapsed-summary"></div>
+        <div class="totals-bar">
+          <div>
+            <div class="t-label">Total Loads</div>
+            <div class="t-value" id="total-loads-display">0</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="t-label">Est. Drive Time</div>
+            <div class="t-hrs" id="total-hrs-display">0.0 hrs</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Templates -->
+      <div class="card no-print" style="overflow:hidden;">
+        <div class="card-header">
+          Load Templates — By Day of Week
+          <button class="btn btn-ghost btn-sm" onclick="saveTemplate()">💾 Save Today's Counts</button>
+        </div>
+        <div style="padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--gray-400);">Load template:</span>
+          <div id="template-days" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
+      </div>
+
+      <!-- Optimizer tuning toggles moved to Settings → Optimizer Tuning -->
+
+      <!-- Generate Button -->
+      <button class="btn-generate no-print" onclick="generateAssignments()">⚡ Generate Load Assignments</button>
+
+      <!-- Load Bucket (pre-generate manual staging) -->
+      <div id="load-bucket-panel" class="no-print" style="display:none;">
+        <div class="bucket-header">
+          <span class="bucket-title" id="bucket-title">📦 Load Bucket — Drag loads onto a driver card to manually assign</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="bucket-count" id="bucket-count">0 unassigned</span>
+            <button id="bucket-clear-btn" onclick="clearAllBucketAssignments()" style="display:none;font-size:10px;padding:2px 8px;background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger);border-radius:3px;cursor:pointer;" title="Remove all manual assignments">✕ Clear all</button>
+            <button id="bucket-rerun-btn" onclick="rerunRemaining()" style="display:none;font-size:10px;padding:2px 8px;background:var(--danger);color:white;border:none;border-radius:3px;cursor:pointer;font-weight:700;" title="Re-run optimizer to place new loads">⚡ Re-run Generate</button>
+          </div>
+        </div>
+        <div class="bucket-chips" id="bucket-chips"></div>
+      </div>
+
+      <!-- Summary Metrics (post-generate) -->
+      <div id="metrics-grid" style="display:none;">
+        <div class="summary-bar">
+          <div class="summary-tile">
+            <div class="s-val red" id="m-total">—</div>
+            <div class="s-lbl">Total Loads</div>
+            <div class="s-sub" id="m-drivers-used"></div>
+          </div>
+          <div class="summary-tile">
+            <div class="s-val" id="m-internal">—</div>
+            <div class="s-lbl">Internal</div>
+            <div class="s-sub" id="m-internal-pct"></div>
+          </div>
+          <div class="summary-tile">
+            <div class="s-val" id="m-shore">—</div>
+            <div class="s-lbl">External Overflow</div>
+            <div class="s-sub" id="m-shore-pct"></div>
+          </div>
+          <div class="summary-tile">
+            <div class="s-val green" id="m-dot-ok">—</div>
+            <div class="s-lbl">DOT Status</div>
+            <div class="s-sub" id="m-dot-sub"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden metric tiles kept for JS compatibility -->
+      <span id="m-avail" style="display:none;"></span>
+      <span id="m-dot-limit" style="display:none;">10</span>
+
+    </div>
+  </div>
+
+  <!-- Driver Cards (post-generate) -->
+  <div id="driver-cards-section" style="display:none; margin-top:20px;">
+    <div style="max-width:1350px; margin:0 auto;">
+      <div class="card">
+        <div class="card-header">
+          <span>Driver Assignments — Pass-Out Sheet</span>
+          <div class="btn-group no-print">
+            <button class="btn btn-green btn-sm" id="commit-day-btn" onclick="commitToHistory()">📅 Commit Day</button>
+            <button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+            <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇ CSV</button>
+            <button class="btn btn-outline btn-sm" onclick="exportSheet()">📄 Sheet</button>
+            <button class="btn btn-outline btn-sm" onclick="openClearDayModal()">↺ Start Over</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Workload summary -->
+          <div style="margin-bottom:16px;">
+            <div class="flex-between" style="margin-bottom:8px;">
+              <span style="font-size:12px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:0.4px;">Driver Workload</span>
+              <span id="dot-status-summary"></span>
+            </div>
+            <div id="workload-list"><div class="empty-state">Run optimizer to see workload</div></div>
+          </div>
+
+          <!-- External-carrier overflow (if any) -->
+          <div id="shoreline-panel" style="display:none;margin-bottom:16px;">
+            <div style="font-size:12px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">🚛 External Overflow</div>
+            <div id="shoreline-content"></div>
+          </div>
+
+          <!-- Domicile rule violations (if any) -->
+          <div id="domicile-warning-panel" style="display:none;margin-bottom:16px;">
+            <div style="font-size:12px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">⚠ Domicile Rule Violations</div>
+            <div id="domicile-warning-content"></div>
+          </div>
+
+                    <!-- Plan quality summary -->
+          <div id="plan-quality-panel" style="display:none;margin-bottom:16px;">
+            <div style="font-size:12px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">📊 Plan Quality</div>
+            <div id="plan-quality-content"></div>
+          </div>
+
+          <div class="divider"></div>
+          <div id="stale-result-banner" class="no-print" style="margin-bottom:12px;padding:10px 14px;background:var(--danger-bg);border:2px solid var(--danger);border-radius:var(--radius);align-items:center;gap:10px;flex-wrap:wrap;display:none;">
+            <span style="font-size:12px;font-weight:700;color:var(--danger);">⚠ <span id="stale-banner-title">Results may be stale</span></span>
+            <span id="stale-banner-sub" style="font-size:11px;color:var(--gray-600);flex:1;">Something changed since last Generate — current assignments are still valid until you re-run.</span>
+            <button class="btn btn-sm" style="background:var(--danger);color:white;border:none;padding:5px 12px;" onclick="rerunRemaining()">⚡ Re-run (keep committed)</button>
+          </div>
+          <div id="what-if-banner" class="no-print" style="margin-bottom:12px;padding:10px 14px;background:var(--amber-bg);border:2px solid var(--amber);border-radius:var(--radius);align-items:center;gap:10px;flex-wrap:wrap;display:none;">
+            <span style="font-size:12px;font-weight:700;color:var(--amber);">⚡ What-if overrides active</span>
+            <span style="font-size:11px;color:var(--gray-600);flex:1;">Changes apply on next re-run — drag results are still live.</span>
+            <button class="btn btn-sm" style="background:var(--amber);color:white;border:none;padding:5px 12px;" onclick="rerunRemaining()">Re-run with overrides</button>
+            <button class="btn btn-outline btn-sm" onclick="clearAllWhatIf()">Clear all</button>
+          </div>
+          <div class="driver-cards-grid" id="driver-cards-grid"></div>
+        </div>
+        <div class="print-dot-note">
+          ⚖️ DOT COMPLIANCE: All drivers must stay within <strong>10-hour driving limit</strong>. Drivers showing ⚠️ OVER must not be dispatched for additional runs.
+          Generated: <span id="print-gen-time"></span>  •  Coca-Cola Bottling Co. United — Montgomery DC
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Assignments Table (post-generate) -->
+  <div id="assignments-section" style="display:none; margin-top:16px;">
+    <div style="max-width:1350px; margin:0 auto;">
+      <div class="card">
+        <div class="card-header">
+          Full Load Assignments — Detailed View
+          <button class="btn btn-ghost btn-sm no-print" id="detail-toggle-btn" onclick="toggleDetailCols()">📋 Show Trailer / Carrier</button>
+        </div>
+        <div class="tbl-wrap">
+          <table id="assignments-table" class="hide-details">
+            <thead>
+              <tr>
+                <th class="tbl-num">#</th>
+                <th>Build Phase</th>
+                <th>Destination</th>
+                <th class="sortable" onclick="sortAssignments('depart')" title="Sort each location by true departure (when the truck leaves the DC)">Depart <span class="asrt-caret" data-acol="depart"></span></th>
+                <th class="sortable" onclick="sortAssignments('eta')" title="Sort each location by receiver ETA">ETA <span class="asrt-caret" data-acol="eta"></span></th>
+                <th>Miles</th>
+                <th class="sortable" onclick="sortAssignments('hrs')" title="Sort each location by hours">Hrs <span class="asrt-caret" data-acol="hrs"></span></th>
+                <th class="sortable" onclick="sortAssignments('driver')" title="Sort each location by driver">Driver <span class="asrt-caret" data-acol="driver"></span></th>
+                <th class="sortable" onclick="sortAssignments('run')" title="Sort each location by driver run #">Run <span class="asrt-caret" data-acol="run"></span></th>
+                <th class="col-detail">Trailer #</th>
+                <th class="col-detail">Carrier</th>
+                <th class="no-print">Override</th>
+                <th class="no-print">Status</th>
+              </tr>
+            </thead>
+            <tbody id="assignments-tbody"></tbody>
+            <tfoot id="assignments-tfoot"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-dashboard -->
+
+<!-- ═══ TAB: FLEET ══════════════════════════════════════════════════════ -->
+<div id="tab-fleet" class="tab-content">
+  <div style="max-width:1350px; margin:0 auto;">
+    <div class="flex-between" style="margin-bottom:16px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;">Driver Roster</div>
+        <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">Manage drivers, home bases, restrictions, and vacation status.</div>
+      </div>
+      <button class="btn btn-primary no-print" onclick="openAddDriver()">+ Add Driver</button>
+    </div>
+    <div class="warn-banner no-print" style="margin-bottom:12px;">
+      ☀️ Toggle <strong>Vacation</strong> to remove a driver from load assignments. Their loads automatically redirect to the next available driver or external carrier.
+    </div>
+    <div class="card">
+      <div id="driver-rules-panel" style="padding:12px 16px;font-size:12px;border-bottom:1px solid var(--gray-100);background:var(--gray-50);"></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" onclick="sortFleet('name')">Driver Name <span class="sort-caret" data-col="name"></span></th>
+              <th class="sortable" onclick="sortFleet('home')">Home Base <span class="sort-caret" data-col="home"></span></th>
+              <th class="sortable" onclick="sortFleet('restriction')">Restriction <span class="sort-caret" data-col="restriction"></span></th>
+              <th class="sortable text-center" onclick="sortFleet('arrives')">Arrives <span class="sort-caret" data-col="arrives"></span></th>
+              <th class="sortable text-center" onclick="sortFleet('vacation')">Vacation <span class="sort-caret" data-col="vacation"></span></th>
+              <th class="sortable text-center" onclick="sortFleet('status')">Status <span class="sort-caret" data-col="status"></span></th>
+              <th class="no-print">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="fleet-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--gray-400);">Changes take effect on the next Generate run.</div>
+  </div>
+</div><!-- /tab-fleet -->
+
+<!-- ═══ TAB: HISTORY ════════════════════════════════════════════════════ -->
+<div id="tab-history" class="tab-content">
+  <div style="max-width:860px;margin:0 auto;">
+    <div class="flex-between" style="margin-bottom:16px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;">Daily Log</div>
+        <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">Committed days — source for rolling 7-day DOT hour tracking.</div>
+      </div>
+      <button class="btn btn-danger btn-sm no-print" onclick="clearHistory()">🗑 Clear Log</button>
+    </div>
+    <div id="history-content" class="stac
