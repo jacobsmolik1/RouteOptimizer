@@ -1,0 +1,7 @@
+{
+  "entry": "app.html",
+  "sha256_app_html": "919876baf4a681174ac1b324b344443c5b0181328a90782b6c17a66a2fd49c9d",
+  "bytes": 820036,
+  "note": "RESPONSIVE_R1: phone\u2264640 Generate+load counts+sticky; tablet 2-col; desktop dense preserved",
+  "updated": "2026-09-16T21:57:49Z"
+}
