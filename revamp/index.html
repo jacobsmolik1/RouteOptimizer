@@ -29,7 +29,7 @@
     for (var i = 1; i <= PARTS; i++) {
       status.textContent = 'Fetching part ' + i + ' / ' + PARTS;
       var name = './parts/p' + String(i).padStart(2, '0') + '.part';
-      var res = await fetch(name + '?v=20260916b', { cache: 'no-store' });
+      var res = await fetch(name + '?v=20260916d', { cache: 'no-store' });
       if (!res.ok) throw new Error(name + ' HTTP ' + res.status);
       texts.push(await res.text());
     }
