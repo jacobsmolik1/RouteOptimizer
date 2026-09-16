@@ -3,46 +3,85 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CCBCU | Route Optimizer — REVAMP PREVIEW (loading…)</title>
+<title>CCBCU | Route Optimizer — REVAMP PREVIEW</title>
 <style>
   html,body{margin:0;font-family:Inter,system-ui,sans-serif;background:#F8F9FC;color:#1a1a1a}
-  .wrap{max-width:420px;margin:18vh auto;padding:24px;background:#fff;border:1px solid #E2E5EF;border-radius:12px;text-align:center}
+  .wrap{max-width:520px;margin:12vh auto;padding:28px;background:#fff;border:1px solid #E2E5EF;border-radius:12px;box-shadow:0 4px 16px rgba(26,32,64,.08)}
+  .badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;color:#0B5FFF;background:#E8F0FF;padding:3px 8px;border-radius:999px;margin-bottom:12px}
+  h1{font-size:20px;margin:0 0 8px}
+  p{font-size:14px;color:#4A5168;line-height:1.5;margin:0 0 12px}
+  code{font-size:12px;background:#EEF0F5;padding:2px 6px;border-radius:4px}
   .spin{width:28px;height:28px;border:3px solid #E2E5EF;border-top-color:#E61D2B;border-radius:50%;margin:0 auto 14px;animation:s .7s linear infinite}
   @keyframes s{to{transform:rotate(360deg)}}
-  .err{color:#C41824;font-size:13px;margin-top:12px}
+  .err{color:#C41824;font-size:13px;margin-top:12px;display:none}
+  .note{font-size:12px;color:#6B7394;margin-top:16px}
+  ol{margin:0;padding-left:20px;color:#4A5168;font-size:13px;line-height:1.55}
 </style>
 </head>
 <body>
 <div class="wrap" id="boot">
-  <div class="spin"></div>
-  <div style="font-weight:700">Loading REVAMP PREVIEW…</div>
-  <div id="status" style="font-size:12px;color:#6B7394;margin-top:8px">Fetching packaged app</div>
-  <div class="err" id="err" hidden></div>
+  <div class="badge">REVAMP PREVIEW · GITHUB PAGES</div>
+  <div class="spin" id="spin"></div>
+  <h1>Loading REVAMP PREVIEW…</h1>
+  <p id="status">Fetching packaged production app (jsDelivr) and enabling preview mode.</p>
+  <div class="err" id="err"></div>
+  <div class="note" id="hint" hidden>
+    <p><strong>Full Wave3 bake not yet on this branch.</strong> To publish the local <code>app.html</code> (~765KB) as this entry:</p>
+    <ol>
+      <li>Open <code>gh-pages</code> → <code>revamp/</code> in the GitHub UI</li>
+      <li>Upload / replace <code>index.html</code> with your baked <code>app.html</code></li>
+      <li>Hard-refresh this page</li>
+    </ol>
+  </div>
 </div>
 <script>
 (async function () {
-  var PARTS = 53;
   var status = document.getElementById('status');
-  var errEl = document.getElementById('err');
+  var err = document.getElementById('err');
+  var hint = document.getElementById('hint');
+  var SOURCES = [
+    'https://cdn.jsdelivr.net/gh/jacobsmolik1/RouteOptimizer@main/index.html',
+    'https://raw.githubusercontent.com/jacobsmolik1/RouteOptimizer/main/index.html'
+  ];
   try {
-    var texts = [];
-    for (var i = 1; i <= PARTS; i++) {
-      status.textContent = 'Fetching part ' + i + ' / ' + PARTS;
-      var name = './parts/p' + String(i).padStart(2, '0') + '.part';
-      var res = await fetch(name + '?v=20260916e', { cache: 'no-store' });
-      if (!res.ok) throw new Error(name + ' HTTP ' + res.status);
-      texts.push(await res.text());
+    var html = null, lastErr = null;
+    for (var i = 0; i < SOURCES.length; i++) {
+      status.textContent = 'Fetching ' + SOURCES[i].split('/')[2] + '…';
+      try {
+        var res = await fetch(SOURCES[i] + '?revamp=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        html = await res.text();
+        if (!html || html.length < 10000) throw new Error('short payload');
+        break;
+      } catch (e) { lastErr = e; html = null; }
     }
-    status.textContent = 'Assembling…';
-    var html = texts.join('');
-    if (html.length < 100000) throw new Error('assembled payload too short: ' + html.length);
+    if (!html) throw lastErr || new Error('fetch failed');
+    html = html.replace(/<title>[^<]*<\/title>/, '<title>CCBCU | Route Optimizer — REVAMP PREVIEW</title>');
+    if (html.indexOf('REVAMP_PREVIEW') === -1) {
+      var marker = '<' + 'script>';
+      var idx = -1, searchFrom = 0;
+      while (true) {
+        var at = html.indexOf(marker, searchFrom);
+        if (at < 0) break;
+        var tagEnd = html.indexOf('>', at);
+        var openTag = html.substring(at, tagEnd + 1);
+        if (openTag.indexOf('src=') === -1) { idx = tagEnd + 1; break; }
+        searchFrom = tagEnd + 1;
+      }
+      if (idx > 0) {
+        html = html.slice(0, idx) + '\nconst REVAMP_PREVIEW = true;\nwindow.REVAMP_PREVIEW = true;\n' + html.slice(idx);
+      }
+    }
+    status.textContent = 'Starting preview…';
     document.open();
     document.write(html);
     document.close();
   } catch (e) {
-    errEl.hidden = false;
-    errEl.textContent = String(e && e.message ? e.message : e);
-    status.textContent = 'Failed to load preview';
+    document.getElementById('spin').style.display = 'none';
+    err.style.display = 'block';
+    err.textContent = String(e && e.message ? e.message : e);
+    status.textContent = 'Could not auto-load preview';
+    hint.hidden = false;
   }
 })();
 </script>
