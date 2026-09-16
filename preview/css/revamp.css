@@ -1,0 +1,4150 @@
+/* REVAMP PREVIEW chrome (packaging only) — SAP Belize × Coca-Cola */
+:root {
+  /* Brand */
+  --revamp-red: #E61D2B;
+  --revamp-red-dark: #C41220;
+  --revamp-navy: #354a5f;          /* Belize dark slate (driver headers) */
+  --revamp-coke-navy: #001F5B;     /* legacy Coke navy for info tags */
+
+  /* Belize shell surfaces */
+  --revamp-page: #f5f6f7;
+  --revamp-page-alt: #eff1f2;
+  --revamp-surface: #ffffff;
+  --revamp-border: #d9d9d9;
+  --revamp-border-soft: #e5e9ec;
+
+  /* Belize text */
+  --revamp-text: #32363a;
+  --revamp-text-secondary: #6a6d70;
+  --revamp-text-muted: #89919a;
+
+  /* Semantic */
+  --revamp-ok: #107e3e;
+  --revamp-ok-bg: #f1faf5;
+  --revamp-warn-bg: #fffbeb;
+  --revamp-warn-border: #f5e6c8;
+  --revamp-warn-text: #9a7b2f;
+  --revamp-warn-pill: #f8efd6;
+
+  /* Rhythm */
+  --revamp-radius: 8px;
+  --revamp-radius-sm: 4px;
+  --revamp-space: 0.625rem;
+
+  /* Legacy aliases (keep older selectors working) */
+  --revamp-gray-50: var(--revamp-page);
+  --revamp-gray-100: var(--revamp-page-alt);
+  --revamp-gray-200: var(--revamp-border);
+  --revamp-gray-400: var(--revamp-text-muted);
+  --revamp-gray-600: var(--revamp-text-secondary);
+}
+
+/* ── Page shell ── */
+body.revamp-preview {
+  padding-bottom: 80px;
+  background: var(--revamp-page) !important;
+  color: var(--revamp-text);
+}
+body.revamp-preview .test-banner { display: none !important; }
+body.revamp-preview #tab-dashboard,
+body.revamp-preview #tab-fleet,
+body.revamp-preview #tab-history {
+  background: transparent;
+}
+
+/* Preview banner — short near-white strip; don't compete with header */
+.revamp-preview-banner {
+  background: #fafbfc;
+  color: var(--revamp-text-muted);
+  text-align: center;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  padding: 2px 12px;
+  position: relative;
+  z-index: 10001;
+  border-bottom: 1px solid var(--revamp-border-soft);
+  line-height: 1.35;
+}
+.revamp-preview-banner span { color: var(--revamp-text-secondary); font-weight: 600; }
+
+/* ── Header: Coke red brand bar (quieter weight) ── */
+body.revamp-preview header {
+  height: 46px;
+  padding: 0 16px;
+  background: var(--revamp-red) !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid var(--revamp-red-dark);
+}
+body.revamp-preview .hdr-logo {
+  gap: 10px;
+  padding-right: 16px;
+  border-right-color: rgba(255, 255, 255, 0.28);
+}
+body.revamp-preview .hdr-logo-badge {
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--revamp-radius-sm);
+  padding: 3px 7px;
+  font-size: 8px;
+}
+body.revamp-preview .hdr-logo-coke {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+body.revamp-preview .hdr-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+body.revamp-preview .hdr-settings-btn {
+  width: 28px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+body.revamp-preview .hdr-settings-btn:hover {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+/* Header DC chip — primary DC switcher (calls toggleDCSwitcher) */
+.revamp-dc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 999px;
+  padding: 4px 11px 4px 12px;
+  font-weight: 700;
+  font-size: 12.5px;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  vertical-align: middle;
+  margin-right: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+.revamp-dc-chip:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.22);
+}
+.revamp-dc-chip:focus-visible {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.65);
+  outline: 2px solid rgba(230, 29, 43, 0.55);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+}
+.revamp-dc-chip.is-open {
+  background: rgba(255, 255, 255, 0.32);
+  border-color: rgba(255, 255, 255, 0.72);
+}
+.revamp-dc-chip-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.revamp-dc-chip-chevron {
+  font-size: 9px;
+  opacity: 0.85;
+  line-height: 1;
+  transform: translateY(-0.5px);
+}
+.revamp-dc-chip.is-open .revamp-dc-chip-chevron {
+  opacity: 1;
+}
+/* Slot hosts chip + dropdown (moved from #dc-switcher) */
+body.revamp-preview .revamp-dc-slot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+body.revamp-preview .revamp-dc-slot .revamp-dc-chip {
+  margin-right: 0;
+}
+body.revamp-preview .revamp-dc-slot #dc-switcher-dropdown {
+  top: calc(100% + 6px);
+  left: 0;
+  right: auto;
+  min-width: 200px;
+}
+/* Demote redundant ⇄ — chip owns switching */
+body.revamp-preview #dc-switcher > .hdr-settings-btn,
+body.revamp-preview #dc-switcher.revamp-dc-switcher-demoted {
+  display: none !important;
+}
+body.revamp-preview .hdr-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  opacity: 1;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+}
+body.revamp-preview #revamp-hdr-sub-rest {
+  opacity: 0.7;
+  font-weight: 500;
+  font-size: 10px;
+}
+/* Quieter header utility cluster */
+body.revamp-preview header .hdr-right,
+body.revamp-preview header .hdr-actions,
+body.revamp-preview header .header-right {
+  gap: 8px;
+  opacity: 1;
+}
+body.revamp-preview header .hdr-right .btn,
+body.revamp-preview header .hdr-actions .btn {
+  padding: 3px 7px;
+  font-size: 10px;
+  box-shadow: none !important;
+  filter: none !important;
+}
+body.revamp-preview #hdr-dispatchers-btn,
+body.revamp-preview #hdr-logout-btn {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: rgba(255, 255, 255, 0.48) !important;
+  font-size: 9.5px !important;
+  font-weight: 500 !important;
+  padding: 2px 3px !important;
+  height: auto !important;
+  width: auto !important;
+  border-radius: 3px !important;
+  opacity: 0.78;
+  letter-spacing: 0.01em;
+}
+body.revamp-preview #hdr-dispatchers-btn:hover,
+body.revamp-preview #hdr-logout-btn:hover {
+  color: rgba(255, 255, 255, 0.88) !important;
+  background: rgba(0, 0, 0, 0.10) !important;
+  opacity: 1;
+}
+body.revamp-preview .hdr-date,
+body.revamp-preview header .hdr-date {
+  opacity: 0.42 !important;
+  font-size: 9.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.2;
+}
+body.revamp-preview .hdr-date strong,
+body.revamp-preview #hdr-date {
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  opacity: 0.75 !important;
+}
+body.revamp-preview #hdr-day {
+  opacity: 0.65;
+  font-size: 9px !important;
+}
+body.revamp-preview #hdr-user-email,
+body.revamp-preview .hdr-user-email {
+  opacity: 0.42 !important;
+  font-size: 9.5px !important;
+  font-weight: 500 !important;
+  max-width: 130px;
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+body.revamp-preview .hdr-settings-btn {
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 13px !important;
+  background: rgba(0, 0, 0, 0.10) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  opacity: 0.85;
+}
+body.revamp-preview .hdr-settings-btn:hover {
+  background: rgba(0, 0, 0, 0.20) !important;
+  opacity: 1;
+}
+
+/* ── Tabs: underline active in red, muted inactive ── */
+body.revamp-preview .tab-bar {
+  background: var(--revamp-surface);
+  border-bottom: 1px solid var(--revamp-border);
+  box-shadow: none;
+  padding: 0 20px;
+}
+body.revamp-preview .tab-btn {
+  color: var(--revamp-text-secondary);
+  font-weight: 600;
+  font-size: 11.5px;
+  padding: 12px 16px;
+  border-bottom-width: 2px;
+  letter-spacing: 0.04em;
+  background: transparent;
+  border-radius: 0;
+}
+body.revamp-preview .tab-btn:hover {
+  color: var(--revamp-text);
+  background: transparent;
+}
+body.revamp-preview .tab-btn.active {
+  color: var(--revamp-red);
+  border-bottom-color: var(--revamp-red);
+  font-weight: 700;
+  background: transparent;
+  border-radius: 0;
+}
+
+/* Soft-scope production cards / stack / tables / buttons */
+body.revamp-preview .card {
+  border-radius: var(--revamp-radius);
+  border-color: var(--revamp-border);
+  box-shadow: none;
+}
+body.revamp-preview .card-header {
+  border-left-width: 2px;
+  border-left-color: var(--revamp-red);
+  border-bottom-color: var(--revamp-border-soft);
+  color: var(--revamp-text-muted);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 10px 14px;
+}
+body.revamp-preview .stack {
+  gap: 14px;
+}
+body.revamp-preview .tab-content {
+  padding: 16px 20px 28px;
+}
+body.revamp-preview table,
+body.revamp-preview .tbl,
+body.revamp-preview .tbl-wrap table {
+  border-color: var(--revamp-border);
+}
+body.revamp-preview th {
+  color: var(--revamp-text-secondary);
+  font-weight: 700;
+  background: var(--revamp-page-alt);
+}
+body.revamp-preview td {
+  color: var(--revamp-text);
+  border-color: var(--revamp-border-soft);
+}
+body.revamp-preview .btn {
+  border-radius: var(--revamp-radius);
+  box-shadow: none !important;
+  font-weight: 600;
+  filter: none;
+}
+body.revamp-preview .btn-primary,
+body.revamp-preview .btn-generate {
+  background: var(--revamp-red);
+  border: 1px solid var(--revamp-red);
+  color: #fff;
+  box-shadow: none !important;
+  filter: none;
+}
+body.revamp-preview .btn-primary:hover,
+body.revamp-preview .btn-generate:hover {
+  box-shadow: none !important;
+  filter: none;
+}
+body.revamp-preview .btn-secondary,
+body.revamp-preview .btn-outline {
+  background: var(--revamp-surface);
+  border: 1px solid var(--revamp-border);
+  color: var(--revamp-text);
+}
+body.revamp-preview .btn-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--revamp-text-secondary);
+  box-shadow: none;
+}
+
+/* ── Collapsed Daily Load Input — quiet white chip card only ── */
+body.revamp-preview.revamp-input-compact .input-card-collapsed {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  overflow: visible;
+}
+body.revamp-preview.revamp-input-compact .input-card-collapsed > .card-header {
+  display: none !important;
+}
+body.revamp-preview.revamp-input-compact .input-card-collapsed #phase-inputs,
+body.revamp-preview.revamp-input-compact .input-card-collapsed .totals-bar,
+body.revamp-preview.revamp-input-compact .input-card-collapsed #collapsed-summary,
+body.revamp-preview.revamp-input-compact .input-card-collapsed .collapsed-summary,
+body.revamp-preview.revamp-input-compact .input-card-collapsed #input-toggle-btn,
+body.revamp-preview.revamp-input-compact .input-card-collapsed #disabled-loc-banner,
+body.revamp-preview.revamp-input-compact .input-card-collapsed .revamp-input-advanced-toggle {
+  display: none !important;
+}
+body.revamp-preview.revamp-input-compact .input-card-collapsed .card-header > div:last-child {
+  display: none;
+}
+/* Never show production collapsed-summary chips when has-plan (revamp chips own this) */
+body.revamp-preview.has-plan #collapsed-summary,
+body.revamp-preview.has-plan .collapsed-summary {
+  display: none !important;
+}
+
+.revamp-input-chips {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: #ffffff;
+  border: 1px solid var(--revamp-border);
+  border-radius: var(--revamp-radius);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  font-size: 12px;
+  color: var(--revamp-text-secondary);
+}
+.revamp-input-chips.is-visible { display: flex; }
+.revamp-input-chips .revamp-chips-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.revamp-input-chips .revamp-chips-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--revamp-text);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.revamp-input-chips .revamp-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.revamp-input-chips .revamp-chip {
+  background: var(--revamp-page-alt);
+  border: 1px solid var(--revamp-border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--revamp-text);
+}
+.revamp-input-chips .revamp-chip.em {
+  background: #fff7f7;
+  border-color: #f0d0d3;
+  color: #c41220;
+  font-weight: 600;
+}
+.revamp-input-chips .revamp-edit-counts {
+  background: #E61D2B;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: none;
+  text-decoration: none;
+}
+.revamp-input-chips .revamp-edit-counts:hover {
+  background: #C41220;
+  text-decoration: none;
+  filter: none;
+}
+.revamp-input-chips .revamp-chip-text { display: none; }
+
+/* ── Expanded Daily Load Input (Edit counts) — Belize slim editor ── */
+body.revamp-preview #tab-dashboard .stack > .card:first-child,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) {
+  background: #ffffff !important;
+  border: 1px solid var(--revamp-border) !important;
+  border-radius: var(--revamp-radius) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+/* Header chrome only while editing counts — never when compact chips show */
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) > .card-header {
+  background: #ffffff !important;
+  color: var(--revamp-text) !important;
+  border-bottom: 1px solid var(--revamp-border) !important;
+  border-left: none !important;
+  padding: 12px 16px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) > .card-header > div:last-child {
+  display: none !important;
+}
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) > .card-header > div:first-child {
+  display: flex !important;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--revamp-text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* Compact: force-hide header even if other rules fight */
+body.revamp-preview.revamp-input-compact .input-card-collapsed > .card-header {
+  display: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+/* Ghost Done / Collapse */
+body.revamp-preview #input-toggle-btn {
+  background: transparent !important;
+  border: 1px solid var(--revamp-border) !important;
+  color: var(--revamp-text-secondary) !important;
+  border-radius: var(--revamp-radius-sm) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 4px 12px !important;
+  box-shadow: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+body.revamp-preview #input-toggle-btn:hover {
+  border-color: var(--revamp-text-muted) !important;
+  color: var(--revamp-text) !important;
+  background: var(--revamp-page-alt) !important;
+}
+
+/* Slim phase rows — label + count + warn primary */
+body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-row,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-row {
+  padding: 10px 16px;
+  gap: 10px;
+  border-bottom: 1px solid var(--revamp-border-soft);
+  background: #ffffff;
+}
+body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-label,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-label {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--revamp-text);
+  min-width: 0;
+}
+body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-input,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-input {
+  width: 64px;
+  padding: 7px 8px;
+  border: 1px solid var(--revamp-border);
+  border-radius: var(--revamp-radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--revamp-text);
+  background: #ffffff;
+  box-shadow: none;
+}
+body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-input:focus,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-input:focus {
+  outline: none;
+  border-color: var(--revamp-red);
+  background: #ffffff;
+}
+
+/* Demote secondary controls (default collapsed in editing / first card) */
+body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-num,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-num,
+body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-reorder,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-reorder,
+body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-time,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-time,
+body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-hrs,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-hrs,
+body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-buildday-btn,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-buildday-btn {
+  display: none !important;
+}
+/* Advanced disclosure reveals demoted controls */
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:first-child .phase-reorder,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-reorder,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:first-child .phase-time,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-time,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:first-child .phase-hrs,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-hrs,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:first-child .phase-buildday-btn,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-buildday-btn {
+  display: flex !important;
+}
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:first-child .phase-buildday-btn,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-buildday-btn {
+  display: inline-flex !important;
+}
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:first-child .phase-time,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-time,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:first-child .phase-hrs,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-hrs {
+  display: inline-block !important;
+}
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:first-child .phase-reorder,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-reorder {
+  opacity: 0.45;
+  transform: scale(0.9);
+}
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:first-child .phase-time,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-time {
+  width: 78px;
+  padding: 4px 6px;
+  font-size: 11px;
+  border: 1px solid var(--revamp-border);
+  border-radius: var(--revamp-radius-sm);
+  color: var(--revamp-text-secondary);
+  background: var(--revamp-page-alt);
+}
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:first-child .phase-hrs,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-hrs {
+  font-size: 11px;
+  color: var(--revamp-text-muted);
+}
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:first-child .phase-buildday-btn,
+body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-buildday-btn {
+  font-size: 10px;
+  opacity: 0.85;
+  border-color: var(--revamp-border);
+  color: var(--revamp-text-secondary);
+  background: #ffffff;
+}
+
+.revamp-input-advanced-toggle {
+  display: none;
+  border: 0;
+  background: transparent;
+  color: var(--revamp-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 4px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  box-shadow: none !important;
+}
+body.revamp-preview.revamp-input-editing .revamp-input-advanced-toggle {
+  display: inline-block;
+}
+body.revamp-preview.revamp-input-advanced .revamp-input-advanced-toggle {
+  color: var(--revamp-text-secondary);
+}
+
+/* Quiet light-gray totals footer (not black bar) */
+body.revamp-preview #tab-dashboard .stack > .card:first-child .totals-bar,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .totals-bar {
+  background: var(--revamp-page) !important;
+  border-top: 1px solid var(--revamp-border);
+  border-radius: 0 !important;
+  padding: 10px 16px;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 0;
+  flex-wrap: wrap;
+}
+body.revamp-preview #tab-dashboard .stack > .card:first-child .totals-bar > div,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .totals-bar > div {
+  display: contents;
+}
+body.revamp-preview #tab-dashboard .stack > .card:first-child .totals-bar .t-label,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .totals-bar .t-label {
+  display: none !important;
+}
+body.revamp-preview #tab-dashboard .stack > .card:first-child .totals-bar .t-value,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .totals-bar .t-value {
+  color: var(--revamp-text-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+body.revamp-preview #tab-dashboard .stack > .card:first-child .totals-bar .t-value::after,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .totals-bar .t-value::after {
+  content: ' loads';
+  font-weight: 500;
+}
+body.revamp-preview #tab-dashboard .stack > .card:first-child .totals-bar .t-hrs,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .totals-bar .t-hrs {
+  color: var(--revamp-text-muted) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+body.revamp-preview #tab-dashboard .stack > .card:first-child .totals-bar .t-hrs::before,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .totals-bar .t-hrs::before {
+  content: ' · ~';
+}
+
+/* disabled-loc: hidden when has-plan unless editing — see harden rule at file end */
+
+/* ── 4-up metrics — flat Belize object-page tiles ── */
+.revamp-plan-summary {
+  display: none;
+  max-width: 1350px;
+  margin: 14px auto 10px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 12px;
+  flex-wrap: nowrap;
+  font-size: 12px;
+  color: var(--revamp-text-secondary);
+  grid-template-columns: repeat(4, 1fr);
+}
+body.revamp-preview.has-plan .revamp-plan-summary {
+  display: grid;
+}
+.revamp-plan-summary .rps-item,
+.revamp-plan-summary .metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0;
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: left;
+  background: var(--revamp-surface);
+  border: 1px solid var(--revamp-border);
+  border-radius: var(--revamp-radius);
+  padding: 14px 16px;
+  box-shadow: none;
+}
+.revamp-plan-summary .rps-lbl,
+.revamp-plan-summary .metric .label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--revamp-text-muted);
+  text-transform: uppercase;
+  order: 0;
+  opacity: 0.9;
+}
+.revamp-plan-summary .rps-val,
+.revamp-plan-summary .metric .value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--revamp-text);
+  line-height: 1.2;
+  margin-top: 6px;
+  order: 1;
+}
+.revamp-plan-summary .rps-val.rps-ok,
+.revamp-plan-summary .metric.good .value { color: var(--revamp-ok); }
+.revamp-plan-summary .rps-val.rps-warn { color: var(--revamp-red); }
+.revamp-plan-summary .rps-hint,
+.revamp-plan-summary .metric .hint {
+  font-size: 11px;
+  color: var(--revamp-text-secondary);
+  margin-top: 2px;
+  font-weight: 500;
+  order: 2;
+}
+.revamp-plan-summary .rps-sep { display: none !important; }
+
+@media (max-width: 720px) {
+  body.revamp-preview.has-plan .revamp-plan-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+body.revamp-preview.has-plan #metrics-grid {
+  display: none !important;
+}
+
+/* Tuck Templates + Manual Assignments / load-bucket when has-plan */
+.revamp-setup-tuck { display: none !important; }
+.revamp-setup-untuck {
+  display: none;
+  background: transparent;
+  border: 0;
+  color: var(--revamp-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0 8px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.revamp-setup-untuck.is-visible { display: inline-block; }
+.revamp-setup-untuck:hover { color: var(--revamp-text); }
+
+/* ── Needs Attention — quiet pale amber strip (biggest quiet-down) ── */
+body.revamp-preview #plan-quality-panel.revamp-needs {
+  display: none;
+  max-width: 1350px;
+  margin: 0 auto 12px;
+  background: var(--revamp-warn-bg);
+  border: 1px solid var(--revamp-warn-border);
+  border-radius: var(--revamp-radius-sm);
+  overflow: hidden;
+  box-shadow: none;
+  padding: 0;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs.is-visible { display: block !important; }
+body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd .needs-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--revamp-warn-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: none; /* quieter sentence-case: Needs attention */
+}
+/* Fiori Message Strip lite — calm warning glyph (not loud alert) */
+body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd .needs-strip-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: #b8953a;
+  opacity: 0.88;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd .needs-strip-ico svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--revamp-warn-pill);
+  color: var(--revamp-warn-text);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-sub {
+  margin-left: auto;
+  font-size: 11px;
+  color: #a08850;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-chevron {
+  font-size: 12px;
+  color: #a08850;
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs.is-open .needs-chevron { transform: rotate(90deg); }
+body.revamp-preview #plan-quality-panel.revamp-needs #plan-quality-content {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 12px 8px;
+  list-style: none;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs.is-open #plan-quality-content { display: flex; }
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  color: #6b5a2e;
+  line-height: 1.4;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 5px 2px;
+  font-weight: 450;
+  border-bottom: 1px solid rgba(245, 230, 200, 0.55);
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row:last-child {
+  border-bottom: 0;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row.pq-hours,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row.pq-domicile,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row.pq-info,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row.pq-shore,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row.pq-window,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row.pq-dock,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row.pq-dot {
+  color: #6b5a2e;
+  font-weight: 450;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-tag {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+  opacity: 0.92;
+  text-transform: uppercase;
+}
+/* Soft-amber chip family — differentiate by label text only (Belize calm).
+   INFO stays quiet blue-gray (settings affordance). */
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-tag.warn,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-tag.window,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-tag.shore,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-tag.dom,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-tag.dock {
+  background: #f8efd6;
+  color: #9a7b2f;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-tag.info {
+  background: #eef2f6;
+  color: #5a6b7c;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-tag.ok {
+  background: var(--revamp-ok-bg);
+  color: var(--revamp-ok);
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-msg {
+  flex: 1;
+  min-width: 0;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-jump {
+  margin-left: auto;
+  color: #8a6a3a;
+  font-weight: 600;
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: transparent;
+  border: 0;
+  padding: 0 2px;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-jump.pq-view-driver,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-jump[data-pq-action="view-driver"] {
+  color: #9a7b2f; /* strip amber family — not Coke red */
+  font-weight: 700;
+  font-size: 12px;
+  padding: 1px 4px;
+  letter-spacing: 0.01em;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-jump.pq-view-driver:hover,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-jump[data-pq-action="view-driver"]:hover {
+  color: #6b5a2e;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-jump:hover {
+  color: #6b5a2e;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-msg .pq-settings-link {
+  margin-left: 0;
+  display: inline;
+  color: #5a6b7c;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-msg .pq-settings-link:hover {
+  color: #32363a;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row.pq-info {
+  cursor: default;
+}
+/* DOMICILE View stays strip amber/brown (not Coke/danger red) */
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row.pq-domicile .pq-view-driver {
+  color: #9a7b2f;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row.pq-domicile .pq-view-driver:hover {
+  color: #6b5a2e;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row.pq-unused,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row:has(.pq-unused-collapsed) {
+  display: none !important;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-unused-btn {
+  border: 0;
+  background: transparent;
+  color: #a08850;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 4px;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: nowrap;
+  margin-left: auto;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-unused-btn[hidden] {
+  display: none !important;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-sub[hidden] {
+  display: none !important;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-unused-btn:hover { color: #6b5a2e; }
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-unused-extra {
+  display: none;
+  padding: 0 12px 8px;
+  font-size: 11.5px;
+  color: #8a7340;
+  line-height: 1.45;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-unused-extra.show { display: block; }
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-unused-collapsed {
+  border: 0;
+  background: var(--revamp-warn-pill);
+  color: #7a6530;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-unused-extra {
+  display: none;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: #8a7340;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-unused-extra.show { display: block; }
+
+/* Cards toolbar — Fiori-lite filter tokens (Wave 2 #7) */
+.revamp-cards-toolbar {
+  display: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  margin: 2px 0 10px;
+  padding: 2px 0 4px;
+}
+.revamp-cards-toolbar.visible { display: flex; }
+.revamp-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.revamp-filter-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.revamp-filter-token {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  border: 1px solid #d9dde0;
+  background: #f5f6f7;
+  color: #6a6d70;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.revamp-filter-token:hover {
+  background: #eff1f2;
+  border-color: #c9ced3;
+  color: #32363a;
+}
+/* Mode tokens (Assigned / Show all / Near limit): soft Coke-tint fill */
+.revamp-filter-token.is-selected,
+.revamp-filter-token[data-mode="assigned"].is-selected,
+.revamp-filter-token[data-mode="all"].is-selected,
+.revamp-filter-token[data-mode="near"].is-selected {
+  background: rgba(230, 29, 43, 0.08);
+  border-color: rgba(230, 29, 43, 0.38);
+  color: #c41220;
+  box-shadow: none;
+}
+/* Dest tokens: outline selected (not fill) */
+.revamp-filter-token[data-mode="dest"].is-selected {
+  background: #ffffff;
+  border-color: rgba(230, 29, 43, 0.55);
+  color: #c41220;
+  box-shadow: inset 0 0 0 1px rgba(230, 29, 43, 0.18);
+}
+.revamp-filter-token:focus-visible {
+  outline: 2px solid rgba(230, 29, 43, 0.45);
+  outline-offset: 2px;
+}
+.revamp-filter-more {
+  font-size: 11px;
+  font-weight: 600;
+  color: #89919a;
+  padding: 0 2px;
+}
+.revamp-filter-empty {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #6a6d70;
+  letter-spacing: 0.01em;
+  padding: 4px 1px 0;
+}
+.revamp-filter-empty[hidden] { display: none !important; }
+.revamp-filter-empty-msg { color: #6a6d70; }
+.revamp-filter-empty-cta {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: #c41220;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.revamp-filter-empty-cta:hover { color: #E61D2B; }
+.revamp-filter-empty-cta:focus-visible {
+  outline: 2px solid rgba(230, 29, 43, 0.35);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.revamp-cards-toolbar .hint {
+  font-size: 11px;
+  color: var(--revamp-text-secondary);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+.revamp-show-all-legacy {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+body.revamp-preview .driver-card.revamp-empty-hidden { display: none !important; }
+
+/* PASS-OUT section + driver cards (Belize slate header + Coke avatar) */
+body.revamp-preview.has-plan #driver-cards-section .card {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+body.revamp-preview.has-plan #driver-cards-section .card > .card-header {
+  background: transparent !important;
+  color: var(--revamp-text-secondary) !important;
+  padding: 2px 0 8px;
+  border: 0;
+  border-left: 0 !important;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+body.revamp-preview.has-plan #driver-cards-section .card > .card-body {
+  padding: 0;
+  background: transparent;
+}
+body.revamp-preview.has-plan #driver-cards-section .driver-card {
+  border-radius: var(--revamp-radius-sm);
+  border: 1px solid var(--revamp-border);
+  box-shadow: none !important;
+  overflow: hidden;
+  background: var(--revamp-surface);
+}
+body.revamp-preview.has-plan #driver-cards-section .driver-card::before {
+  display: none;
+}
+body.revamp-preview.has-plan #driver-cards-section .driver-cards-grid {
+  gap: 10px;
+}
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header {
+  padding: 8px 10px;
+  background: var(--revamp-navy) !important;
+  color: #fff;
+}
+body.revamp-preview.has-plan #driver-cards-section .drv-initial {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--revamp-red) !important;
+  color: #fff !important;
+  border-radius: 50%;
+}
+body.revamp-preview.has-plan #driver-cards-section .driver-card-footer {
+  border-top: 1px solid var(--revamp-border-soft);
+  background: var(--revamp-surface);
+  padding: 8px 10px;
+}
+/* Soft-scope driver cards even outside has-plan when in preview */
+body.revamp-preview .driver-card {
+  border-radius: var(--revamp-radius-sm);
+  border: 1px solid var(--revamp-border);
+  box-shadow: none !important;
+}
+body.revamp-preview .driver-card::before { display: none; }
+body.revamp-preview .driver-card-header {
+  background: var(--revamp-navy) !important;
+}
+body.revamp-preview .drv-initial {
+  background: var(--revamp-red);
+  font-weight: 700;
+}
+body.revamp-preview .driver-card.is-shore .driver-card-header {
+  background: #5b4b8a !important;
+}
+body.revamp-preview .driver-card.is-unassigned .driver-card-header {
+  background: #a33b3b !important;
+}
+
+/* Collapse toggles */
+.revamp-collapse-toggle {
+  background: transparent;
+  border: 0;
+  color: var(--revamp-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px 4px 0;
+  letter-spacing: 0.02em;
+  text-align: left;
+}
+.revamp-collapse-toggle:hover { color: var(--revamp-text); }
+
+body.revamp-preview.has-plan #assignments-section.revamp-collapsed .tbl-wrap {
+  display: none !important;
+}
+body.revamp-preview.has-plan #assignments-section .card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+body.revamp-preview #revamp-details-toggle {
+  margin-right: 4px;
+}
+
+.revamp-workload-wrap {
+  position: relative;
+}
+.revamp-workload-toggle {
+  display: none;
+  margin-bottom: 8px;
+}
+body.revamp-preview.has-plan .revamp-workload-toggle { display: inline-block; }
+body.revamp-preview.has-plan .revamp-workload-wrap.revamp-collapsed > .flex-between,
+body.revamp-preview.has-plan .revamp-workload-wrap.revamp-collapsed > #workload-list {
+  display: none !important;
+}
+
+/* Hide mid-page Print/CSV in pass-out header when has-plan */
+body.revamp-preview.has-plan #driver-cards-section .revamp-mid-print,
+body.revamp-preview.has-plan #driver-cards-section .revamp-mid-csv {
+  display: none !important;
+}
+
+/* ── Sticky bar — flatter; Commit is the only loud red ── */
+.revamp-sticky-bar {
+  display: none;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 9990;
+  background: #ffffff;
+  border-top: 1px solid #d9dde0;
+  box-shadow: none !important;
+  padding: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+body.revamp-preview.has-plan .revamp-sticky-bar { display: flex; }
+.revamp-sticky-bar .left {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  min-width: 160px;
+  flex: 1 1 auto;
+}
+.revamp-sticky-bar .left strong,
+.revamp-sticky-bar .left #revamp-sticky-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--revamp-text-secondary);
+}
+.revamp-sticky-bar .left span,
+.revamp-sticky-bar .left #revamp-sticky-sub {
+  font-size: 12px;
+  color: var(--revamp-text-secondary);
+  font-weight: 600;
+}
+.revamp-sticky-bar .revamp-sticky-hint {
+  display: none !important;
+}
+.revamp-sticky-bar .actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+/* Re-run = ghost / text-only */
+.revamp-sticky-bar .btn-rerun {
+  background: transparent;
+  color: var(--revamp-text-muted);
+  border: 1px solid transparent;
+  border-radius: var(--revamp-radius-sm);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+.revamp-sticky-bar .btn-rerun:hover {
+  background: transparent;
+  color: var(--revamp-text-secondary);
+}
+/* Generate fresh = secondary outline */
+.revamp-sticky-bar .btn-fresh {
+  background: transparent;
+  color: var(--revamp-text-secondary);
+  border: 1px dashed #c5ccd2;
+  border-radius: var(--revamp-radius-sm);
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+.revamp-sticky-bar .btn-fresh:hover {
+  background: var(--revamp-page);
+  border-style: solid;
+  border-color: var(--revamp-border);
+  color: var(--revamp-text);
+}
+/* Print/CSV = secondary */
+.revamp-sticky-bar .btn-ghost {
+  background: transparent;
+  border: 1px solid var(--revamp-border);
+  border-radius: var(--revamp-radius-sm);
+  color: var(--revamp-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+  box-shadow: none !important;
+}
+.revamp-sticky-bar .btn-ghost:hover {
+  background: var(--revamp-page);
+  color: var(--revamp-text);
+}
+/* Commit Day = solid Coke red primary (only loud control) */
+.revamp-sticky-bar .btn-commit-primary {
+  background: var(--revamp-red);
+  color: #fff;
+  border: 1px solid var(--revamp-red);
+  border-radius: var(--revamp-radius-sm);
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: none !important;
+  text-shadow: none;
+  filter: none;
+}
+.revamp-sticky-bar .btn-commit-primary:hover {
+  background: var(--revamp-red-dark);
+  border-color: var(--revamp-red-dark);
+  filter: none;
+  box-shadow: none !important;
+}
+
+body.revamp-preview.has-plan .btn-generate {
+  display: none !important;
+}
+body.revamp-preview.has-plan #commit-day-btn {
+  display: none !important;
+}
+
+@media print {
+  .revamp-preview-banner,
+  .revamp-sticky-bar,
+  .revamp-cards-toolbar,
+  .revamp-plan-summary,
+  .revamp-collapse-toggle,
+  .revamp-input-chips,
+  .revamp-setup-untuck,
+  .revamp-dc-chip { display: none !important; }
+  body.revamp-preview { padding-bottom: 0 !important; }
+  body.revamp-preview.has-plan #assignments-section.revamp-collapsed .tbl-wrap,
+  body.revamp-preview.has-plan .revamp-workload-wrap.revamp-collapsed > .flex-between,
+  body.revamp-preview.has-plan .revamp-workload-wrap.revamp-collapsed > #workload-list {
+    display: block !important;
+  }
+  /* S2-1: Assigned-filter hide must not apply to print sheets */
+  body.revamp-preview .driver-card.revamp-empty-hidden {
+    display: block !important;
+  }
+}
+
+/* Harden: tuck templates + bucket by structure when has-plan */
+body.revamp-preview.has-plan #tab-dashboard .stack > .card.no-print:has(#template-days) {
+  display: none !important;
+}
+body.revamp-preview.has-plan #load-bucket-panel {
+  display: none !important;
+}
+body.revamp-preview.has-plan.revamp-setup-untucked #tab-dashboard .stack > .card.no-print:has(#template-days),
+body.revamp-preview.has-plan.revamp-setup-untucked #load-bucket-panel {
+  display: block !important;
+}
+
+/* Harden: hide mid Print/CSV without relying on JS classes */
+body.revamp-preview.has-plan #driver-cards-section .card-header button[onclick*="print"],
+body.revamp-preview.has-plan #driver-cards-section .card-header button[onclick*="exportCSV"] {
+  display: none !important;
+}
+
+/* Absorb production domicile + disabled-loc banners into Needs Attention when has-plan */
+body.revamp-preview.has-plan #domicile-warning-panel {
+  display: none !important;
+}
+/* Avoid double "Today's loads" while editing — chips hide; panel header owns the title */
+body.revamp-preview.revamp-input-editing #revamp-input-chips {
+  display: none !important;
+}
+/* Collapsed: only chip strip title — never show a second heading above chips */
+body.revamp-preview.revamp-input-compact .input-card-collapsed > .card-header,
+body.revamp-preview.revamp-input-compact #revamp-input-chips .revamp-chips-title + .revamp-chips-title {
+  display: none !important;
+}
+
+/* nit: disabled-loc only in Needs Attention — not inside Edit counts panel */
+body.revamp-preview.has-plan #disabled-loc-banner {
+  display: none !important;
+}
+
+/* === Drivers + History Belize shell === */
+
+/* Quiet page titles (sentence-case subtitles already in markup) */
+body.revamp-preview #tab-fleet > div > .flex-between,
+body.revamp-preview #tab-history > div > .flex-between {
+  align-items: flex-start;
+  margin-bottom: 14px !important;
+  gap: 12px;
+}
+body.revamp-preview #tab-fleet > div > .flex-between > div > div:first-child,
+body.revamp-preview #tab-history > div > .flex-between > div > div:first-child {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: var(--revamp-text) !important;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+body.revamp-preview #tab-fleet > div > .flex-between > div > div:nth-child(2),
+body.revamp-preview #tab-history > div > .flex-between > div > div:nth-child(2) {
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: var(--revamp-text-muted) !important;
+  margin-top: 4px !important;
+  line-height: 1.4;
+}
+
+/* + Add Driver stays solid Coke primary (inherits .btn-primary) */
+body.revamp-preview #tab-fleet > div > .flex-between > .btn-primary {
+  background: var(--revamp-red) !important;
+  border: 1px solid var(--revamp-red) !important;
+  color: #fff !important;
+  border-radius: var(--revamp-radius);
+  font-weight: 600;
+  box-shadow: none !important;
+  flex-shrink: 0;
+}
+
+/* Vacation tip → calm INFO (not loud amber warn) */
+body.revamp-preview #tab-fleet .warn-banner,
+body.revamp-preview #tab-fleet .revamp-info-banner {
+  background: #f0f5fa !important;
+  border: 1px solid #d5dde6 !important;
+  color: var(--revamp-text-secondary) !important;
+  border-radius: var(--revamp-radius);
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 400;
+  gap: 8px;
+  box-shadow: none;
+}
+body.revamp-preview #tab-fleet .warn-banner strong,
+body.revamp-preview #tab-fleet .revamp-info-banner strong {
+  color: var(--revamp-text);
+  font-weight: 600;
+}
+
+/* Fleet table card — white Belize chrome */
+body.revamp-preview #tab-fleet .card {
+  background: var(--revamp-surface);
+  border: 1px solid #d9dde0;
+  border-radius: var(--revamp-radius);
+  box-shadow: none;
+  overflow: hidden;
+}
+body.revamp-preview #tab-fleet #driver-rules-panel {
+  background: var(--revamp-surface) !important;
+  border-bottom: 1px solid var(--revamp-border-soft) !important;
+  color: var(--revamp-text-secondary) !important;
+  font-size: 12px !important;
+  padding: 10px 14px !important;
+}
+body.revamp-preview #tab-fleet .tbl-wrap {
+  border: none;
+  border-radius: 0;
+}
+/* Light Belize thead — kill black bar */
+body.revamp-preview #tab-fleet thead tr {
+  background: var(--revamp-page-alt) !important;
+  color: var(--revamp-text-secondary) !important;
+}
+body.revamp-preview #tab-fleet thead th {
+  background: var(--revamp-page-alt) !important;
+  color: var(--revamp-text-secondary) !important;
+  border-bottom: 1px solid var(--revamp-border);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+body.revamp-preview #tab-fleet tbody tr {
+  border-bottom: 1px solid var(--revamp-border-soft);
+}
+body.revamp-preview #tab-fleet tbody tr:hover {
+  background: var(--revamp-page-alt);
+}
+body.revamp-preview #tab-fleet tbody td {
+  color: var(--revamp-text);
+  border-color: var(--revamp-border-soft);
+}
+
+/* Available / Vacation badges — calm */
+body.revamp-preview #tab-fleet .badge-vac {
+  background: #faf6ee;
+  color: #8a7340;
+  border: 1px solid #e8dfc8;
+  font-weight: 600;
+}
+body.revamp-preview #tab-fleet .badge-avail {
+  background: var(--revamp-ok-bg);
+  color: var(--revamp-ok);
+  border: 1px solid #cfe8d8;
+  font-weight: 600;
+}
+body.revamp-preview #tab-fleet .badge-any {
+  background: var(--revamp-page-alt);
+  color: var(--revamp-text-secondary);
+  border: 1px solid var(--revamp-border-soft);
+}
+
+/* Vacation toggles — softer amber when on */
+body.revamp-preview #tab-fleet .toggle .slider {
+  background: #e5e9ec;
+  box-shadow: none;
+}
+body.revamp-preview #tab-fleet .toggle .slider::before {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+body.revamp-preview #tab-fleet input:checked + .slider {
+  background: #d4b96a;
+}
+
+/* Edit / Copy ghost; delete quiet danger icon */
+body.revamp-preview #tab-fleet .btn-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--revamp-text-secondary);
+}
+body.revamp-preview #tab-fleet .btn-ghost:hover {
+  background: var(--revamp-page-alt);
+  color: var(--revamp-text);
+  opacity: 1;
+}
+body.revamp-preview #tab-fleet td.no-print .btn-danger,
+body.revamp-preview #tab-fleet .btn-group .btn-danger {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--revamp-text-muted) !important;
+  padding: 5px 8px;
+  box-shadow: none !important;
+}
+body.revamp-preview #tab-fleet td.no-print .btn-danger:hover,
+body.revamp-preview #tab-fleet .btn-group .btn-danger:hover {
+  background: #fef2f2 !important;
+  color: #b42318 !important;
+  opacity: 1;
+}
+
+/* Footer hint under fleet card */
+body.revamp-preview #tab-fleet > div > div[style*="margin-top:10px"] {
+  color: var(--revamp-text-muted) !important;
+  font-size: 11px !important;
+}
+
+/* ── History: Daily Log ── */
+
+/* Demote Clear Log — outline danger, not title-peer solid */
+body.revamp-preview #tab-history .revamp-clear-log,
+body.revamp-preview #tab-history > div > .flex-between > .btn-danger {
+  background: transparent !important;
+  border: 1px solid #eadede !important;
+  color: #9a6a6a !important;
+  font-size: 10.5px !important;
+  font-weight: 500 !important;
+  padding: 3px 8px !important;
+  border-radius: var(--revamp-radius-sm);
+  box-shadow: none !important;
+  opacity: 0.72;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+body.revamp-preview #tab-history .revamp-clear-log:hover,
+body.revamp-preview #tab-history > div > .flex-between > .btn-danger:hover {
+  background: #fef5f5 !important;
+  border-color: #d49090 !important;
+  color: #8b2e2e !important;
+  opacity: 1;
+}
+body.revamp-preview #tab-history .revamp-clear-log-wrap {
+  margin-top: 8px;
+}
+body.revamp-preview #tab-history .revamp-clear-log-wrap .revamp-clear-log {
+  margin-top: 0;
+}
+
+/* Legend under Daily Log subtitle */
+body.revamp-preview #tab-history .revamp-hist-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--revamp-text-muted);
+  font-weight: 400;
+}
+body.revamp-preview #tab-history .revamp-hist-legend .revamp-leg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+body.revamp-preview #tab-history .revamp-hist-legend .revamp-leg-ico {
+  font-size: 12px;
+  line-height: 1;
+}
+body.revamp-preview #tab-history .revamp-hist-legend .revamp-leg-warn {
+  color: #8a7340;
+}
+body.revamp-preview #tab-history .revamp-hist-legend .revamp-leg-over {
+  color: #a63d3d;
+}
+
+/* Day cards */
+body.revamp-preview #tab-history .hist-entry {
+  background: var(--revamp-surface);
+  border: 1px solid #d9dde0;
+  border-radius: 8px;
+  box-shadow: none;
+  overflow: hidden;
+}
+body.revamp-preview #tab-history .hist-date-bar {
+  background: var(--revamp-page-alt) !important;
+  color: var(--revamp-text) !important;
+  border-bottom: 1px solid var(--revamp-border-soft);
+  padding: 10px 14px;
+}
+body.revamp-preview #tab-history .hist-date-label {
+  color: var(--revamp-text);
+  font-weight: 600;
+  font-size: 13px;
+}
+body.revamp-preview #tab-history .hist-date-bar > div:last-child {
+  color: var(--revamp-text-secondary);
+}
+/* Soften inline efficiency pill */
+body.revamp-preview #tab-history .hist-date-bar span[title*="Efficiency"] {
+  color: var(--revamp-text) !important;
+  background: var(--revamp-surface) !important;
+  border: 1px solid var(--revamp-border) !important;
+  font-weight: 600 !important;
+  padding: 2px 8px !important;
+  border-radius: 10px !important;
+}
+/* Soften committed chip (inline green-on-red-bar → quiet OK) */
+body.revamp-preview #tab-history .hist-date-bar > div:last-child > span[style*="34,197,94"],
+body.revamp-preview #tab-history .hist-date-bar > div:last-child > span[style*="4ade80"] {
+  background: var(--revamp-ok-bg) !important;
+  color: var(--revamp-ok) !important;
+  border: 1px solid #cfe8d8;
+  font-weight: 600 !important;
+}
+body.revamp-preview #tab-history .hist-arrow {
+  color: var(--revamp-text-muted) !important;
+  opacity: 1 !important;
+}
+
+body.revamp-preview #tab-history .hist-metrics-row {
+  border-bottom: 1px solid var(--revamp-border-soft);
+  background: var(--revamp-surface);
+}
+body.revamp-preview #tab-history .hist-metric {
+  border-right: 1px solid var(--revamp-border-soft);
+  padding: 10px 8px;
+}
+body.revamp-preview #tab-history .hist-metric .hm-val {
+  color: var(--revamp-text);
+  font-weight: 700;
+  font-size: 18px;
+}
+body.revamp-preview #tab-history .hist-metric .hm-lbl {
+  color: var(--revamp-text-muted);
+  font-size: 10px;
+}
+
+/* Driver hour chips — Belize quiet */
+body.revamp-preview #tab-history .hist-driver-chip {
+  background: var(--revamp-page-alt);
+  color: var(--revamp-text-secondary);
+  border: 1px solid var(--revamp-border-soft);
+  border-radius: 12px;
+  font-size: 11px;
+  padding: 3px 9px;
+}
+body.revamp-preview #tab-history .hist-driver-chip.warn {
+  background: #faf6ee;
+  color: #8a7340;
+  border-color: #e8dfc8;
+}
+body.revamp-preview #tab-history .hist-driver-chip.over {
+  background: #fef5f5;
+  color: #a63d3d;
+  border-color: #e5bcbc;
+}
+body.revamp-preview #tab-history .hist-drivers {
+  padding: 10px 14px;
+}
+body.revamp-preview #tab-history .hist-entry-detail {
+  border-top: 1px solid var(--revamp-border-soft);
+}
+
+/* Empty state — same white card quiet */
+body.revamp-preview #tab-history .empty-state,
+body.revamp-preview #tab-history #history-content > .empty-state {
+  background: var(--revamp-surface) !important;
+  border: 1px solid #d9dde0 !important;
+  border-radius: 8px !important;
+  color: var(--revamp-text-muted);
+  box-shadow: none;
+  padding: 36px 24px !important;
+}
+
+/* === Pass-out cards calm densify === */
+/* Choice: Belize light header + Coke red initial (matches Drivers/History quieter shell). Not black gradient. */
+
+body.revamp-preview .driver-card-header,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header {
+  background: var(--revamp-page-alt) !important;
+  background-image: none !important;
+  color: #32363a !important;
+  border-bottom: 1px solid #d9dde0 !important;
+  padding: 8px 10px;
+  gap: 8px;
+}
+
+body.revamp-preview .driver-card-header .drv-name,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-name {
+  color: #32363a !important;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+body.revamp-preview .driver-card-header .drv-base,
+body.revamp-preview .driver-card-header .drv-base span,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-base,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-base span {
+  color: var(--revamp-text-secondary) !important;
+  font-weight: 500 !important;
+  font-size: 10px;
+}
+
+/* Arrives time — secondary (not white-on-navy) */
+body.revamp-preview .driver-card-header .drv-base span[style*="Arrives"],
+body.revamp-preview .driver-card-header .drv-base span[style*="255,255,255"] {
+  color: var(--revamp-text-secondary) !important;
+  font-weight: 500 !important;
+}
+
+body.revamp-preview .drv-initial,
+body.revamp-preview.has-plan #driver-cards-section .drv-initial {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 50%;
+  background: var(--revamp-red) !important;
+  color: #fff !important;
+  flex-shrink: 0;
+}
+
+/* Shoreline: same light header + violet accent (not full purple bar) */
+body.revamp-preview .driver-card.is-shore {
+  border-color: var(--revamp-border) !important;
+  border-left: 3px solid #6b5b95 !important;
+}
+body.revamp-preview .driver-card.is-shore .driver-card-header,
+body.revamp-preview.has-plan #driver-cards-section .driver-card.is-shore .driver-card-header {
+  background: var(--revamp-page-alt) !important;
+  color: #32363a !important;
+  filter: none !important;
+}
+body.revamp-preview .driver-card.is-shore .drv-initial,
+body.revamp-preview .driver-card.is-shore .drv-initial[style] {
+  background: #6b5b95 !important;
+  color: #fff !important;
+}
+body.revamp-preview .driver-card.is-shore .driver-card-header > div[style*="font-size:15px"] {
+  color: var(--revamp-text-muted) !important;
+  opacity: 1 !important;
+}
+
+/* Unassigned with loads: light header + danger accent (override inline red header) */
+body.revamp-preview .driver-card.is-unassigned {
+  border-color: var(--revamp-border) !important;
+  border-left: 3px solid #a63d3d !important;
+}
+body.revamp-preview .driver-card.is-unassigned .driver-card-header,
+body.revamp-preview .driver-card.is-unassigned .driver-card-header[style],
+body.revamp-preview.has-plan #driver-cards-section .driver-card.is-unassigned .driver-card-header {
+  background: var(--revamp-page-alt) !important;
+  color: #32363a !important;
+}
+body.revamp-preview .driver-card.is-unassigned .drv-initial,
+body.revamp-preview .driver-card.is-unassigned .drv-initial[style] {
+  background: #a63d3d !important;
+  color: #fff !important;
+}
+body.revamp-preview .driver-card.is-unassigned .drv-name,
+body.revamp-preview .driver-card.is-unassigned .drv-base {
+  color: #32363a !important;
+}
+body.revamp-preview .driver-card.is-unassigned .drv-base {
+  color: var(--revamp-text-secondary) !important;
+}
+/* #8 nit: empty Unassigned → calm gray avatar/stripe (not Coke exception look) */
+body.revamp-preview .driver-card.is-unassigned.revamp-unassigned-calm,
+body.revamp-preview .driver-card.is-unassigned:has(.revamp-empty-im--card) {
+  border-left-color: #c9ced3 !important;
+  border-color: var(--revamp-border) !important;
+}
+body.revamp-preview .driver-card.is-unassigned.revamp-unassigned-calm .drv-initial,
+body.revamp-preview .driver-card.is-unassigned.revamp-unassigned-calm .drv-initial[style],
+body.revamp-preview .driver-card.is-unassigned:has(.revamp-empty-im--card) .drv-initial,
+body.revamp-preview .driver-card.is-unassigned:has(.revamp-empty-im--card) .drv-initial[style] {
+  background: #c9ced3 !important;
+  color: #5a5e62 !important;
+  border: 0 !important;
+}
+body.revamp-preview .driver-card.is-unassigned.revamp-unassigned-calm .card-dot-status,
+body.revamp-preview .driver-card.is-unassigned.revamp-unassigned-calm .card-dot-status[style],
+body.revamp-preview .driver-card.is-unassigned:has(.revamp-empty-im--card) .card-dot-status,
+body.revamp-preview .driver-card.is-unassigned:has(.revamp-empty-im--card) .card-dot-status[style] {
+  color: #89919a !important;
+  background: #f3f4f5 !important;
+  border-color: #e5e9ec !important;
+}
+
+/* ··· overflow for Ad Hoc / What-if */
+body.revamp-preview .revamp-card-more {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+body.revamp-preview .revamp-card-more-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--revamp-text-muted);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: var(--revamp-radius-sm);
+  cursor: pointer;
+}
+body.revamp-preview .revamp-card-more-btn:hover,
+body.revamp-preview .revamp-card-more.is-open .revamp-card-more-btn {
+  background: var(--revamp-surface);
+  border-color: var(--revamp-border);
+  color: var(--revamp-text);
+}
+body.revamp-preview .revamp-card-more-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 40;
+  min-width: 128px;
+  padding: 4px;
+  background: var(--revamp-surface);
+  border: 1px solid #d9dde0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(50, 54, 58, 0.12);
+}
+body.revamp-preview .revamp-card-more.is-open .revamp-card-more-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+body.revamp-preview .revamp-card-more-menu .btn-adhoc-add,
+body.revamp-preview .revamp-card-more-menu .wi-toggle-btn {
+  margin: 0 !important;
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  font-size: 11px !important;
+  font-weight: 600;
+  padding: 6px 8px !important;
+  border-radius: 4px;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--revamp-text) !important;
+  cursor: pointer;
+  white-space: nowrap;
+}
+body.revamp-preview .revamp-card-more-menu .btn-adhoc-add:hover,
+body.revamp-preview .revamp-card-more-menu .wi-toggle-btn:hover {
+  background: var(--revamp-page-alt) !important;
+  color: var(--revamp-text) !important;
+}
+
+/* Out = clear primary row action (onclick preserved) */
+body.revamp-preview .run-row .out-btn {
+  border: 1px solid var(--revamp-red) !important;
+  color: var(--revamp-red) !important;
+  background: #fff !important;
+  font-weight: 700;
+  font-size: 10px;
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+body.revamp-preview .run-row .out-btn:hover {
+  background: #fef2f2 !important;
+  border-color: var(--revamp-red-dark) !important;
+  color: var(--revamp-red-dark) !important;
+}
+body.revamp-preview .run-row .out-btn.stamped {
+  background: var(--revamp-ok-bg) !important;
+  border-color: #cfe8d8 !important;
+  color: var(--revamp-ok) !important;
+}
+/* Lock stays quieter secondary next to Out */
+body.revamp-preview .run-row .out-btn[onclick*="toggleLock"] {
+  border-color: var(--revamp-border) !important;
+  color: var(--revamp-text-muted) !important;
+  background: transparent !important;
+  font-weight: 600;
+}
+body.revamp-preview .run-row .out-btn[onclick*="toggleLock"].stamped {
+  border-color: #cfe8d8 !important;
+  color: var(--revamp-ok) !important;
+  background: var(--revamp-ok-bg) !important;
+}
+
+/* DOT OK / Near Limit / Over — calm Belize chips */
+body.revamp-preview .card-dot-status,
+body.revamp-preview .driver-card-footer .card-dot-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  line-height: 1.3;
+}
+body.revamp-preview .card-dot-ok {
+  background: var(--revamp-ok-bg) !important;
+  color: var(--revamp-ok) !important;
+  border-color: #cfe8d8 !important;
+}
+body.revamp-preview .card-dot-warn {
+  background: #faf6ee !important;
+  color: #8a7340 !important;
+  border-color: #e8dfc8 !important;
+}
+body.revamp-preview .card-dot-over {
+  background: #fef5f5 !important;
+  color: #a63d3d !important;
+  border-color: #e5bcbc !important;
+}
+body.revamp-preview .driver-card.is-unassigned .card-dot-status,
+body.revamp-preview .driver-card.is-shore .card-dot-status {
+  background: var(--revamp-page-alt) !important;
+  color: var(--revamp-text-secondary) !important;
+  border-color: var(--revamp-border-soft) !important;
+}
+body.revamp-preview .driver-card.is-unassigned .card-dot-status[style] {
+  color: #a63d3d !important;
+  background: #fef5f5 !important;
+  border-color: #e5bcbc !important;
+}
+body.revamp-preview .driver-card.is-shore .card-dot-status[style] {
+  color: #6b5b95 !important;
+  background: #f3f0f8 !important;
+  border-color: #ddd4ec !important;
+}
+
+/* Deadhead — secondary muted (not amber shout) */
+body.revamp-preview .driver-card-footer > span:not(.card-total-hrs):not(.card-dot-status),
+body.revamp-preview .driver-card-footer .revamp-deadhead {
+  color: var(--revamp-text-muted) !important;
+  font-weight: 500 !important;
+  font-size: 10px !important;
+}
+
+/* Soften run rows + badges */
+body.revamp-preview .run-row {
+  border-bottom-color: var(--revamp-border-soft) !important;
+  padding: 5px 10px;
+}
+body.revamp-preview .run-label {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-radius: 3px;
+  opacity: 0.92;
+}
+body.revamp-preview .driver-card.is-modified {
+  border-color: #e8dfc8 !important;
+  border-width: 1px !important;
+}
+body.revamp-preview .wi-badge {
+  background: #f8efd6 !important;
+  color: #8a7340 !important;
+  border: 1px solid #e8dfc8;
+  font-weight: 600;
+}
+
+/* What-if panel — quiet when open (not thick amber shout) */
+body.revamp-preview .what-if-panel {
+  border-top: 1px solid #d9dde0 !important;
+  background: var(--revamp-page-alt) !important;
+  padding: 8px 10px;
+}
+body.revamp-preview .wi-revert-btn {
+  border: 1px solid var(--revamp-border) !important;
+  color: var(--revamp-text-secondary) !important;
+  background: var(--revamp-surface) !important;
+}
+body.revamp-preview .wi-revert-btn:hover {
+  border-color: var(--revamp-text-muted) !important;
+  color: var(--revamp-text) !important;
+  background: var(--revamp-surface) !important;
+}
+body.revamp-preview #what-if-banner {
+  background: var(--revamp-page-alt) !important;
+  border: 1px solid #d9dde0 !important;
+  border-radius: 6px;
+}
+
+body.revamp-preview .driver-card-footer {
+  background: var(--revamp-surface) !important;
+  border-top: 1px solid var(--revamp-border-soft) !important;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+body.revamp-preview .card-total-hrs {
+  color: var(--revamp-text);
+  font-weight: 700;
+}
+
+/* === Commit family === */
+/* Dashboard sticky: light surface family (match soft sticky); Coke only on Commit Day.
+   UX nit: never a full red footer band. */
+body.revamp-preview.has-plan:not(.revamp-sticky-soft) .revamp-sticky-bar {
+  background: #ffffff !important;
+  border-top: 1px solid #d9dde0 !important;
+  box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.04) !important;
+}
+body.revamp-preview.has-plan:not(.revamp-sticky-soft) .revamp-sticky-bar .left span,
+body.revamp-preview.has-plan:not(.revamp-sticky-soft) .revamp-sticky-bar .left #revamp-sticky-status,
+body.revamp-preview.has-plan:not(.revamp-sticky-soft) .revamp-sticky-bar .left #revamp-sticky-title,
+body.revamp-preview.has-plan:not(.revamp-sticky-soft) .revamp-sticky-bar .left #revamp-sticky-sub {
+  color: #32363a !important;
+  font-weight: 600;
+}
+
+
+/* One sticky owns Plan ready / Re-run / Generate / Commit.
+   Mid-page pass-out header keeps Start Over + Sheet only. */
+
+/* Soft sticky on Drivers / History (status visible; actions demoted) */
+body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar {
+  background: var(--revamp-page-alt, #eff1f2);
+  border-top-color: var(--revamp-border-soft, #d9dde0);
+  box-shadow: none !important;
+}
+body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .left span,
+body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .left #revamp-sticky-status {
+  color: var(--revamp-text-muted, #89919a);
+  font-weight: 500;
+  font-size: 12px;
+}
+body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .btn-rerun,
+body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .btn-fresh,
+body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .btn-ghost,
+body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .btn-commit-primary {
+  display: none !important;
+}
+body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .btn-open-dashboard {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #c5ccd2;
+  border-radius: 6px;
+  color: #32363a;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 7px 12px;
+  text-decoration: none;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  letter-spacing: 0.01em;
+}
+body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .btn-open-dashboard:hover {
+  color: #1f2326;
+  border-color: #aeb6bd;
+  background: #f7f8f9;
+}
+body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .btn-open-dashboard::before {
+  content: "←";
+  font-weight: 700;
+  opacity: 0.7;
+}
+body.revamp-preview.has-plan:not(.revamp-sticky-soft) .revamp-sticky-bar .btn-open-dashboard {
+  display: none !important;
+}
+
+/* Mid-page: hide Commit + Print/CSV + Generate/Re-run twins under has-plan.
+   Start Over + Sheet remain. Prefer class hooks; keep #commit-day-btn in DOM. */
+body.revamp-preview.has-plan #driver-cards-section .card-header #commit-day-btn,
+body.revamp-preview.has-plan #driver-cards-section .card-header .revamp-mid-commit,
+body.revamp-preview.has-plan #driver-cards-section .card-header .revamp-mid-print,
+body.revamp-preview.has-plan #driver-cards-section .card-header .revamp-mid-csv,
+body.revamp-preview.has-plan #driver-cards-section .card-header .revamp-mid-gen-twin,
+body.revamp-preview.has-plan #driver-cards-section .card-header button[onclick*="commitToHistory"],
+body.revamp-preview.has-plan #driver-cards-section .card-header button[onclick*="generateAssignments"],
+body.revamp-preview.has-plan #driver-cards-section .card-header button[onclick*="rerunRemaining"] {
+  display: none !important;
+}
+
+/* Sentence-case pass-out section title (kill shouty all-caps micro-header) */
+body.revamp-preview.has-plan #driver-cards-section .card > .card-header > span {
+  text-transform: none !important;
+  letter-spacing: 0.01em;
+  font-weight: 600;
+  color: var(--revamp-text-secondary);
+}
+
+/* === Pass-out scan densify (Wave 2 #6) === */
+/* Quiet card chrome so DEST · ETA · hrs scan first. Packaging only. */
+
+/* Soften driver-card header chrome toward Belize gray (keep Coke initial) */
+body.revamp-preview .driver-card-header,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header {
+  background: #f3f4f5 !important;
+  padding: 6px 10px;
+  gap: 6px;
+}
+body.revamp-preview .driver-card-header .drv-name,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-name {
+  font-weight: 600;
+  font-size: 11px;
+  color: #6a6d70 !important;
+  letter-spacing: 0;
+}
+body.revamp-preview .driver-card-header .drv-base,
+body.revamp-preview .driver-card-header .drv-base span,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-base,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-base span {
+  font-size: 10px;
+  font-weight: 500 !important;
+  color: var(--revamp-text-muted) !important;
+}
+body.revamp-preview .driver-card.is-shore .driver-card-header,
+body.revamp-preview.has-plan #driver-cards-section .driver-card.is-shore .driver-card-header,
+body.revamp-preview .driver-card.is-unassigned .driver-card-header,
+body.revamp-preview .driver-card.is-unassigned .driver-card-header[style],
+body.revamp-preview.has-plan #driver-cards-section .driver-card.is-unassigned .driver-card-header {
+  background: #f3f4f5 !important;
+}
+
+/* Run line scan-first: DEST · ETA · hrs dominate; demote RUN chrome */
+body.revamp-preview .run-row {
+  gap: 6px;
+  padding: 5px 10px;
+  align-items: center;
+}
+body.revamp-preview .run-phase {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: var(--revamp-text) !important;
+  line-height: 1.35;
+}
+/* Flatten nested ETA onto the DEST line with middot (outer + inner display:block spans) */
+body.revamp-preview .run-phase span[style*="display:block"],
+body.revamp-preview .run-phase span[style*="display: block"] {
+  display: inline !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--revamp-text-secondary) !important;
+  line-height: inherit !important;
+}
+/* Middot only before the first nested time block (direct child of .run-phase) */
+body.revamp-preview .run-phase > span[style*="display:block"]::before,
+body.revamp-preview .run-phase > span[style*="display: block"]::before {
+  content: " · ";
+  color: var(--revamp-text-muted);
+  font-weight: 500;
+}
+body.revamp-preview .run-phase span[style*="display:block"] span,
+body.revamp-preview .run-phase span[style*="display: block"] span {
+  color: inherit !important;
+  font-weight: inherit !important;
+  font-size: inherit !important;
+  display: inline !important;
+}
+body.revamp-preview .run-hrs {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: var(--revamp-text) !important;
+  letter-spacing: 0.01em;
+}
+body.revamp-preview .run-hrs.empty {
+  color: var(--revamp-text-muted) !important;
+  font-weight: 500 !important;
+}
+/* Demote RUN / MANUAL / AD HOC badge chrome */
+body.revamp-preview .run-label {
+  opacity: 0.55;
+  font-weight: 600 !important;
+  font-size: 8px !important;
+  letter-spacing: 0.02em;
+  width: 32px;
+  min-width: 32px;
+  padding: 1px 3px;
+}
+body.revamp-preview .run-row:hover .run-label {
+  opacity: 0.75;
+}
+/* Home return chip — keep readable but secondary */
+body.revamp-preview .run-phase span[style*="← Home"],
+body.revamp-preview .run-phase span[style*="Home"] {
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  opacity: 0.9;
+}
+
+/* Mute lock until hover (Out stays primary) */
+body.revamp-preview .run-row .out-btn[onclick*="toggleLock"] {
+  opacity: 0.14;
+  filter: grayscale(0.85);
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--revamp-text-muted) !important;
+  transition: opacity 0.12s ease, filter 0.12s ease;
+}
+body.revamp-preview .run-row:hover .out-btn[onclick*="toggleLock"],
+body.revamp-preview .run-row:focus-within .out-btn[onclick*="toggleLock"],
+body.revamp-preview .run-row .out-btn[onclick*="toggleLock"]:focus {
+  opacity: 1;
+  filter: none;
+  border-color: var(--revamp-border) !important;
+}
+body.revamp-preview .run-row .out-btn[onclick*="toggleLock"].stamped {
+  /* Locked slightly more visible at rest than unlocked (0.14) */
+  opacity: 0.58;
+  filter: grayscale(0.2);
+  border-color: #cfe8d8 !important;
+  background: var(--revamp-ok-bg) !important;
+  color: var(--revamp-ok) !important;
+}
+body.revamp-preview .run-row:hover .out-btn[onclick*="toggleLock"].stamped,
+body.revamp-preview .run-row:focus-within .out-btn[onclick*="toggleLock"].stamped {
+  opacity: 1;
+  filter: none;
+  border-color: #cfe8d8 !important;
+  background: var(--revamp-ok-bg) !important;
+}
+
+/* Reorder: always-visible CSS chevrons (no opacity/visibility hover thrash) */
+body.revamp-preview .run-row .run-reorder {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 16px;
+  min-width: 16px;
+  max-width: 18px;
+  flex-shrink: 0;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  overflow: visible;
+}
+body.revamp-preview .run-row .run-move {
+  border: 1px solid var(--revamp-border-soft);
+  background: var(--revamp-surface);
+  color: transparent; /* hide any leftover glyph text */
+  font-size: 0;
+  line-height: 0;
+  width: 14px;
+  height: 11px;
+  padding: 0;
+  border-radius: 2px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+body.revamp-preview .run-row .run-move::before {
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-bottom: 4.5px solid var(--revamp-text-muted);
+}
+body.revamp-preview .run-row .run-move[data-dir="later"]::before {
+  border-bottom: 0;
+  border-top: 4.5px solid var(--revamp-text-muted);
+}
+body.revamp-preview .run-row .run-move:hover {
+  background: var(--revamp-red);
+  border-color: var(--revamp-red);
+  color: transparent;
+}
+body.revamp-preview .run-row .run-move:hover::before {
+  border-bottom-color: #fff;
+}
+body.revamp-preview .run-row .run-move[data-dir="later"]:hover::before {
+  border-top-color: #fff;
+  border-bottom-color: transparent;
+}
+
+/* Quieter What-if panel title / labels */
+body.revamp-preview .what-if-panel .wi-label {
+  font-size: 10px;
+  font-weight: 500 !important;
+  color: var(--revamp-text-muted) !important;
+  letter-spacing: 0.01em;
+  min-width: 64px;
+}
+body.revamp-preview .what-if-panel .wi-row label {
+  color: var(--revamp-text-secondary) !important;
+  font-weight: 500;
+}
+body.revamp-preview #what-if-banner > span:first-child,
+body.revamp-preview #what-if-banner span[style*="amber"],
+body.revamp-preview #what-if-banner span[style*="font-weight:700"] {
+  color: var(--revamp-text-secondary) !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+}
+
+/* Drivers tab — mute Edit / Copy / Delete icons (same CSS pass) */
+body.revamp-preview #tab-fleet tbody td.no-print .btn-ghost,
+body.revamp-preview #tab-fleet tbody td.no-print .btn-danger,
+body.revamp-preview #tab-fleet .btn-group .btn-ghost,
+body.revamp-preview #tab-fleet .btn-group .btn-danger {
+  opacity: 0.42;
+  transition: opacity 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+body.revamp-preview #tab-fleet tbody tr:hover td.no-print .btn-ghost,
+body.revamp-preview #tab-fleet tbody tr:hover td.no-print .btn-danger,
+body.revamp-preview #tab-fleet tbody tr:focus-within td.no-print .btn-ghost,
+body.revamp-preview #tab-fleet tbody tr:focus-within td.no-print .btn-danger,
+body.revamp-preview #tab-fleet tbody td.no-print .btn-ghost:hover,
+body.revamp-preview #tab-fleet tbody td.no-print .btn-danger:hover,
+body.revamp-preview #tab-fleet tbody td.no-print .btn-ghost:focus,
+body.revamp-preview #tab-fleet tbody td.no-print .btn-danger:focus {
+  opacity: 1;
+}
+
+/* Needs Attention — DOMICILE jump highlight on pass-out card */
+@keyframes revamp-card-flash-kf {
+  0% { outline-color: rgba(230, 29, 43, 0.55); box-shadow: 0 0 0 3px rgba(230, 29, 43, 0.18); }
+  100% { outline-color: transparent; box-shadow: none; }
+}
+body.revamp-preview .driver-card.revamp-card-flash,
+body.revamp-preview [id^="drv-card-"].revamp-card-flash {
+  outline: 2px solid rgba(230, 29, 43, 0.45);
+  outline-offset: 2px;
+  border-radius: 6px;
+  animation: revamp-card-flash-kf 2s ease-out forwards;
+}
+
+/* ═══ Wave 2 #8 — Empty states (Illustrated Message lite, text-first) ═══ */
+.revamp-empty-im {
+  text-align: left;
+  background: var(--revamp-surface);
+  border: 1px solid #d9dde0;
+  border-radius: 8px;
+  padding: 20px 18px;
+  box-shadow: none;
+  max-width: 420px;
+}
+.revamp-empty-im--flush {
+  max-width: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.revamp-empty-im--inline {
+  border: 0;
+  background: transparent;
+  padding: 8px 0 4px;
+  max-width: none;
+}
+.revamp-empty-im__title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #32363a;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  text-transform: none;
+}
+.revamp-empty-im__body {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6a6d70;
+  line-height: 1.45;
+}
+.revamp-empty-im__cta {
+  margin-top: 10px;
+}
+.revamp-empty-im__link {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #c41220;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.revamp-empty-im__link:hover { color: #E61D2B; }
+.revamp-empty-im__hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #89919a;
+  font-weight: 500;
+}
+
+/* History empty — prefer IM structure over loud padded box */
+body.revamp-preview #tab-history .empty-state.revamp-empty-im,
+body.revamp-preview #tab-history #history-content > .empty-state.revamp-empty-im {
+  background: var(--revamp-surface) !important;
+  border: 1px solid #d9dde0 !important;
+  border-radius: 8px !important;
+  color: #6a6d70;
+  box-shadow: none;
+  padding: 20px 18px !important;
+  text-align: left;
+  max-width: 420px;
+}
+
+/* Drivers empty — sit in roster card */
+body.revamp-preview #tab-fleet .revamp-empty-im--drivers {
+  margin: 16px;
+  max-width: none;
+}
+body.revamp-preview #tab-fleet.revamp-fleet-empty .tbl-wrap {
+  display: none;
+}
+body.revamp-preview #tab-fleet.revamp-fleet-empty #driver-rules-panel {
+  display: none;
+}
+
+/* No-plan dashboard guidance near Generate */
+.revamp-noplan-empty {
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  background: #fafbfc;
+  border: 1px solid #e5e9ec;
+  border-radius: 8px;
+  max-width: 520px;
+}
+body.revamp-preview.has-plan .revamp-noplan-empty {
+  display: none !important;
+}
+.revamp-noplan-empty .revamp-empty-im__title {
+  font-size: 13px;
+}
+.revamp-noplan-empty .revamp-empty-im__body {
+  font-size: 12px;
+}
+
+/* Unassigned calm empty (has-plan, no unassigned card) */
+.revamp-unassigned-empty {
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1px solid #d9dde0;
+  border-radius: 8px;
+}
+body.revamp-preview:not(.has-plan) .revamp-unassigned-empty {
+  display: none !important;
+}
+.revamp-unassigned-empty .revamp-empty-im__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #32363a;
+}
+.revamp-unassigned-empty .revamp-empty-im__body {
+  font-size: 12px;
+  color: #6a6d70;
+}
+
+/* Unassigned special card — calm when body has no runs (edge) */
+body.revamp-preview .driver-card.is-unassigned .revamp-empty-im--card {
+  margin: 8px 10px 10px;
+  padding: 10px 12px;
+  border: 1px dashed #e5e9ec;
+  background: #fafbfc;
+  border-radius: 6px;
+  max-width: none;
+}
+
+/* ═══ Wave 2 #10 — Shell calm + keyboard/focus (packaging) ═══ */
+/* Soft Coke focus ring (Belize-like) — not browser default blue */
+body.revamp-preview {
+  --revamp-focus-ring: 2px solid rgba(230, 29, 43, 0.50);
+  --revamp-focus-offset: 2px;
+}
+
+/* Mute Dispatchers emoji (👥 renders purple) → header-gray like Sign Out */
+body.revamp-preview #hdr-dispatchers-btn {
+  color: rgba(255, 255, 255, 0.48) !important;
+}
+body.revamp-preview #hdr-dispatchers-btn .revamp-disp-ico {
+  display: inline-block;
+  margin-right: 3px;
+  font-size: 10px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.42);
+  filter: grayscale(1) brightness(1.15);
+  opacity: 0.7;
+}
+
+/* Tabs */
+body.revamp-preview .tab-btn:focus-visible {
+  outline: var(--revamp-focus-ring);
+  outline-offset: var(--revamp-focus-offset);
+  border-radius: 2px;
+}
+
+/* Edit counts */
+.revamp-input-chips .revamp-edit-counts:focus-visible {
+  outline: var(--revamp-focus-ring);
+  outline-offset: var(--revamp-focus-offset);
+}
+
+/* Sticky actions (Commit / Re-run / Generate / Print / CSV / Open Dashboard) */
+.revamp-sticky-bar .btn-commit-primary:focus-visible,
+.revamp-sticky-bar .btn-rerun:focus-visible,
+.revamp-sticky-bar .btn-fresh:focus-visible,
+.revamp-sticky-bar .btn-ghost:focus-visible,
+.revamp-sticky-bar .btn-open-dashboard:focus-visible {
+  outline: var(--revamp-focus-ring);
+  outline-offset: var(--revamp-focus-offset);
+}
+
+/* Needs Attention jumps / Settings→Destinations links */
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-jump:focus-visible,
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-msg .pq-settings-link:focus-visible {
+  outline: var(--revamp-focus-ring);
+  outline-offset: var(--revamp-focus-offset);
+  border-radius: 2px;
+}
+
+/* Filter empty CTA already has focus-visible; bump offset consistency */
+.revamp-filter-empty-cta:focus-visible {
+  outline: 2px solid rgba(230, 29, 43, 0.45);
+  outline-offset: 2px;
+}
+
+/* Header utilities focus (Dispatchers / Sign Out / Settings gear) */
+body.revamp-preview #hdr-dispatchers-btn:focus-visible,
+body.revamp-preview #hdr-logout-btn:focus-visible,
+body.revamp-preview .hdr-settings-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 2px;
+}
+
+/* Clear Log focus */
+body.revamp-preview #tab-history .revamp-clear-log:focus-visible {
+  outline: var(--revamp-focus-ring);
+  outline-offset: var(--revamp-focus-offset);
+  opacity: 1;
+}
+
+/* Double-Generate guard — busy chrome while generate/rerun running */
+body.revamp-preview.revamp-gen-busy .revamp-sticky-bar .btn-rerun,
+body.revamp-preview.revamp-gen-busy .revamp-sticky-bar .btn-fresh,
+body.revamp-preview.revamp-gen-busy .btn-generate {
+  opacity: 0.55;
+  pointer-events: none;
+  cursor: wait;
+}
+body.revamp-preview.revamp-gen-busy .revamp-sticky-bar .btn-fresh::after {
+  content: "…";
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Wave 2 #11 — Settings quieting (object-page hierarchy, packaging only)
+   Does not change save / optimizer / Generate / Commit behavior or role gating.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Flat Coke header (no loud gradient) */
+body.revamp-preview #settings-modal .settings-header {
+  background: #E61D2B !important;
+  background-image: none !important;
+  padding: 12px 18px !important;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+body.revamp-preview #settings-modal .settings-header h2 {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.01em;
+}
+body.revamp-preview #settings-modal .settings-header .modal-close {
+  color: rgba(255, 255, 255, 0.78) !important;
+  font-size: 20px !important;
+}
+body.revamp-preview #settings-modal .settings-header .modal-close:hover {
+  color: #fff !important;
+}
+
+/* Panel surface — Belize object page */
+body.revamp-preview #settings-modal .settings-panel {
+  box-shadow: -2px 0 12px rgba(50, 54, 58, 0.12) !important;
+  background: #fafafa !important;
+}
+body.revamp-preview #settings-modal .settings-body {
+  padding: 16px 18px 28px !important;
+  background: #fafafa;
+  color: #32363a;
+}
+
+/* Section titles — clearer hierarchy by tier */
+body.revamp-preview #settings-modal .settings-section-title {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em !important;
+  color: #6a6d70 !important;
+  margin: 4px 0 10px !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid #ebebeb !important;
+}
+body.revamp-preview #settings-modal .settings-section-title[data-revamp-tier="primary"] {
+  color: #32363a !important;
+  font-size: 12px !important;
+  letter-spacing: 0.06em !important;
+  border-bottom-color: #d9dde0 !important;
+  margin-top: 0 !important;
+}
+body.revamp-preview #settings-modal .settings-section-title[data-revamp-tier="advanced"],
+body.revamp-preview #settings-modal .settings-section-title[data-revamp-tier="danger"] {
+  color: #89919a !important;
+  font-weight: 600 !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.04em !important;
+  border-bottom-color: #ebebeb !important;
+  margin-top: 6px !important;
+}
+body.revamp-preview #settings-modal .settings-section-title[data-revamp-tier="danger"] {
+  color: #a85a5a !important;
+  border-bottom-color: #f0d8d8 !important;
+}
+
+/* Soft dividers */
+body.revamp-preview #settings-modal .divider {
+  border: none !important;
+  border-top: 1px solid #ebebeb !important;
+  margin: 18px 0 !important;
+  opacity: 1;
+}
+
+/* Primary help under Destinations — keep readable; demote other section blurbs */
+body.revamp-preview #settings-modal .settings-section-title[data-revamp-tier="primary"] + p {
+  font-size: 12px !important;
+  color: #6a6d70 !important;
+  margin-bottom: 10px !important;
+  line-height: 1.45;
+}
+body.revamp-preview #settings-modal .settings-section-title[data-revamp-tier="secondary"] + p,
+body.revamp-preview #settings-modal .settings-section-title[data-revamp-tier="advanced"] + p {
+  font-size: 11px !important;
+  color: #89919a !important;
+  line-height: 1.4;
+}
+body.revamp-preview #settings-modal .settings-section-title[data-revamp-tier="advanced"] + p {
+  max-height: 2.8em;
+  overflow: hidden;
+  opacity: 0.85;
+}
+
+/* Destinations — list-report block */
+body.revamp-preview #settings-modal .revamp-settings-list-report {
+  border: 1px solid #d9dde0 !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  margin-bottom: 12px !important;
+  overflow: hidden;
+  box-shadow: none !important;
+}
+body.revamp-preview #settings-modal .revamp-settings-list-report .dest-settings-table {
+  margin: 0 !important;
+  width: 100%;
+  border-collapse: collapse;
+}
+body.revamp-preview #settings-modal .dest-settings-table thead th {
+  background: #f7f7f7 !important;
+  color: #6a6d70 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #ebebeb !important;
+  padding: 8px 6px !important;
+}
+body.revamp-preview #settings-modal .dest-settings-table tbody td {
+  border-bottom: 1px solid #f0f1f2 !important;
+  padding: 7px 6px !important;
+  font-size: 12px !important;
+  color: #32363a;
+  background: #fff;
+}
+body.revamp-preview #settings-modal .dest-settings-table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+body.revamp-preview #settings-modal .dest-settings-table tbody tr:hover td {
+  background: #fafbfc;
+}
+
+/* Primary save near Destinations stays solid; secondary outline quieter */
+body.revamp-preview #settings-modal .settings-body > .btn.btn-dark.btn-sm {
+  background: #354a5f !important;
+  border-color: #354a5f !important;
+  font-weight: 600;
+}
+body.revamp-preview #settings-modal .settings-body > .btn.btn-outline.btn-sm {
+  color: #6a6d70 !important;
+  border-color: #d9dde0 !important;
+  background: #fff !important;
+  font-weight: 500;
+}
+
+/* Advanced / noise blocks — quieter surface + denser */
+body.revamp-preview #settings-modal .revamp-settings-block[data-revamp-tier="advanced"],
+body.revamp-preview #settings-modal .revamp-settings-block[data-revamp-tier="danger"] {
+  background: #f5f6f7;
+  border: 1px solid #ebebeb;
+  border-radius: 6px;
+  padding: 10px 12px 12px;
+  margin: 0 0 4px;
+}
+body.revamp-preview #settings-modal .revamp-settings-block[data-revamp-tier="danger"] {
+  background: #faf7f7;
+  border-color: #f0d8d8;
+}
+body.revamp-preview #settings-modal .revamp-settings-block[data-revamp-tier="advanced"] .settings-section-title,
+body.revamp-preview #settings-modal .revamp-settings-block[data-revamp-tier="danger"] .settings-section-title {
+  margin-top: 0 !important;
+  border-bottom: none !important;
+  padding-bottom: 4px !important;
+}
+body.revamp-preview #settings-modal .revamp-settings-block[data-revamp-tier="advanced"] .toggle-wrap span,
+body.revamp-preview #settings-modal .revamp-settings-block[data-revamp-tier="advanced"] label + span {
+  font-size: 12px !important;
+  color: #6a6d70 !important;
+}
+body.revamp-preview #settings-modal .revamp-settings-block[data-revamp-tier="advanced"] > div[style*="align-items"] > span {
+  font-size: 11px !important;
+  color: #89919a !important;
+}
+
+/* Field groups — compact Belize */
+body.revamp-preview #settings-modal .field-group label {
+  color: #6a6d70 !important;
+  font-size: 11px !important;
+  font-weight: 600;
+}
+body.revamp-preview #settings-modal .field-group input.plain,
+body.revamp-preview #settings-modal .field-group select.plain {
+  border-color: #d9dde0 !important;
+  border-radius: 4px !important;
+  font-size: 13px !important;
+  color: #32363a;
+  background: #fff;
+}
+
+/* Danger Zone button — outline danger, not shouty full red block peer to Save */
+body.revamp-preview #settings-modal #reset-btn {
+  background: #fff !important;
+  color: #bb0000 !important;
+  border: 1px solid #e7b3b3 !important;
+  font-weight: 600;
+  opacity: 0.92;
+}
+body.revamp-preview #settings-modal #reset-btn:hover {
+  background: #fdf2f2 !important;
+  opacity: 1;
+}
+
+/* Primary Destinations block breathing room */
+body.revamp-preview #settings-modal .revamp-settings-block[data-revamp-tier="primary"] {
+  background: #ffffff;
+  border: 1px solid #d9dde0;
+  border-radius: 8px;
+  padding: 12px 14px 14px;
+  margin-bottom: 4px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
+}
+body.revamp-preview #settings-modal .revamp-settings-block[data-revamp-tier="primary"] .settings-section-title {
+  margin-top: 0 !important;
+}
+
+/* Secondary blocks — flat, less chrome */
+body.revamp-preview #settings-modal .revamp-settings-block[data-revamp-tier="secondary"] {
+  padding: 2px 0 4px;
+}
+
+/* Assigned filter — overflow + idle-domicile severity remain glanceable */
+/* S2: empty Unassigned chrome (.revamp-unassigned-calm / data-revamp-unassigned-empty) is a real
+   .is-unassigned card so applyEmptyCardFilter never treats it as empty-driver. */
+body.revamp-preview #driver-cards-grid .driver-card.is-shore:not(.revamp-empty-hidden),
+body.revamp-preview #driver-cards-grid .driver-card.revamp-severity-keep {
+  outline: none;
+}
+body.revamp-preview #driver-cards-grid .driver-card.revamp-severity-keep {
+  box-shadow: inset 3px 0 0 #e8d5a3;
+}
+body.revamp-preview #driver-cards-grid .driver-card.revamp-severity-keep.revamp-empty-hidden {
+  /* JS should not hide these under Assigned; belt-and-suspenders */
+  display: block !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Wave 2 #12 — Compact density polish (packaging only)
+   Tighter gaps / less air. Do NOT shrink Out or phase-input count steppers.
+   Do NOT shrink Commit Day primary. Capacity chip skipped (no planned/remaining
+   in card-header DOM). Gen-busy already disables real .btn-generate.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Pass-out grid denser (less air between cards) */
+body.revamp-preview.has-plan #driver-cards-section .driver-cards-grid,
+body.revamp-preview #driver-cards-grid.driver-cards-grid,
+body.revamp-preview .driver-cards-grid {
+  gap: 6px !important;
+}
+
+/* Card chrome — slightly denser padding; scan line + Out untouched in size */
+body.revamp-preview .driver-card-header,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header {
+  padding: 5px 8px;
+  gap: 5px;
+}
+body.revamp-preview.has-plan #driver-cards-section .driver-card-footer,
+body.revamp-preview .driver-card-footer {
+  padding: 6px 8px;
+}
+body.revamp-preview .run-row {
+  padding: 4px 8px;
+  gap: 5px;
+}
+
+/* Filter token bar — less air above grid */
+.revamp-cards-toolbar {
+  margin: 0 0 6px;
+  padding: 0 0 2px;
+  gap: 3px;
+}
+.revamp-filter-tokens {
+  gap: 5px;
+}
+
+/* Sticky denser — status left / actions right preserved; Commit size locked */
+.revamp-sticky-bar {
+  padding: 6px 14px;
+  gap: 8px;
+}
+.revamp-sticky-bar .actions {
+  gap: 6px;
+}
+/* Explicit: do not shrink Commit Day primary (keep #10/#11 sizes) */
+.revamp-sticky-bar .btn-commit-primary {
+  padding: 7px 14px !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  min-height: 32px;
+}
+
+/* Header utilities denser (quiet cluster tighter) */
+body.revamp-preview header .hdr-right,
+body.revamp-preview header .hdr-actions,
+body.revamp-preview header .header-right {
+  gap: 5px;
+}
+
+/* Metrics + Needs — slightly tighter rhythm, still breathing (not crushed) */
+.revamp-plan-summary {
+  margin: 10px auto 8px;
+  gap: 10px;
+}
+.revamp-plan-summary .rps-item,
+.revamp-plan-summary .metric {
+  padding: 12px 14px;
+}
+.revamp-plan-summary .rps-val,
+.revamp-plan-summary .metric .value {
+  margin-top: 5px;
+  font-size: 21px;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs {
+  margin: 0 auto 10px;
+}
+
+/* Page stack — less air between major blocks */
+body.revamp-preview .stack {
+  gap: 10px;
+}
+body.revamp-preview .tab-content {
+  padding: 12px 16px 24px;
+}
+body.revamp-preview.has-plan #driver-cards-section .card > .card-header {
+  gap: 8px;
+  padding: 2px 0 6px;
+}
+
+/* Finger-target keep — shared-PC: do NOT shrink Out or count steppers.
+   Out (.out-btn) and phase-input steppers intentionally untouched this pass
+   (gap/margin density only). Prior densify sizes remain the floor. */
+
+/* Pass-out section title row denser */
+body.revamp-preview.has-plan #driver-cards-section > .card {
+  margin-bottom: 0;
+}
+
+
+/* S1-2: Commit gated while plan stale (packaging) */
+body.revamp-preview.revamp-plan-stale .revamp-sticky-bar .btn-commit-primary {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.15);
+}
+body.revamp-preview .revamp-sticky-bar #revamp-sticky-status.revamp-stale-commit-msg {
+  color: var(--danger, #c62828);
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Wave 3 / TP#3 — DC go-live ready-gate (preview only)
+   Soft-block Generate when 0 available drivers or 0 enabled destinations.
+   Soft-warn Commit if a fiction plan somehow exists. Does not rewrite optimizer.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Fiori Message Strip / IM lite — banner above Generate */
+.revamp-dc-ready-gate {
+  display: none;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  background: #fff8e6;
+  border: 1px solid #f0d48a;
+  border-left: 3px solid #e8a317;
+  border-radius: 6px;
+  max-width: 560px;
+  box-sizing: border-box;
+}
+.revamp-dc-ready-gate.is-visible {
+  display: flex;
+}
+.revamp-dc-ready-gate.is-soft {
+  background: #f5f6f7;
+  border-color: #d9dde0;
+  border-left-color: #89919a;
+}
+.revamp-dc-ready-gate__icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: #8a6d00;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+}
+.revamp-dc-ready-gate.is-soft .revamp-dc-ready-gate__icon {
+  color: #6a6d70;
+}
+.revamp-dc-ready-gate__body {
+  flex: 1;
+  min-width: 0;
+}
+.revamp-dc-ready-gate__title {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #32363a;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+}
+.revamp-dc-ready-gate__text {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6a6d70;
+  line-height: 1.45;
+}
+.revamp-dc-ready-gate__cta {
+  margin-top: 8px;
+}
+.revamp-dc-ready-gate__link {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #c41220;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.revamp-dc-ready-gate__link:hover { color: #E61D2B; }
+.revamp-dc-ready-gate__link:focus-visible {
+  outline: 2px solid rgba(230, 29, 43, 0.5);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Soft-disable Generate + sticky generate actions when DC not ready */
+body.revamp-preview.revamp-dc-not-ready .btn-generate,
+body.revamp-preview.revamp-dc-not-ready .revamp-sticky-bar .btn-rerun,
+body.revamp-preview.revamp-dc-not-ready .revamp-sticky-bar .btn-fresh {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.12);
+}
+/* Keep clickable so click can surface the banner (aria-disabled, not disabled attr) */
+body.revamp-preview.revamp-dc-not-ready .btn-generate[aria-disabled="true"],
+body.revamp-preview.revamp-dc-not-ready .revamp-sticky-bar .btn-rerun[aria-disabled="true"],
+body.revamp-preview.revamp-dc-not-ready .revamp-sticky-bar .btn-fresh[aria-disabled="true"] {
+  pointer-events: auto;
+}
+
+/* Soft-disable Commit on fiction sticky / ready-gate blocked — mute + demote primary */
+body.revamp-preview.revamp-dc-not-ready.has-plan .revamp-sticky-bar .btn-commit-primary,
+body.revamp-preview .revamp-sticky-bar .btn-commit-primary.revamp-commit-not-ready,
+body.revamp-preview .revamp-sticky-bar .btn-commit-primary[data-revamp-commit-not-ready="1"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(0.2);
+  background: #f4f5f6 !important;
+  color: #6a6d70 !important;
+  border: 1.5px solid #c8cdd9 !important;
+  box-shadow: none !important;
+}
+body.revamp-preview.revamp-dc-not-ready.has-plan .revamp-sticky-bar .btn-commit-primary[aria-disabled="true"],
+body.revamp-preview .revamp-sticky-bar .btn-commit-primary.revamp-commit-not-ready[aria-disabled="true"] {
+  pointer-events: auto; /* click still surfaces not-ready quiet msg */
+}
+body.revamp-preview .revamp-sticky-bar #revamp-sticky-status.revamp-ready-gate-msg {
+  color: #8a6d00;
+  font-weight: 600;
+}
+
+@media print {
+  .revamp-dc-ready-gate { display: none !important; }
+}
+
+@keyframes revamp-ready-gate-flash-kf {
+  0% { box-shadow: 0 0 0 3px rgba(232, 163, 23, 0.35); }
+  100% { box-shadow: none; }
+}
+.revamp-dc-ready-gate.revamp-ready-gate-flash {
+  animation: revamp-ready-gate-flash-kf 1.2s ease-out;
+}
+
+
+/* ═══ Wave 3 / TP#2 — homeFirst visibility + dest/carrier audit (preview only) ═══ */
+body.revamp-preview .revamp-quiet-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e8ebef;
+  background: #f8f9fa;
+  color: #6a6d70;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+body.revamp-preview .revamp-quiet-note[hidden] { display: none !important; }
+body.revamp-preview .revamp-quiet-note__mark {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: #eef0f2;
+  color: #89919a;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
+body.revamp-preview .revamp-quiet-note__body { flex: 1 1 auto; min-width: 0; }
+body.revamp-preview .revamp-quiet-note__title {
+  font-weight: 600;
+  color: #52565a;
+  margin: 0 0 2px;
+}
+body.revamp-preview .revamp-quiet-note__text { margin: 0; color: #6a6d70; }
+body.revamp-preview .revamp-quiet-note--placeholder {
+  border-style: dashed;
+  background: #fafbfc;
+}
+body.revamp-preview #settings-modal .revamp-dest-audit {
+  margin: 0 0 10px;
+}
+body.revamp-preview #tab-fleet .revamp-homefirst-gap {
+  margin-top: -4px;
+}
+body.revamp-preview #drv-homefirst-group .revamp-homefirst-modal-note {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: #6a6d70;
+  background: #f8f9fa;
+  border: 1px dashed #e1e4e8;
+  border-radius: 4px;
+}
+@media print {
+  .revamp-quiet-note,
+  .revamp-homefirst-gap,
+  .revamp-dest-audit,
+  .revamp-homefirst-modal-note { display: none !important; }
+}
+
+
+/* ═══ Wave 3 / TP#5 — Commit audit package chrome (preview only / localStorage) ═══ */
+body.revamp-preview .revamp-audit-preview-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: 1px dashed #c8cdd9;
+  background: #f8f9fa;
+  color: #89919a;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  cursor: help;
+  vertical-align: middle;
+}
+body.revamp-preview .revamp-audit-preview-chip[hidden] { display: none !important; }
+body.revamp-preview .revamp-sticky-bar .revamp-audit-preview-chip {
+  margin-left: 6px;
+}
+body.revamp-preview #revamp-commit-btn[title] {
+  /* title carries "Audit preview (local only)" */
+}
+body.revamp-preview .hist-entry .revamp-commit-audit {
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eef0f2;
+  border-radius: 0;
+  background: #fafbfc;
+}
+body.revamp-preview .hist-entry .revamp-commit-audit--placeholder {
+  border-style: none;
+  border-bottom: 1px dashed #e8ebef;
+}
+body.revamp-preview .revamp-commit-audit__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 0 0 4px;
+  font-size: 11px;
+  color: #52565a;
+}
+body.revamp-preview .revamp-commit-audit__meta strong {
+  font-weight: 600;
+  color: #32363a;
+}
+body.revamp-preview .revamp-commit-audit__who {
+  color: #6a6d70;
+}
+body.revamp-preview .revamp-commit-audit__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+body.revamp-preview .revamp-audit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid #e5e9ec;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  color: #52565a;
+  line-height: 1.4;
+}
+body.revamp-preview .revamp-audit-chip__tag {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #89919a;
+}
+body.revamp-preview .revamp-audit-chip--shore .revamp-audit-chip__tag { color: #6b21a8; }
+body.revamp-preview .revamp-audit-chip--gap .revamp-audit-chip__tag { color: #b45309; }
+body.revamp-preview .revamp-audit-chip--info .revamp-audit-chip__tag { color: #475569; }
+body.revamp-preview .revamp-audit-local-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #eef0f2;
+  color: #89919a;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+body.revamp-preview #settings-modal .revamp-exclusive-phase-cap-note {
+  margin: 0 0 10px;
+}
+body.revamp-preview #settings-modal .revamp-exclusive-phase-cap-note .revamp-quiet-note__text code {
+  font-size: 10.5px;
+  background: #eef0f2;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+@media print {
+  .revamp-audit-preview-chip,
+  .revamp-commit-audit,
+  .revamp-exclusive-phase-cap-note { display: none !important; }
+}
+
+
+/* ═══ 2026-09-16 UI bugfixes — packaging chrome ═══ */
+
+/* Full Load Assignments / Details — Belize×Coke table chrome (match Drivers/History) */
+body.revamp-preview #assignments-section > div > .card,
+body.revamp-preview #assignments-section .card {
+  border: 1px solid var(--revamp-border) !important;
+  border-radius: var(--revamp-radius-sm);
+  box-shadow: none !important;
+  background: var(--revamp-surface);
+}
+body.revamp-preview #assignments-section .card-header,
+body.revamp-preview #assignments-section.revamp-assignments .card-header {
+  background: var(--revamp-page-alt) !important;
+  border-bottom: 1px solid var(--revamp-border-soft);
+  border-left: 3px solid var(--revamp-red);
+  color: var(--revamp-text);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none !important; /* kill prod .card-header uppercase */
+}
+body.revamp-preview #assignments-section .card-header .card-title,
+body.revamp-preview #assignments-section .card-title,
+body.revamp-preview #assignments-section .revamp-assignments-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--revamp-text) !important;
+  letter-spacing: 0.01em !important;
+  text-transform: none !important;
+}
+body.revamp-preview #assignments-section #revamp-details-toggle,
+body.revamp-preview #revamp-details-toggle {
+  text-transform: none !important;
+  letter-spacing: 0.01em;
+  font-weight: 600;
+  color: var(--revamp-text-secondary);
+  font-size: 12px;
+}
+body.revamp-preview #assignments-section .tbl-wrap {
+  border: 0;
+  border-radius: 0;
+}
+body.revamp-preview #assignments-section thead tr {
+  background: #f7f7f7 !important;
+  color: var(--revamp-text-secondary) !important;
+}
+body.revamp-preview #assignments-section thead th {
+  background: #f7f7f7 !important;
+  color: var(--revamp-text-secondary) !important;
+  border-bottom: 1px solid var(--revamp-border);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+body.revamp-preview #assignments-section tbody tr {
+  border-bottom: 1px solid var(--revamp-border-soft);
+}
+body.revamp-preview #assignments-section tbody tr:hover {
+  background: var(--revamp-page-alt);
+}
+body.revamp-preview #assignments-section tbody td {
+  color: var(--revamp-text);
+  border-color: var(--revamp-border-soft);
+  font-size: 12px;
+}
+body.revamp-preview #assignments-section #detail-toggle-btn,
+body.revamp-preview #assignments-section .btn-ghost.btn-sm {
+  border: 1px solid var(--revamp-border-soft);
+  background: var(--revamp-surface);
+  color: var(--revamp-text-secondary);
+  font-weight: 600;
+  font-size: 11px;
+}
+body.revamp-preview #assignments-section #detail-toggle-btn:hover {
+  border-color: var(--revamp-border);
+  color: var(--revamp-text);
+  background: var(--revamp-page-alt);
+}
+body.revamp-preview #revamp-details-toggle {
+  color: var(--revamp-text-secondary);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Shore / overflow — loud Expand CTA (Out only after expand; engine untouched) */
+body.revamp-preview .driver-card.is-shore .driver-card-header {
+  cursor: pointer;
+}
+body.revamp-preview .driver-card.is-shore .revamp-shore-expand-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #6b5b95;
+  background: #6b5b95;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  line-height: 1.2;
+}
+body.revamp-preview .driver-card.is-shore .revamp-shore-expand-cta:hover {
+  background: #5a4c82;
+  border-color: #5a4c82;
+}
+body.revamp-preview .driver-card.is-shore .revamp-shore-expand-cta[data-expanded="1"] {
+  background: var(--revamp-surface);
+  color: #5a4c82;
+  border-color: #c9c2dc;
+}
+body.revamp-preview .driver-card.is-shore .revamp-shore-expand-cta .revamp-shore-chev {
+  font-size: 10px;
+  line-height: 1;
+}
+body.revamp-preview .driver-card.is-shore .driver-card-header > div[style*="font-size:15px"] {
+  display: none !important; /* replaced by Expand CTA */
+}
+body.revamp-preview .driver-card.is-shore .revamp-shore-footer-cta {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border: 1px dashed #c9c2dc;
+  border-radius: 4px;
+  background: #f7f5fb;
+  color: #5a4c82;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+}
+body.revamp-preview .driver-card.is-shore.is-shore-expanded .revamp-shore-footer-cta {
+  display: none !important;
+}
+body.revamp-preview .driver-card.is-shore .card-dot-status {
+  color: #5a4c82 !important;
+}
+
+/* Filter hint under tokens */
+body.revamp-preview #revamp-empty-hint {
+  font-size: 11px;
+  color: var(--revamp-text-muted);
+}
+
+/* Emoji demote leftovers — production strings may still paint; packaging overrides look */
+body.revamp-preview #dot-compliance-banner,
+body.revamp-preview .warn-banner.dot-banner,
+body.revamp-preview [id*="dot"][class*="banner"] {
+  font-variant-emoji: text;
+}
+
+/* ═══ 2026-09-16 Round2 — Jacob screenshot packaging ═══ */
+
+/* Pass-out denser Belize (headers + run rows only; engine untouched) */
+body.revamp-preview .driver-card-header,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header {
+  padding: 5px 8px !important;
+  gap: 6px !important;
+  min-height: 0;
+}
+body.revamp-preview .driver-card-header .drv-name,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-name {
+  font-size: 11px !important;
+  font-weight: 600;
+  line-height: 1.25;
+}
+body.revamp-preview .driver-card-header .drv-base,
+body.revamp-preview .driver-card-header .drv-base span,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-base,
+body.revamp-preview.has-plan #driver-cards-section .driver-card-header .drv-base span {
+  font-size: 9.5px !important;
+  line-height: 1.25;
+}
+body.revamp-preview .drv-initial,
+body.revamp-preview.has-plan #driver-cards-section .drv-initial {
+  width: 22px !important;
+  height: 22px !important;
+  font-size: 10px !important;
+}
+body.revamp-preview .run-row {
+  padding: 3px 8px !important;
+  gap: 5px !important;
+  min-height: 0;
+}
+body.revamp-preview .run-label {
+  font-size: 8px !important;
+  padding: 1px 4px !important;
+  opacity: 0.78;
+  letter-spacing: 0.03em;
+}
+body.revamp-preview .run-hrs {
+  font-size: 11px !important;
+  font-weight: 700;
+}
+body.revamp-preview .driver-card-footer {
+  padding: 4px 8px !important;
+}
+body.revamp-preview .card-total-hrs {
+  font-size: 10px !important;
+}
+body.revamp-preview .card-dot-status,
+body.revamp-preview .driver-card-footer .card-dot-status {
+  font-size: 9.5px !important;
+  padding: 1px 7px !important;
+  font-variant-emoji: text;
+}
+
+/* Workload toggle — sentence case skin like Details */
+body.revamp-preview #revamp-workload-toggle,
+body.revamp-preview .revamp-workload-toggle {
+  text-transform: none !important;
+  letter-spacing: 0.01em;
+  font-weight: 600;
+}
+
+/* ═══ 2026-09-16 — FIX_EXPAND_ASSIGN (Shore expand + Assignments table) ═══ */
+
+/* Collapsed shore summary rows: look + feel clickable (JS wires toggleShoreCard) */
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row.revamp-shore-summary,
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row[data-revamp-shore-summary="1"] {
+  cursor: pointer;
+}
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row.revamp-shore-summary:hover,
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row[data-revamp-shore-summary="1"]:hover {
+  background: #f7f5fb;
+}
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row.revamp-shore-summary:focus-visible,
+body.revamp-preview .driver-card.is-shore:not(.is-shore-expanded) .run-row[data-revamp-shore-summary="1"]:focus-visible {
+  outline: 2px solid rgba(230, 29, 43, 0.45);
+  outline-offset: 1px;
+}
+
+/* Never CSS-hide expanded shore runs (Out/Lock + drag must remain visible) */
+body.revamp-preview .driver-card.is-shore .driver-card-runs,
+body.revamp-preview .driver-card.is-shore.is-shore-expanded .driver-card-runs {
+  display: block !important;
+  visibility: visible !important;
+  max-height: none !important;
+  overflow: visible !important;
+  opacity: 1 !important;
+}
+
+/* Assignments thead — kill prod uppercase (Jacob ALL CAPS headers) */
+body.revamp-preview #assignments-section thead th,
+body.revamp-preview #assignments-section.revamp-assignments thead th,
+body.revamp-preview #assignments-table thead th {
+  text-transform: none !important;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--revamp-text-secondary) !important;
+  background: #f7f7f7 !important;
+}
+
+/* Repeated col-key band under each destination group — same sentence case */
+body.revamp-preview #assignments-section tr.col-key td,
+body.revamp-preview #assignments-table tr.col-key td {
+  text-transform: none !important;
+  letter-spacing: 0.02em;
+  background: #f7f7f7 !important;
+  color: var(--revamp-text-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  padding: 4px 8px !important;
+  border-bottom: 1px solid var(--revamp-border) !important;
+}
+
+/* Shoreline body rows — neutralize purple/pink to Belize neutrals */
+body.revamp-preview #assignments-section tbody tr.row-shore,
+body.revamp-preview #assignments-table tbody tr.row-shore,
+body.revamp-preview #assignments-section tbody tr.row-shore.revamp-zebra-a,
+body.revamp-preview #assignments-table tbody tr.row-shore.revamp-zebra-a {
+  background: #ffffff !important;
+  box-shadow: inset 2px 0 0 #e61d2b; /* thin Coke accent only */
+}
+body.revamp-preview #assignments-section tbody tr.row-shore.revamp-zebra-b,
+body.revamp-preview #assignments-table tbody tr.row-shore.revamp-zebra-b {
+  background: #fafafa !important;
+  box-shadow: inset 2px 0 0 #e61d2b;
+}
+body.revamp-preview #assignments-section tbody tr.row-shore:hover,
+body.revamp-preview #assignments-table tbody tr.row-shore:hover {
+  background: #f5f5f5 !important;
+}
+
+/* Quieter DRIVER cell for Shoreline */
+body.revamp-preview #assignments-section .badge-shore,
+body.revamp-preview #assignments-section .badge-shore.revamp-badge-shore-quiet,
+body.revamp-preview #assignments-table .badge-shore {
+  background: transparent !important;
+  color: var(--revamp-text-secondary) !important;
+  font-weight: 600;
+  font-size: 11px;
+  padding: 0 !important;
+  letter-spacing: 0.02em;
+  font-variant-emoji: text;
+}
+
+/* Tighten assignment body density */
+body.revamp-preview #assignments-section tbody td,
+body.revamp-preview #assignments-table tbody td {
+  padding: 4px 8px !important;
+  font-size: 12px;
+  vertical-align: middle;
+}
+body.revamp-preview #assignments-section thead th,
+body.revamp-preview #assignments-table thead th {
+  padding: 6px 8px !important;
+}
+
+/* Destination group bar — keep Coke red, denser/cleaner */
+body.revamp-preview #assignments-section tr.phase-group-hdr td,
+body.revamp-preview #assignments-table tr.phase-group-hdr td {
+  padding: 3px 8px !important;
+  font-size: 10px !important;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Responsive Wave R1 — 2026-09-16 (packaging only)
+   phone ≤640 · tablet 641–960 · desktop ≥961 (dense Belize preserved)
+   Media queries only tighten small screens; no desktop regression.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Touch / coarse pointer — reduce hover-only affordances */
+@media (hover: none), (pointer: coarse) {
+  body.revamp-preview .run-row .out-btn[onclick*="toggleLock"] {
+    opacity: 0.85 !important;
+    filter: none;
+    pointer-events: auto;
+  }
+  body.revamp-preview .run-row .out-btn[onclick*="toggleLock"].stamped {
+    opacity: 0.9 !important;
+  }
+  body.revamp-preview .run-row .run-move {
+    width: 22px;
+    height: 18px;
+    min-width: 22px;
+  }
+  body.revamp-preview #tab-fleet tbody td.no-print .btn-ghost,
+  body.revamp-preview #tab-fleet tbody td.no-print .btn-danger,
+  body.revamp-preview #tab-fleet .btn-group .btn-ghost,
+  body.revamp-preview #tab-fleet .btn-group .btn-danger {
+    opacity: 0.72;
+  }
+}
+
+/* Phase count steppers (packaging +/-) — wrap always visible; +/- only on phone */
+.revamp-phase-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.revamp-phase-stepper .revamp-step-btn {
+  display: none; /* desktop: input only */
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--revamp-border);
+  background: var(--revamp-page-alt);
+  color: var(--revamp-text);
+  border-radius: var(--revamp-radius-sm);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+.revamp-phase-stepper .revamp-step-btn:focus-visible {
+  outline: 2px solid rgba(230, 29, 43, 0.5);
+  outline-offset: 2px;
+}
+
+/* Header More toggle — packaging; hidden until phone MQ */
+.revamp-hdr-more {
+  display: none;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: var(--revamp-radius-sm);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+}
+.revamp-hdr-more:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.7);
+  outline-offset: 2px;
+}
+body.revamp-preview.revamp-hdr-utils-open .revamp-hdr-more {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+/* ── Tablet 641–960 ── */
+@media (max-width: 960px) and (min-width: 641px) {
+  body.revamp-preview .driver-cards-grid,
+  body.revamp-preview.has-plan #driver-cards-section .driver-cards-grid,
+  body.revamp-preview #driver-cards-grid.driver-cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  body.revamp-preview.has-plan .revamp-plan-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  body.revamp-preview #assignments-section .tbl-wrap,
+  body.revamp-preview #assignments-section .tbl-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .revamp-sticky-bar {
+    padding: 8px 12px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+  .revamp-sticky-bar .actions {
+    gap: 6px;
+  }
+  .revamp-filter-tokens {
+    flex-wrap: wrap;
+  }
+}
+
+/* ── Phone ≤640 ── */
+@media (max-width: 640px) {
+  /* Page shell + safe area for sticky thumb bar */
+  body.revamp-preview {
+    padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  body.revamp-preview .stack {
+    padding-left: 10px;
+    padding-right: 10px;
+    gap: 10px;
+  }
+
+  /* Header — compact; DC chip reachable; utilities fold */
+  body.revamp-preview header {
+    height: auto;
+    min-height: 48px;
+    padding: 6px 10px;
+    padding-top: calc(6px + env(safe-area-inset-top, 0px));
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  body.revamp-preview .hdr-logo {
+    padding-right: 8px;
+    gap: 6px;
+  }
+  body.revamp-preview .hdr-logo-badge { display: none; }
+  body.revamp-preview .hdr-title { font-size: 12px; }
+  body.revamp-preview .hdr-sub,
+  body.revamp-preview #revamp-hdr-sub-rest { display: none !important; }
+  body.revamp-preview .revamp-dc-chip,
+  body.revamp-preview .revamp-dc-slot .revamp-dc-chip {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  body.revamp-preview .hdr-settings-btn {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 16px !important;
+  }
+  .revamp-hdr-more { display: inline-flex; align-items: center; justify-content: center; }
+  /* Fold utilities behind More unless open */
+  body.revamp-preview:not(.revamp-hdr-utils-open) header .hdr-date,
+  body.revamp-preview:not(.revamp-hdr-utils-open) header #hdr-day,
+  body.revamp-preview:not(.revamp-hdr-utils-open) header #hdr-dispatchers-btn,
+  body.revamp-preview:not(.revamp-hdr-utils-open) header #hdr-user-email,
+  body.revamp-preview:not(.revamp-hdr-utils-open) header .hdr-user-email,
+  body.revamp-preview:not(.revamp-hdr-utils-open) header #hdr-logout-btn {
+    display: none !important;
+  }
+  body.revamp-preview.revamp-hdr-utils-open header .hdr-right,
+  body.revamp-preview.revamp-hdr-utils-open header .hdr-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 4px;
+  }
+  body.revamp-preview.revamp-hdr-utils-open header .hdr-date,
+  body.revamp-preview.revamp-hdr-utils-open header #hdr-dispatchers-btn,
+  body.revamp-preview.revamp-hdr-utils-open header #hdr-user-email,
+  body.revamp-preview.revamp-hdr-utils-open header #hdr-logout-btn {
+    display: inline-flex !important;
+    opacity: 0.9 !important;
+    font-size: 11px !important;
+    min-height: 36px;
+    align-items: center;
+  }
+
+  /* Tabs — scrollable, thumb-friendly */
+  body.revamp-preview .tabs,
+  body.revamp-preview .tab-bar,
+  body.revamp-preview nav.tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+  body.revamp-preview .tab-btn {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  /* Preview banner — shorter on phone */
+  .revamp-preview-banner {
+    font-size: 9px;
+    padding: 3px 8px;
+    text-align: left;
+  }
+
+  /* ── Daily Load Input / Edit counts — editable, not glance-only ── */
+  body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-row,
+  body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 10px 12px;
+  }
+  body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-label,
+  body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-label {
+    grid-column: 1;
+    font-size: 14px;
+  }
+  /* Steppers + input on second cell */
+  body.revamp-preview #tab-dashboard .stack > .card:first-child .phase-input,
+  body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .phase-input {
+    width: 56px;
+    min-width: 56px;
+    min-height: 44px;
+    font-size: 16px; /* avoid iOS zoom */
+    padding: 8px 6px;
+  }
+  .revamp-phase-stepper {
+    display: inline-flex;
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .revamp-phase-stepper .revamp-step-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+  }
+  /* When advanced on phone, stack secondary controls under label */
+  body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-reorder,
+  body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-time,
+  body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-hrs,
+  body.revamp-preview.revamp-input-advanced #tab-dashboard .stack > .card:has(#phase-inputs) .phase-buildday-btn {
+    grid-column: 1 / -1;
+  }
+  body.revamp-preview .revamp-edit-counts,
+  body.revamp-preview #input-toggle-btn,
+  body.revamp-preview #revamp-input-advanced-toggle {
+    min-height: 44px !important;
+    min-width: 44px;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+  }
+  .revamp-input-chips {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+  .revamp-input-chips .revamp-edit-counts {
+    width: 100%;
+    justify-content: center;
+  }
+  body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) > .card-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) .totals-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Generate — full-width mid-page; sticky owns post-plan actions */
+  body.revamp-preview .btn-generate {
+    width: 100% !important;
+    min-height: 48px;
+    font-size: 15px;
+    padding: 14px 16px;
+  }
+
+  /* Sticky action bar — thumb-friendly, safe-area, stacked */
+  .revamp-sticky-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08) !important;
+  }
+  .revamp-sticky-bar .left {
+    min-width: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .revamp-sticky-bar .actions {
+    margin-left: 0;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .revamp-sticky-bar .btn-rerun,
+  .revamp-sticky-bar .btn-fresh,
+  .revamp-sticky-bar .btn-ghost,
+  .revamp-sticky-bar .btn-commit-primary,
+  .revamp-sticky-bar .btn-open-dashboard {
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+    padding: 10px 8px !important;
+    font-size: 13px !important;
+  }
+  .revamp-sticky-bar .btn-commit-primary {
+    grid-column: 1 / -1;
+    min-height: 48px !important;
+    font-size: 14px !important;
+    padding: 12px 14px !important;
+  }
+  /* Soft sticky (Drivers/History): Open Dashboard full width */
+  body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .actions {
+    grid-template-columns: 1fr;
+  }
+  body.revamp-preview.revamp-sticky-soft .revamp-sticky-bar .btn-open-dashboard {
+    grid-column: 1 / -1;
+  }
+  /* Hide Print/CSV on phone sticky to reduce clutter (still in mid/header elsewhere if needed) */
+  .revamp-sticky-bar #revamp-print-btn,
+  .revamp-sticky-bar #revamp-csv-btn {
+    display: none !important;
+  }
+
+  /* Pass-out cards — 1 column */
+  body.revamp-preview .driver-cards-grid,
+  body.revamp-preview.has-plan #driver-cards-section .driver-cards-grid,
+  body.revamp-preview #driver-cards-grid.driver-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  /* Filters — wrap + horizontal scroll fallback */
+  .revamp-cards-toolbar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  .revamp-filter-tokens {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .revamp-filter-token {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+
+  /* Shore Expand + Out — reachable touch targets */
+  body.revamp-preview .driver-card.is-shore .revamp-shore-expand-cta {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  body.revamp-preview .driver-card.is-shore .revamp-shore-footer-cta {
+    min-height: 44px;
+    padding: 12px 10px;
+    font-size: 12px;
+  }
+  body.revamp-preview .run-row .out-btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  /* Reorder chevrons — stable size, no thrash (already non-hover layout; enlarge for touch) */
+  body.revamp-preview .run-row .run-reorder {
+    width: 28px;
+    min-width: 28px;
+    max-width: 32px;
+    gap: 4px;
+  }
+  body.revamp-preview .run-row .run-move {
+    width: 28px;
+    height: 22px;
+    min-width: 28px;
+    min-height: 22px;
+  }
+  body.revamp-preview .run-row {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  /* Plan summary — 2-col max on phone */
+  body.revamp-preview.has-plan .revamp-plan-summary {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px;
+    margin: 8px 10px;
+  }
+  body.revamp-preview #plan-quality-panel.revamp-needs {
+    margin: 0 10px 10px;
+  }
+
+  /* Assignments · detailed — horizontal scroll + sticky first column (no 9-col squash) */
+  body.revamp-preview #assignments-section .tbl-wrap,
+  body.revamp-preview #assignments-section .card .tbl-wrap {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  body.revamp-preview #assignments-section table,
+  body.revamp-preview #assignments-table {
+    min-width: 720px;
+    width: max-content;
+    max-width: none;
+  }
+  body.revamp-preview #assignments-section thead th:first-child,
+  body.revamp-preview #assignments-section tbody td:first-child,
+  body.revamp-preview #assignments-table thead th:first-child,
+  body.revamp-preview #assignments-table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #f7f7f7;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+  }
+  body.revamp-preview #assignments-section tbody td:first-child,
+  body.revamp-preview #assignments-table tbody td:first-child {
+    background: #ffffff;
+  }
+  body.revamp-preview #assignments-section tbody tr:nth-child(even) td:first-child,
+  body.revamp-preview #assignments-table tbody tr:nth-child(even) td:first-child {
+    background: #fafafa;
+  }
+  body.revamp-preview #assignments-section thead th,
+  body.revamp-preview #assignments-table thead th {
+    text-transform: none !important; /* sentence-case already; lock on phone */
+    white-space: nowrap;
+  }
+  body.revamp-preview #assignments-section .card-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  body.revamp-preview #assignments-section #detail-toggle-btn,
+  body.revamp-preview #assignments-section #revamp-details-toggle {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+
+  /* Needs Attention rows — larger jump targets */
+  body.revamp-preview #plan-quality-panel.revamp-needs .pq-view-driver,
+  body.revamp-preview #plan-quality-panel.revamp-needs a,
+  body.revamp-preview #plan-quality-panel.revamp-needs button {
+    min-height: 40px;
+  }
+
+  /* Settings modal — full-bleed phone */
+  body.revamp-preview #settings-modal .modal,
+  body.revamp-preview .modal {
+    width: 100% !important;
+    max-width: 100vw !important;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  /* Drivers / History tables — scroll */
+  body.revamp-preview #tab-fleet .tbl-wrap,
+  body.revamp-preview #tab-history .tbl-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Desktop ≥961 — explicit preserve dense multi-col (no change vs baseline) */
+@media (min-width: 961px) {
+  body.revamp-preview .driver-cards-grid,
+  body.revamp-preview.has-plan #driver-cards-section .driver-cards-grid {
+    /* prod default is 3-col; leave alone */
+  }
+  .revamp-phase-stepper .revamp-step-btn { display: none !important; }
+  .revamp-hdr-more { display: none !important; }
+}
