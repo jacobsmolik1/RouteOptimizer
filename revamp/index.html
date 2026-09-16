@@ -3211,25 +3211,22 @@ body.revamp-preview .run-row:focus-within .out-btn[onclick*="toggleLock"].stampe
   background: var(--revamp-ok-bg) !important;
 }
 
-/* Reorder ▲▼ affordance on hover / focus-within only */
+/* Reorder ▲▼: reserve width always — opacity/visibility fade only (no layout thrash) */
 body.revamp-preview .run-row .run-reorder {
   opacity: 0;
-  width: 0;
-  min-width: 0;
-  max-width: 0;
+  visibility: hidden;
+  width: 18px;
+  min-width: 18px;
+  max-width: 28px;
+  flex-shrink: 0;
   overflow: hidden;
-  margin: 0 !important;
-  padding: 0 !important;
-  gap: 0 !important;
   pointer-events: none;
-  transition: opacity 0.12s ease;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
 }
 body.revamp-preview .run-row:hover .run-reorder,
 body.revamp-preview .run-row:focus-within .run-reorder {
   opacity: 1;
-  width: auto;
-  min-width: 18px;
-  max-width: 28px;
+  visibility: visible;
   pointer-events: auto;
 }
 body.revamp-preview .run-row .run-move {
@@ -4169,6 +4166,151 @@ body.revamp-preview #settings-modal .revamp-exclusive-phase-cap-note .revamp-qui
   .revamp-audit-preview-chip,
   .revamp-commit-audit,
   .revamp-exclusive-phase-cap-note { display: none !important; }
+}
+
+
+/* ═══ 2026-09-16 UI bugfixes — packaging chrome ═══ */
+
+/* Full Load Assignments / Details — Belize×Coke table chrome (match Drivers/History) */
+body.revamp-preview #assignments-section > div > .card,
+body.revamp-preview #assignments-section .card {
+  border: 1px solid var(--revamp-border) !important;
+  border-radius: var(--revamp-radius-sm);
+  box-shadow: none !important;
+  background: var(--revamp-surface);
+}
+body.revamp-preview #assignments-section .card-header {
+  background: var(--revamp-page-alt) !important;
+  border-bottom: 1px solid var(--revamp-border-soft);
+  color: var(--revamp-text);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+body.revamp-preview #assignments-section .card-header .card-title,
+body.revamp-preview #assignments-section .card-title {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--revamp-text) !important;
+  letter-spacing: 0.01em;
+  text-transform: none !important;
+}
+body.revamp-preview #assignments-section .tbl-wrap {
+  border: 0;
+  border-radius: 0;
+}
+body.revamp-preview #assignments-section thead tr {
+  background: #f7f7f7 !important;
+  color: var(--revamp-text-secondary) !important;
+}
+body.revamp-preview #assignments-section thead th {
+  background: #f7f7f7 !important;
+  color: var(--revamp-text-secondary) !important;
+  border-bottom: 1px solid var(--revamp-border);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+body.revamp-preview #assignments-section tbody tr {
+  border-bottom: 1px solid var(--revamp-border-soft);
+}
+body.revamp-preview #assignments-section tbody tr:hover {
+  background: var(--revamp-page-alt);
+}
+body.revamp-preview #assignments-section tbody td {
+  color: var(--revamp-text);
+  border-color: var(--revamp-border-soft);
+  font-size: 12px;
+}
+body.revamp-preview #assignments-section #detail-toggle-btn,
+body.revamp-preview #assignments-section .btn-ghost.btn-sm {
+  border: 1px solid var(--revamp-border-soft);
+  background: var(--revamp-surface);
+  color: var(--revamp-text-secondary);
+  font-weight: 600;
+  font-size: 11px;
+}
+body.revamp-preview #assignments-section #detail-toggle-btn:hover {
+  border-color: var(--revamp-border);
+  color: var(--revamp-text);
+  background: var(--revamp-page-alt);
+}
+body.revamp-preview #revamp-details-toggle {
+  color: var(--revamp-text-secondary);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Shore / overflow — loud Expand CTA (Out only after expand; engine untouched) */
+body.revamp-preview .driver-card.is-shore .driver-card-header {
+  cursor: pointer;
+}
+body.revamp-preview .driver-card.is-shore .revamp-shore-expand-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #6b5b95;
+  background: #6b5b95;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  line-height: 1.2;
+}
+body.revamp-preview .driver-card.is-shore .revamp-shore-expand-cta:hover {
+  background: #5a4c82;
+  border-color: #5a4c82;
+}
+body.revamp-preview .driver-card.is-shore .revamp-shore-expand-cta[data-expanded="1"] {
+  background: var(--revamp-surface);
+  color: #5a4c82;
+  border-color: #c9c2dc;
+}
+body.revamp-preview .driver-card.is-shore .revamp-shore-expand-cta .revamp-shore-chev {
+  font-size: 10px;
+  line-height: 1;
+}
+body.revamp-preview .driver-card.is-shore .driver-card-header > div[style*="font-size:15px"] {
+  display: none !important; /* replaced by Expand CTA */
+}
+body.revamp-preview .driver-card.is-shore .revamp-shore-footer-cta {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 8px;
+  border: 1px dashed #c9c2dc;
+  border-radius: 4px;
+  background: #f7f5fb;
+  color: #5a4c82;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+}
+body.revamp-preview .driver-card.is-shore.is-shore-expanded .revamp-shore-footer-cta {
+  display: none !important;
+}
+body.revamp-preview .driver-card.is-shore .card-dot-status {
+  color: #5a4c82 !important;
+}
+
+/* Filter hint under tokens */
+body.revamp-preview #revamp-empty-hint {
+  font-size: 11px;
+  color: var(--revamp-text-muted);
+}
+
+/* Emoji demote leftovers — production strings may still paint; packaging overrides look */
+body.revamp-preview #dot-compliance-banner,
+body.revamp-preview .warn-banner.dot-banner,
+body.revamp-preview [id*="dot"][class*="banner"] {
+  font-variant-emoji: text;
 }
 
 </style>
@@ -11708,6 +11850,26 @@ if (false && 'serviceWorker' in navigator) {
     return k;
   }
 
+  function stripEmojiChars(s) {
+    return String(s || '')
+      .replace(/📋/g, '')
+      .replace(/📅/g, '')
+      .replace(/⚖️/g, '')
+      .replace(/⚠️/g, '')
+      .replace(/⚠︎/g, '')
+      .replace(/⚠/g, '')
+      .replace(/☀️/g, '')
+      .replace(/☀/g, '')
+      .replace(/🔒/g, '')
+      .replace(/🔓/g, '')
+      .replace(/⏱/g, '')
+      .replace(/👆/g, '')
+      .replace(/👥/g, '')
+      .replace(/⚡/g, '')
+      .replace(/[\uFE0F\u200D]/g, '')
+      .replace(/[ \t]{2,}/g, ' ');
+  }
+
   function getState() {
     try {
       if (typeof state !== 'undefined' && state) {
@@ -12734,9 +12896,42 @@ if (false && 'serviceWorker' in navigator) {
     section.classList.toggle('revamp-collapsed', has && !detailsOpen);
     var btn = document.getElementById('revamp-details-toggle');
     if (btn) {
-      btn.textContent = (has && !detailsOpen) ? '▶ Details' : '▼ Details';
+      btn.textContent = (has && !detailsOpen) ? 'Details' : 'Hide details';
       btn.setAttribute('aria-expanded', (has && detailsOpen) ? 'true' : 'false');
     }
+    polishAssignmentsChrome();
+  }
+
+  function polishAssignmentsChrome() {
+    try {
+      var section = document.getElementById('assignments-section');
+      if (!section) return;
+      section.classList.add('revamp-assignments');
+      var header = section.querySelector('.card-header');
+      if (header) {
+        Array.prototype.forEach.call(header.childNodes, function (n) {
+          if (n.nodeType === 3) {
+            var tx = (n.nodeValue || '').replace(/\s+/g, ' ').trim();
+            if (/Full Load Assignments|Assignments · detailed/i.test(tx) || /Detailed View/i.test(tx)) {
+              n.nodeValue = ' Assignments · detailed ';
+            }
+          } else if (n.nodeType === 1 && !n.id && n.tagName !== 'BUTTON' &&
+              !(n.classList && n.classList.contains('revamp-collapse-toggle'))) {
+            var ht = (n.textContent || '').replace(/\s+/g, ' ').trim();
+            if (/Full Load Assignments/i.test(ht) && !n.querySelector('button, input, table')) {
+              n.textContent = 'Assignments · detailed';
+            }
+          }
+        });
+      }
+      var detBtn = document.getElementById('detail-toggle-btn');
+      if (detBtn) {
+        var raw = (detBtn.textContent || '').replace(/\s+/g, ' ').trim();
+        var cleaned = stripEmojiChars(raw).trim();
+        if (/hide/i.test(cleaned)) detBtn.textContent = 'Hide Trailer / Carrier';
+        else detBtn.textContent = 'Show Trailer / Carrier';
+      }
+    } catch (eA) {}
   }
 
   /* ── Collapse Driver Workload from morning path when has-plan ── */
@@ -12865,17 +13060,104 @@ if (false && 'serviceWorker' in navigator) {
     return false;
   }
 
+  /* Dest filter: tokens use phase.dest codes (EVG); cards show phase.label (Evergreen). */
+  function buildDestMaps() {
+    var labelToCode = {};
+    var codeToLabel = {};
+    try {
+      var st = getState();
+      var phases = (st && st.phases) || [];
+      for (var i = 0; i < phases.length; i++) {
+        var ph = phases[i];
+        if (!ph || !ph.dest) continue;
+        var code = String(ph.dest).toUpperCase();
+        var label = String(ph.label || '').trim();
+        if (label) {
+          labelToCode[label.toLowerCase()] = code;
+          codeToLabel[code] = label;
+        } else if (!codeToLabel[code]) {
+          codeToLabel[code] = code;
+        }
+      }
+      var dests = (st && st.destinations) || [];
+      for (var j = 0; j < dests.length; j++) {
+        var d = dests[j];
+        if (!d || !d.code) continue;
+        var c = String(d.code).toUpperCase();
+        var name = String((d.name || '').split(',')[0] || '').trim();
+        if (name) {
+          if (!labelToCode[name.toLowerCase()]) labelToCode[name.toLowerCase()] = c;
+          if (!codeToLabel[c]) codeToLabel[c] = name;
+        }
+      }
+    } catch (eMaps) {}
+    return { labelToCode: labelToCode, codeToLabel: codeToLabel };
+  }
+
+  function phaseHeadText(phaseEl) {
+    if (!phaseEl) return '';
+    var raw = (phaseEl.childNodes[0] && phaseEl.childNodes[0].nodeType === 3)
+      ? (phaseEl.childNodes[0].nodeValue || '')
+      : (phaseEl.textContent || '');
+    return raw.split(/[—\-\n]/)[0].trim();
+  }
+
+  function tagRunRowDests() {
+    var grid = document.getElementById('driver-cards-grid');
+    if (!grid) return;
+    var maps = buildDestMaps();
+    Array.prototype.forEach.call(grid.querySelectorAll('.run-row'), function (row) {
+      if (row.classList.contains('drop-hint')) return;
+      var code = '';
+      var lab = row.querySelector('.run-label');
+      if (lab) {
+        var lt = (lab.textContent || '').trim().toUpperCase();
+        // Shore/unassigned paint dest code; normal cards paint "RUN 1"
+        if (/^[A-Z][A-Z0-9]{1,4}$/.test(lt) && lt.indexOf('RUN') !== 0) code = lt;
+      }
+      if (!code) {
+        var head = phaseHeadText(row.querySelector('.run-phase'));
+        if (head) {
+          var mapped = maps.labelToCode[head.toLowerCase()];
+          if (mapped) code = mapped;
+          else if (/^[A-Za-z][A-Za-z0-9]{1,4}$/.test(head)) code = head.toUpperCase();
+        }
+      }
+      if (code) {
+        if (row.getAttribute('data-dest') !== code) row.setAttribute('data-dest', code);
+      }
+    });
+  }
+
   function cardHasDest(card, dest) {
     if (!card || !dest) return false;
-    var needle = String(dest).toLowerCase();
+    var needle = String(dest).toUpperCase();
+    var needleLow = needle.toLowerCase();
+    // Prefer packaging-tagged data-dest on run rows
+    var tagged = card.querySelectorAll('[data-dest]');
+    for (var t = 0; t < tagged.length; t++) {
+      if (String(tagged[t].getAttribute('data-dest') || '').toUpperCase() === needle) return true;
+    }
+    // Shore/unassigned .run-label is often the dest code
+    var labels = card.querySelectorAll('.run-label');
+    for (var li = 0; li < labels.length; li++) {
+      var lt = (labels[li].textContent || '').trim().toUpperCase();
+      if (lt === needle) return true;
+    }
+    var maps = buildDestMaps();
+    var wantLabel = String(maps.codeToLabel[needle] || '').toLowerCase();
     var phases = card.querySelectorAll('.run-phase');
     for (var i = 0; i < phases.length; i++) {
-      var raw = (phases[i].childNodes[0] && phases[i].childNodes[0].nodeType === 3)
-        ? (phases[i].childNodes[0].nodeValue || '')
-        : (phases[i].textContent || '');
-      var head = raw.split(/[—\-\n]/)[0].trim().toLowerCase();
-      if (head === needle || head.indexOf(needle) === 0) return true;
-      if (raw.toLowerCase().indexOf(needle) !== -1) return true;
+      var head = phaseHeadText(phases[i]).toLowerCase();
+      var rawLow = (phases[i].textContent || '').toLowerCase();
+      if (!head && !rawLow) continue;
+      if (head === needleLow || head.indexOf(needleLow) === 0) return true;
+      if (wantLabel && (head === wantLabel || head.indexOf(wantLabel) === 0)) return true;
+      var mapped = maps.labelToCode[head];
+      if (mapped && mapped === needle) return true;
+      // "Evergreen × 2 loads" collapsed shore summaries
+      if (wantLabel && rawLow.indexOf(wantLabel) !== -1) return true;
+      if (rawLow.indexOf(needleLow) !== -1) return true;
     }
     return false;
   }
@@ -12991,6 +13273,8 @@ if (false && 'serviceWorker' in navigator) {
     filterBusy = true;
     try {
       ensureCardsToolbar();
+      // Tag run rows with dest codes before filter (label vs code)
+      try { tagRunRowDests(); } catch (eTag) {}
       // S2: inject calm Unassigned chrome before filter so Assigned keeps it glanceable
       try { ensureUnassignedCalmCard(); } catch (eUn) {}
       var cards = Array.prototype.slice.call(grid.querySelectorAll('.driver-card'));
@@ -13042,13 +13326,15 @@ if (false && 'serviceWorker' in navigator) {
         var hint = document.getElementById('revamp-empty-hint');
         if (hint) {
           if (mode === 'all') {
-            hint.textContent = assignedCount + ' assigned · showing all';
+            hint.textContent = assignedCount + ' assigned · Show all reveals unused drivers';
           } else if (mode === 'near') {
-            hint.textContent = visibleCount + ' near limit';
+            hint.textContent = visibleCount
+              ? (visibleCount + ' near limit')
+              : 'No drivers near DOT limit on this plan';
           } else if (mode === 'dest') {
             hint.textContent = visibleCount + ' with ' + (dest || 'dest');
           } else {
-            hint.textContent = assignedCount + ' assigned · empty cards hidden';
+            hint.textContent = assignedCount + ' assigned · empty cards hidden (Show all for unused)';
           }
         }
         var emptyMsg = document.getElementById('revamp-filter-empty');
@@ -14077,6 +14363,13 @@ if (false && 'serviceWorker' in navigator) {
     ensureCardsToolbar();
     applyEmptyCardFilter();
     syncEmptyStates();
+    try { purgePackagingEmojis(); } catch (eP) {}
+  });
+  wrap('toggleDetailCols', function () {
+    try { polishAssignmentsChrome(); } catch (eD) {}
+  });
+  wrap('renderAssignments', function () {
+    try { polishAssignmentsChrome(); purgePackagingEmojis(); } catch (eT) {}
   });
   wrap('renderPlanQuality', restylePlanQuality);
   wrap('renderDomicileWarnings', restylePlanQuality);
@@ -14130,7 +14423,7 @@ if (false && 'serviceWorker' in navigator) {
     document.body.classList.remove('revamp-plan-stale');
     syncCommitStaleGate();
   });
-  wrap('renderFleetTable', function () { syncDriversEmpty(); try { syncDcReadyGate(); } catch (e) {} try { syncHomeFirstGapNote(); } catch (eHf) {} });
+  wrap('renderFleetTable', function () { syncDriversEmpty(); try { syncDcReadyGate(); } catch (e) {} try { syncHomeFirstGapNote(); } catch (eHf) {} try { purgePackagingEmojis(); } catch (eP) {} });
   wrap('renderHistoryTab', function () {
     syncHistoryEmpty();
     try { syncHistoryAuditChrome(); } catch (eHa) {}
@@ -14262,6 +14555,7 @@ if (false && 'serviceWorker' in navigator) {
   function densifyCardHeaders() {
     var grid = document.getElementById('driver-cards-grid');
     if (!grid) return;
+    try { tagRunRowDests(); } catch (eTag2) {}
 
     // Shore/Shoreline card chrome → DC_CONFIG.externalCarrier (display only)
     try {
@@ -14340,6 +14634,101 @@ if (false && 'serviceWorker' in navigator) {
           setTimeout(function () { closeAllCardMore(); }, 0);
         });
       });
+    });
+
+    try { polishShoreExpandAffordance(); } catch (eSh) {}
+    try { polishCardEmojiChrome(); } catch (eEm) {}
+  }
+
+  function polishShoreExpandAffordance() {
+    var shore = document.querySelector('#driver-cards-grid .driver-card.is-shore');
+    if (!shore) return;
+    var expanded = false;
+    try { expanded = !!(typeof shoreExpanded !== 'undefined' && shoreExpanded); } catch (e0) {}
+    // DOM fallback: expanded shore has Out buttons
+    if (shore.querySelector('.out-btn[onclick*="openOutModal"], .out-btn[onclick*="openBucketOutModal"]')) {
+      expanded = true;
+    }
+    shore.classList.toggle('is-shore-expanded', !!expanded);
+
+    var hdr = shore.querySelector('.driver-card-header');
+    if (hdr) {
+      hdr.style.cursor = 'pointer';
+      if (!hdr.getAttribute('title') || /Click to expand|Collapse/i.test(hdr.getAttribute('title') || '')) {
+        hdr.setAttribute('title', expanded
+          ? 'Collapse overflow card'
+          : 'Expand to set Out times / drag loads onto drivers');
+      }
+      var cta = hdr.querySelector('.revamp-shore-expand-cta');
+      if (!cta) {
+        cta = document.createElement('button');
+        cta.type = 'button';
+        cta.className = 'revamp-shore-expand-cta no-print';
+        cta.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof toggleShoreCard === 'function') toggleShoreCard();
+        });
+        hdr.appendChild(cta);
+      }
+      cta.setAttribute('data-expanded', expanded ? '1' : '0');
+      cta.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      cta.innerHTML = expanded
+        ? '<span class="revamp-shore-chev" aria-hidden="true">▲</span> Collapse'
+        : '<span class="revamp-shore-chev" aria-hidden="true">▼</span> Expand · set Out times';
+    }
+
+    var footer = shore.querySelector('.driver-card-footer');
+    if (footer) {
+      var status = footer.querySelector('.card-dot-status');
+      if (status) {
+        status.textContent = expanded ? 'Drag to reassign' : 'External · expand to stamp Out';
+      }
+      var fcta = footer.querySelector('.revamp-shore-footer-cta');
+      if (!expanded) {
+        if (!fcta) {
+          fcta = document.createElement('button');
+          fcta.type = 'button';
+          fcta.className = 'revamp-shore-footer-cta no-print';
+          fcta.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof toggleShoreCard === 'function') toggleShoreCard();
+          });
+          footer.appendChild(fcta);
+        }
+        fcta.textContent = 'Expand to stamp Out times';
+      } else if (fcta) {
+        fcta.remove();
+      }
+    }
+  }
+
+  function polishCardEmojiChrome() {
+    var grid = document.getElementById('driver-cards-grid');
+    if (!grid) return;
+    Array.prototype.forEach.call(grid.querySelectorAll('.out-btn'), function (btn) {
+      var oc = btn.getAttribute('onclick') || '';
+      var raw = (btn.textContent || '').replace(/\s+/g, ' ').trim();
+      var clean = stripEmojiChars(raw).trim();
+      if (/toggleLock/.test(oc)) {
+        var locked = btn.classList.contains('stamped');
+        if (/🔒/.test(raw)) locked = true;
+        else if (/🔓/.test(raw)) locked = false;
+        else if (/^unlock$/i.test(clean)) locked = false;
+        else if (/^lock$/i.test(clean)) locked = true;
+        var label = locked ? 'Lock' : 'Unlock';
+        if (btn.textContent !== label) btn.textContent = label;
+      } else if (/openOutModal|openBucketOutModal|openAdhocOutModal/.test(oc) || /\bOut\b/i.test(raw)) {
+        var stamped = btn.classList.contains('stamped') || /^✓/.test(raw);
+        var next = stamped ? '✓ Out' : 'Out';
+        if (btn.textContent !== next) btn.textContent = next;
+      }
+    });
+    // drv-base locked count emoji
+    Array.prototype.forEach.call(grid.querySelectorAll('.driver-card.is-shore .drv-base'), function (el) {
+      var t = el.textContent || '';
+      if (/🔒|📋|👆/.test(t)) el.textContent = stripEmojiChars(t).replace(/·\s*$/,'').trim();
     });
   }
 
@@ -14581,6 +14970,87 @@ if (false && 'serviceWorker' in navigator) {
   setTimeout(muteDispatchersHeader, 800);
   setTimeout(muteDispatchersHeader, 2000);
 
+  function purgePackagingEmojis() {
+    try {
+      // Commit Day (in-page; sticky already clean)
+      var commit = document.getElementById('commit-day-btn');
+      if (commit) {
+        var ct = (commit.textContent || '').replace(/\s+/g, ' ').trim();
+        if (/commit/i.test(ct)) {
+          commit.textContent = /committed/i.test(ct) ? 'Committed' : 'Commit Day';
+        }
+      }
+      // DOT compliance / print note
+      var banners = document.querySelectorAll(
+        '#tab-dashboard .warn-banner, #driver-cards-section .warn-banner, .print-dot-note, #tab-dashboard [class*="dot"]'
+      );
+      Array.prototype.forEach.call(banners, function (el) {
+        var tx = el.innerHTML || '';
+        if (/⚖️|⚠️|⚠|DOT COMPLIANCE/i.test(tx)) {
+          el.innerHTML = tx
+            .replace(/⚖️\s*/g, '')
+            .replace(/⚠️\s*/g, '')
+            .replace(/⚠\s*/g, '')
+            .replace(/DOT COMPLIANCE:/i, 'DOT compliance:');
+        }
+      });
+      // Explicit DOT banner text node walk
+      Array.prototype.forEach.call(document.querySelectorAll('#tab-dashboard .card, #driver-cards-section'), function (root) {
+        Array.prototype.forEach.call(root.querySelectorAll('*'), function (el) {
+          if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+            var v = el.childNodes[0].nodeValue || '';
+            if (/⚖️|⚠️|📅|📋|☀️/.test(v)) {
+              el.childNodes[0].nodeValue = stripEmojiChars(v);
+            }
+          }
+        });
+      });
+      // Drivers vacation tip + badges
+      var fleet = document.getElementById('tab-fleet');
+      if (fleet) {
+        Array.prototype.forEach.call(fleet.querySelectorAll('.warn-banner, .revamp-info-banner'), function (el) {
+          var html = el.innerHTML || '';
+          if (/☀️|☀/.test(html)) {
+            el.innerHTML = html.replace(/☀️\s*/g, '').replace(/☀\s*/g, '');
+          }
+        });
+        Array.prototype.forEach.call(fleet.querySelectorAll('.badge-vac, .badge-avail, td'), function (el) {
+          var t = el.textContent || '';
+          if (/☀️|☀|🔒/.test(t) && !el.querySelector('input, button, select')) {
+            var cleaned = stripEmojiChars(t).trim();
+            if (cleaned && el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+              el.textContent = cleaned;
+            } else if (el.classList.contains('badge-vac') || el.classList.contains('badge-avail')) {
+              el.textContent = cleaned || el.textContent;
+            }
+          }
+        });
+      }
+      // History empty / commit copy
+      var hist = document.getElementById('tab-history');
+      if (hist) {
+        Array.prototype.forEach.call(hist.querySelectorAll('strong, p, div'), function (el) {
+          if (el.children.length) return;
+          var t = el.textContent || '';
+          if (/📅|🔒/.test(t)) el.textContent = stripEmojiChars(t).trim();
+        });
+      }
+      // History legend icons → plain text markers
+      var leg = document.getElementById('revamp-hist-legend');
+      if (leg) {
+        leg.innerHTML =
+          '<span class="revamp-leg-item revamp-leg-warn"><span class="revamp-leg-ico" aria-hidden="true">!</span> Near DOT limit</span>' +
+          '<span class="revamp-leg-item revamp-leg-over"><span class="revamp-leg-ico" aria-hidden="true">!!</span> Over hours</span>';
+      }
+      polishAssignmentsChrome();
+      polishCardEmojiChrome();
+    } catch (ePurge) {}
+  }
+  purgePackagingEmojis();
+  setTimeout(purgePackagingEmojis, 0);
+  setTimeout(purgePackagingEmojis, 800);
+  setTimeout(purgePackagingEmojis, 2000);
+
 
   /* Wave 2 #11 — Settings object-page hierarchy (chrome only; save/onclick untouched) */
   function classifySettingsTier(titleText) {
@@ -14772,8 +15242,8 @@ if (false && 'serviceWorker' in navigator) {
         leg.id = 'revamp-hist-legend';
         leg.className = 'revamp-hist-legend';
         leg.innerHTML =
-          '<span class="revamp-leg-item revamp-leg-warn"><span class="revamp-leg-ico" aria-hidden="true">⚡</span> Near DOT limit</span>' +
-          '<span class="revamp-leg-item revamp-leg-over"><span class="revamp-leg-ico" aria-hidden="true">⚠</span> Over hours</span>';
+          '<span class="revamp-leg-item revamp-leg-warn"><span class="revamp-leg-ico" aria-hidden="true">!</span> Near DOT limit</span>' +
+          '<span class="revamp-leg-item revamp-leg-over"><span class="revamp-leg-ico" aria-hidden="true">!!</span> Over hours</span>';
         // Place legend after subtitle, before tucked Clear Log wrap
         var tuck = titleCol.querySelector('.revamp-clear-log-wrap');
         if (tuck) titleCol.insertBefore(leg, tuck);
