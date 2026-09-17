@@ -12876,13 +12876,26 @@ if (false && 'serviceWorker' in navigator) {
     try {
       var st = getState();
       if (st && st.lastResult) return true;
-      // DOM fallback if state binding is odd across script scopes
+      // DOM fallback if state binding is odd across script scopes.
+      // IMPORTANT: do NOT treat the pre-Generate roster preview as a plan.
+      // renderDriverCards shows .driver-card for every driver once totalLoads > 0
+      // even when lastResult is null — that false positive collapsed Today's Loads
+      // on the first load-count keystroke (updateLoad → renderAllDriverCards →
+      // syncSticky → syncDailyLoadChips → collapseDailyInputCard).
+      var asg = document.getElementById('assignments-section');
+      if (asg && asg.style.display !== 'none' && asg.querySelector('tbody tr, #assignments-table tr')) {
+        return true;
+      }
       var cards = document.getElementById('driver-cards-section');
-      if (cards && cards.style.display !== 'none' && cards.querySelector('.driver-card')) return true;
+      if (cards && cards.style.display !== 'none') {
+        // Optimizer-assigned runs only (exclude MANUAL / AD HOC bucket rows)
+        if (cards.querySelector('.run-row:not(.bucket-row):not(.adhoc-row)')) return true;
+      }
       var mg = document.getElementById('metrics-grid');
       if (mg && mg.style.display !== 'none' && mg.querySelector('.metric-card, .m-card, [id^="m-"]')) {
         var mt = document.getElementById('m-total');
-        if (mt && /\d/.test(mt.textContent || '')) return true;
+        // Bare "0" must not count — require a positive digit
+        if (mt && /[1-9]/.test(mt.textContent || '')) return true;
       }
     } catch (e) {}
     return false;
@@ -13079,6 +13092,19 @@ if (false && 'serviceWorker' in navigator) {
     return btn;
   }
 
+  function dailyInputActivelyEditing() {
+    // True while user is mid-entry in Today's Loads (typing or +/- steppers).
+    // Prevents any residual auto-collapse from yanking the card closed mid-keystroke.
+    try {
+      var ae = document.activeElement;
+      if (!ae) return false;
+      if (ae.classList && (ae.classList.contains('phase-input') || ae.classList.contains('revamp-step-btn'))) return true;
+      if (ae.id && String(ae.id).indexOf('phase-input') === 0) return true;
+      if (ae.closest && ae.closest('#phase-inputs, .revamp-phase-stepper')) return true;
+    } catch (e) {}
+    return false;
+  }
+
   function syncDailyLoadChips() {
     ensureInputChips();
     var chips = document.getElementById('revamp-input-chips');
@@ -13091,6 +13117,17 @@ if (false && 'serviceWorker' in navigator) {
     if (!editing) document.body.classList.remove('revamp-input-advanced');
 
     if (has && !inputForcedExpand) {
+      // Stay expanded while the user is actively entering counts (morning or
+      // Expand-without-Edit race). Explicit Collapse/Done / afterGenerate still collapse.
+      var cardLive = getDailyInputCard();
+      var expandedLive = !!(cardLive && !cardLive.classList.contains('input-card-collapsed'));
+      if (expandedLive && dailyInputActivelyEditing()) {
+        // Keep expanded chrome; do not apply compact/chip glance mid-keystroke
+        document.body.classList.remove('revamp-input-compact');
+        if (chips) chips.classList.remove('is-visible');
+        syncDailyLoadHeaderChrome();
+        return;
+      }
       collapseDailyInputCard();
       // Harden: never leave legacy collapsed chrome after Edit counts → Done
       var cardFix = getDailyInputCard();
