@@ -5119,6 +5119,168 @@ body.revamp-preview #settings-modal .revamp-settings-done-btn:focus-visible {
   .revamp-hdr-more { display: none !important; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   2026-09-17 — Today's Loads + Generate pro chrome (Belize × Coke)
+   Packaging only: no Generate/optimizer behavior change.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* No-plan morning: kill prod red "TODAY'S LOADS" bar — match Edit-counts white header */
+body.revamp-preview:not(.revamp-input-compact) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) > .card-header {
+  background: #ffffff !important;
+  color: var(--revamp-text) !important;
+  border-bottom: 1px solid var(--revamp-border) !important;
+  border-left: 3px solid var(--revamp-red) !important;
+  padding: 12px 16px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px;
+  flex-wrap: wrap;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+body.revamp-preview:not(.revamp-input-compact) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header > div:first-child,
+body.revamp-preview.revamp-input-editing #tab-dashboard .stack > .card:has(#phase-inputs) > .card-header > div:first-child {
+  display: flex !important;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--revamp-text) !important;
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Templates card — quieter object page */
+body.revamp-preview #tab-dashboard .stack > .card:has(#template-days) {
+  background: #ffffff !important;
+  border: 1px solid var(--revamp-border) !important;
+  border-radius: var(--revamp-radius) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  overflow: hidden;
+}
+body.revamp-preview #tab-dashboard .stack > .card:has(#template-days) > .card-header {
+  background: #f7f8f9 !important;
+  color: var(--revamp-text) !important;
+  border-bottom: 1px solid var(--revamp-border) !important;
+  padding: 10px 16px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0.02em !important;
+}
+body.revamp-preview #template-days button,
+body.revamp-preview #template-days .day-btn,
+body.revamp-preview .template-day-btn {
+  border-radius: 999px !important;
+  border: 1px solid var(--revamp-border) !important;
+  background: #fff !important;
+  color: var(--revamp-text-secondary) !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+body.revamp-preview #template-days button.active,
+body.revamp-preview #template-days .day-btn.active,
+body.revamp-preview .template-day-btn.active,
+body.revamp-preview #template-days button[aria-pressed="true"] {
+  border-color: var(--revamp-red) !important;
+  color: var(--revamp-red) !important;
+  background: #fff7f7 !important;
+}
+
+/* Load bucket panel header — sentence case, quiet */
+body.revamp-preview #load-bucket-panel > .card-header,
+body.revamp-preview #load-bucket-panel .card-header {
+  background: #f7f8f9 !important;
+  color: var(--revamp-text) !important;
+  border-bottom: 1px solid var(--revamp-border) !important;
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* Disabled-loc / empty guidance — quieter Belize strip (not loud yellow brick) */
+body.revamp-preview #disabled-loc-banner {
+  background: #fafbfc !important;
+  border: 1px solid var(--revamp-border) !important;
+  border-left: 3px solid #dba10b !important;
+  color: var(--revamp-text-secondary) !important;
+  border-radius: var(--revamp-radius-sm) !important;
+  box-shadow: none !important;
+}
+
+/* ── Generate assignments — Fiori Emphasized, not carnival CTA ── */
+body.revamp-preview .btn-generate {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  max-width: 420px !important;
+  margin: 8px auto 16px !important;
+  padding: 12px 20px !important;
+  min-height: 44px !important;
+  background: var(--revamp-red) !important;
+  background-image: none !important;
+  border: 1px solid var(--revamp-red) !important;
+  border-radius: 6px !important;
+  color: #fff !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
+  text-transform: none !important;
+  text-shadow: none !important;
+  box-shadow: 0 1px 2px rgba(50, 54, 58, 0.12) !important;
+  filter: none !important;
+  line-height: 1.2 !important;
+}
+body.revamp-preview .btn-generate:hover {
+  background: #C41220 !important;
+  border-color: #C41220 !important;
+  box-shadow: 0 2px 6px rgba(50, 54, 58, 0.16) !important;
+  filter: none !important;
+  transform: none !important;
+}
+body.revamp-preview .btn-generate:active {
+  background: #a50f1a !important;
+  transform: none !important;
+  filter: none !important;
+}
+body.revamp-preview .btn-generate:focus-visible {
+  outline: 2px solid rgba(230, 29, 43, 0.45) !important;
+  outline-offset: 2px !important;
+}
+/* Hide emoji / bolt glyph if engine still injects one as first text node via :: — JS strips too */
+body.revamp-preview .btn-generate .revamp-gen-ico {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.95);
+  border-radius: 2px;
+  border-top-color: transparent;
+  border-left-color: transparent;
+  transform: rotate(-45deg) translateY(-1px);
+  flex-shrink: 0;
+  opacity: 0.95;
+}
+
+@media (max-width: 640px) {
+  body.revamp-preview .btn-generate {
+    max-width: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 8px !important;
+    min-height: 48px !important;
+    font-size: 15px !important;
+  }
+}
+
+
 </style>
 </head>
 <body>
@@ -12877,7 +13039,7 @@ if (false && 'serviceWorker' in navigator) {
     if (row) {
       for (var i = 0; i < row.childNodes.length; i++) {
         var n = row.childNodes[i];
-        if (n.nodeType === 3 && /Daily Load Input|Today/.test(n.nodeValue || '')) {
+        if (n.nodeType === 3 && /Daily Load Input|TODAY|Today.?s.?[Ll]oads|Load Input/i.test(n.nodeValue || '')) {
           n.nodeValue = "Today's loads";
           break;
         }
@@ -13249,7 +13411,32 @@ if (false && 'serviceWorker' in navigator) {
     } catch (e) {}
   }
 
+
+  function ensureGenerateButtonChrome() {
+    try {
+      Array.prototype.forEach.call(document.querySelectorAll('.btn-generate'), function (btn) {
+        if (!btn) return;
+        var raw = (btn.textContent || '').replace(/\s+/g, ' ').trim();
+        // Drop leading symbol characters (lightning etc.)
+        var cleaned = raw.replace(/^[^\wGenerate]+/i, '').trim();
+        if (!cleaned || /generate/i.test(cleaned)) cleaned = 'Generate assignments';
+        var cur = (btn.textContent || '').replace(/\s+/g, ' ').trim();
+        if (cur !== cleaned || !btn.querySelector('.revamp-gen-ico')) {
+          btn.textContent = '';
+          var ico = document.createElement('span');
+          ico.className = 'revamp-gen-ico';
+          ico.setAttribute('aria-hidden', 'true');
+          btn.appendChild(ico);
+          btn.appendChild(document.createTextNode(cleaned));
+        }
+        btn.setAttribute('title', 'Run the optimizer for today\u2019s load counts');
+      });
+    } catch (e) {}
+  }
+
   function syncSticky() {
+    try { ensureGenerateButtonChrome(); } catch (eGen) {}
+    try { syncDailyLoadHeaderChrome(); } catch (eHdr) {}
     var has = planExists();
     document.body.classList.toggle('has-plan', has);
     ensureDcChip();
@@ -17298,6 +17485,10 @@ if (false && 'serviceWorker' in navigator) {
   setTimeout(ensureRevampResponsiveR1, 0);
   setTimeout(ensureRevampResponsiveR1, 400);
   setTimeout(enhancePhaseSteppers, 800);
+  setTimeout(ensureGenerateButtonChrome, 0);
+  setTimeout(ensureGenerateButtonChrome, 400);
+  setTimeout(syncDailyLoadHeaderChrome, 0);
+  setTimeout(syncDailyLoadHeaderChrome, 400);
 
   console.info('[REVAMP_PREVIEW] packaging layer active - production features unchanged · ready-gate TP#3 · enterprise-audit TP#2 · commit-audit TP#5');
 })();
