@@ -5281,6 +5281,437 @@ body.revamp-preview .btn-generate .revamp-gen-ico {
 }
 
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   2026-09-27 bold contrast pass
+   Stakeholder: "polish good, theming too light/flat". Borrow production's bold
+   near-black + Coke red (index.html: black gradient driver headers, red
+   section bars) while keeping revamp density/layout. Reverses the earlier
+   Belize "quiet to white" header rules (search: Belize / card-header /
+   driver-card above). Packaging CSS only. `html body.revamp-preview` prefix
+   + !important so this block wins over earlier !important rules.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --bold-ink: #1a1a1a;
+  --bold-ink-2: #2a2a2a;
+  --bold-red: #E61D2B;
+  --bold-red-dark: #B8121F;
+  --bold-page: #e9ebee;
+  --bold-card-border: #c7ccd2;
+  --bold-shadow: 0 1px 2px rgba(16, 24, 40, 0.10), 0 4px 12px rgba(16, 24, 40, 0.10);
+  --bold-shadow-hover: 0 2px 4px rgba(16, 24, 40, 0.14), 0 8px 20px rgba(16, 24, 40, 0.14);
+  --revamp-page: #e9ebee;
+}
+
+/* ── Page: darker neutral so white cards separate ── */
+html body.revamp-preview { background: var(--bold-page) !important; }
+html body.revamp-preview .revamp-preview-banner { background: #dfe2e6 !important; color: #4a4f55 !important; }
+
+/* ── Generic dashboard cards: real border + elevation ── */
+html body.revamp-preview #tab-dashboard .card,
+html body.revamp-preview #tab-fleet .card,
+html body.revamp-preview #tab-history .card {
+  border: 1px solid var(--bold-card-border) !important;
+  box-shadow: var(--bold-shadow) !important;
+}
+/* Default section headers: bold ink text + Coke red left bar (sentence case kept) */
+html body.revamp-preview #tab-dashboard .card > .card-header {
+  color: var(--bold-ink) !important;
+  font-weight: 800 !important;
+  border-left: 4px solid var(--bold-red) !important;
+  background: #f6f7f8 !important;
+  border-bottom: 1px solid #dde0e4 !important;
+}
+
+/* ── Today's loads (expanded editor): Coke red band, white text (prod used red) ── */
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header {
+  background: var(--bold-red) !important;
+  color: #fff !important;
+  border-left: 0 !important;
+  border-bottom: 0 !important;
+}
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header * { color: #fff !important; }
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header button,
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header .btn {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.75) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header button:hover {
+  background: rgba(255, 255, 255, 0.26) !important;
+}
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header .hint,
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header [class*="sub"] {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header > div:first-child,
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header > div:last-child,
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header > div span {
+  color: #fff !important;
+  opacity: 1 !important;
+}
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header > div:first-child {
+  font-weight: 800 !important;
+  font-size: 13px !important;
+}
+html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header > div:last-child:not(:first-child) {
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+}
+/* Compact (post-Generate) chip glance: red left bar + bold ink title */
+html body.revamp-preview.revamp-input-compact #tab-dashboard .stack > .card:first-child {
+  border-left: 5px solid var(--bold-red) !important;
+}
+html body.revamp-preview #revamp-input-chips .revamp-chips-title {
+  color: var(--bold-ink) !important;
+  font-weight: 800 !important;
+}
+html body.revamp-preview #revamp-input-chips .revamp-chip {
+  border-color: #c3c8ce !important;
+  color: var(--bold-ink) !important;
+  font-weight: 700 !important;
+  background: #f1f2f4 !important;
+}
+html body.revamp-preview #revamp-input-chips .revamp-chip.em {
+  background: var(--bold-red) !important;
+  border-color: var(--bold-red) !important;
+  color: #fff !important;
+}
+
+/* ── Metric tiles: bolder numbers ── */
+html body.revamp-preview #metrics-grid .metric-card,
+html body.revamp-preview #metrics-grid > div {
+  border: 1px solid var(--bold-card-border) !important;
+  box-shadow: var(--bold-shadow) !important;
+  background: #fff !important;
+}
+html body.revamp-preview #metrics-grid .metric-value,
+html body.revamp-preview #metrics-grid [class*="value"],
+html body.revamp-preview #metrics-grid [id^="m-"] {
+  color: var(--bold-ink) !important;
+  font-weight: 800 !important;
+}
+html body.revamp-preview #metrics-grid [class*="label"] {
+  color: #3d4247 !important;
+  font-weight: 700 !important;
+}
+
+/* ── Needs attention: near-black band, red count, white body ── */
+html body.revamp-preview #plan-quality-panel.revamp-needs {
+  background: #fff !important;
+  border: 1px solid var(--bold-card-border) !important;
+  border-left: 5px solid var(--bold-red) !important;
+  box-shadow: var(--bold-shadow) !important;
+  border-radius: 6px !important;
+}
+html body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd {
+  background: var(--bold-ink) !important;
+  padding: 8px 12px !important;
+}
+html body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd,
+html body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd * {
+  color: #fff !important;
+}
+html body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd .needs-title {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+html body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd .needs-strip-ico,
+html body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd .needs-strip-ico * {
+  color: #ffcf33 !important;
+  fill: currentColor;
+}
+html body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd .needs-pill,
+html body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd [class*="count"],
+html body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd [class*="badge"] {
+  background: var(--bold-red) !important;
+  color: #fff !important;
+  border-color: var(--bold-red) !important;
+  font-weight: 800 !important;
+}
+
+/* ── Pass-out section header: Coke red band ── */
+html body.revamp-preview #driver-cards-section > .card-header,
+html body.revamp-preview #driver-cards-section .card > .card-header,
+html body.revamp-preview.has-plan #driver-cards-section .card > .card-header {
+  background: var(--bold-red) !important;
+  color: #fff !important;
+  border-left: 0 !important;
+  border-bottom: 0 !important;
+  font-weight: 800 !important;
+}
+html body.revamp-preview #driver-cards-section .card > .card-header > span:first-child { color: #fff !important; font-weight: 800 !important; font-size: 13px !important; }
+html body.revamp-preview #driver-cards-section .card > .card-header button,
+html body.revamp-preview #driver-cards-section .card > .card-header .btn {
+  background: #fff !important;
+  color: var(--bold-ink) !important;
+  border: 1px solid #fff !important;
+  font-weight: 700 !important;
+}
+
+/* ── Assignments · detailed: near-black band ── */
+html body.revamp-preview #assignments-section > .card-header,
+html body.revamp-preview #assignments-section .card-header:first-child {
+  background: var(--bold-ink) !important;
+  color: #fff !important;
+  border-left: 4px solid var(--bold-red) !important;
+  border-bottom: 0 !important;
+}
+html body.revamp-preview #assignments-section > .card-header *:not(button):not(.btn) { color: #fff !important; }
+html body.revamp-preview #assignments-section > .card-header .revamp-assignments-title { font-weight: 800 !important; }
+html body.revamp-preview #assignments-section > .card-header button,
+html body.revamp-preview #assignments-section > .card-header .btn {
+  background: #fff !important;
+  color: var(--bold-ink) !important;
+  border: 1px solid #fff !important;
+  font-weight: 700 !important;
+}
+html body.revamp-preview #assignments-section tr.phase-group-hdr td,
+html body.revamp-preview #assignments-section .phase-group-hdr {
+  background: var(--bold-red) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+}
+
+/* ═══ Driver cards: prod-style near-black header band, bold name, elevation ═══ */
+html body.revamp-preview #driver-cards-grid { gap: 12px !important; }
+html body.revamp-preview #driver-cards-grid .driver-card {
+  background: #fff !important;
+  border: 1px solid var(--bold-card-border) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--bold-shadow) !important;
+  overflow: hidden !important;
+  transition: box-shadow 0.12s ease;
+}
+html body.revamp-preview #driver-cards-grid .driver-card:hover { box-shadow: var(--bold-shadow-hover) !important; }
+/* prod's 3px Coke red cap above the black header */
+html body.revamp-preview #driver-cards-grid .driver-card::before {
+  content: '' !important;
+  display: block !important;
+  height: 3px !important;
+  background: var(--bold-red) !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card .driver-card-header,
+html body.revamp-preview.has-plan #driver-cards-section #driver-cards-grid .driver-card .driver-card-header {
+  background: linear-gradient(160deg, #2a0005 0%, var(--bold-ink) 55%) !important;
+  color: #fff !important;
+  border-bottom: 0 !important;
+  padding: 6px 9px !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card .driver-card-header .drv-name,
+html body.revamp-preview.has-plan #driver-cards-section #driver-cards-grid .driver-card-header .drv-name {
+  color: #fff !important;
+  font-weight: 800 !important;
+  font-size: 12.5px !important;
+  letter-spacing: 0.005em;
+}
+html body.revamp-preview #driver-cards-grid .driver-card .driver-card-header .drv-base,
+html body.revamp-preview #driver-cards-grid .driver-card .driver-card-header .drv-base span,
+html body.revamp-preview.has-plan #driver-cards-section #driver-cards-grid .driver-card-header .drv-base,
+html body.revamp-preview.has-plan #driver-cards-section #driver-cards-grid .driver-card-header .drv-base span {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card .driver-card-header .drv-base span[style*="Arrives"],
+html body.revamp-preview #driver-cards-grid .driver-card .driver-card-header .drv-base span[style*="255,255,255"] {
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card .drv-initial {
+  background: var(--bold-red) !important;
+  color: #fff !important;
+  font-weight: 900 !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+}
+html body.revamp-preview #driver-cards-grid .driver-card .driver-card-header .revamp-card-more-btn,
+html body.revamp-preview.has-plan #driver-cards-section #driver-cards-grid .driver-card .driver-card-header .revamp-card-more-btn {
+  color: rgba(255, 255, 255, 0.85) !important;
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+html body.revamp-preview.has-plan #driver-cards-section #driver-cards-grid .driver-card .driver-card-header .revamp-card-more-btn:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #fff !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card .revamp-card-more-menu button { color: var(--bold-ink) !important; }
+html body.revamp-preview #driver-cards-grid .driver-card .wi-badge { background: #ffcf33 !important; color: var(--bold-ink) !important; }
+
+/* Run rows: full-strength labels, bold hours + dest */
+html body.revamp-preview #driver-cards-grid .run-row { border-bottom: 1px solid #e6e8eb !important; }
+html body.revamp-preview #driver-cards-grid .run-label {
+  opacity: 1 !important;
+  font-weight: 800 !important;
+}
+html body.revamp-preview #driver-cards-grid .run-phase { color: var(--bold-ink) !important; font-weight: 700 !important; }
+html body.revamp-preview #driver-cards-grid .run-hrs {
+  color: var(--bold-ink) !important;
+  font-weight: 800 !important;
+  font-size: 12px !important;
+}
+/* Footer: bold total hours */
+html body.revamp-preview #driver-cards-grid .driver-card-footer {
+  background: #f3f4f6 !important;
+  border-top: 1px solid #dde0e4 !important;
+}
+html body.revamp-preview #driver-cards-grid .card-total-hrs {
+  color: var(--bold-ink) !important;
+  font-weight: 800 !important;
+  font-size: 11.5px !important;
+}
+html body.revamp-preview #driver-cards-grid .card-total-hrs * { font-weight: 600; }
+
+/* Status chips: strong, not pastel */
+html body.revamp-preview #driver-cards-grid .card-dot-ok {
+  background: #dff3e7 !important;
+  color: #0a6630 !important;
+  border-color: #8ccaa4 !important;
+  font-weight: 800 !important;
+}
+html body.revamp-preview #driver-cards-grid .card-dot-warn {
+  background: #ffe9b8 !important;
+  color: #7a4b00 !important;
+  border-color: #e8b04a !important;
+  font-weight: 800 !important;
+}
+html body.revamp-preview #driver-cards-grid .card-dot-over {
+  background: var(--bold-red) !important;
+  color: #fff !important;
+  border-color: var(--bold-red-dark) !important;
+  font-weight: 800 !important;
+}
+/* Whole-card emphasis for alerts */
+html body.revamp-preview #driver-cards-grid .driver-card:has(.card-dot-over) {
+  border: 2px solid var(--bold-red) !important;
+  box-shadow: 0 0 0 1px rgba(230, 29, 43, 0.25), var(--bold-shadow) !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card:has(.card-dot-over) .driver-card-footer { background: #fdeaea !important; }
+html body.revamp-preview #driver-cards-grid .driver-card:has(.card-dot-warn) { border-color: #e8b04a !important; }
+html body.revamp-preview #driver-cards-grid .driver-card.is-modified { border: 2px solid #e8a317 !important; }
+
+/* Unassigned (real loads waiting): loud red band */
+html body.revamp-preview #driver-cards-grid .driver-card.is-unassigned:not(.revamp-unassigned-calm) {
+  border: 2px solid var(--bold-red) !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card.is-unassigned:not(.revamp-unassigned-calm) .driver-card-header,
+html body.revamp-preview.has-plan #driver-cards-section #driver-cards-grid .driver-card.is-unassigned:not(.revamp-unassigned-calm) .driver-card-header {
+  background: var(--bold-red) !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card.is-unassigned:not(.revamp-unassigned-calm) .drv-initial {
+  background: #fff !important;
+  color: var(--bold-red) !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card.is-unassigned:not(.revamp-unassigned-calm) .card-dot-status {
+  background: var(--bold-red) !important;
+  color: #fff !important;
+  border-color: var(--bold-red-dark) !important;
+  font-weight: 800 !important;
+}
+/* Unassigned calm (0 waiting): neutral slate band — present but not alarming */
+html body.revamp-preview #driver-cards-grid .driver-card.is-unassigned.revamp-unassigned-calm::before { background: #6b7280 !important; }
+html body.revamp-preview #driver-cards-grid .driver-card.is-unassigned.revamp-unassigned-calm .driver-card-header,
+html body.revamp-preview.has-plan #driver-cards-section #driver-cards-grid .driver-card.is-unassigned.revamp-unassigned-calm .driver-card-header {
+  background: #4b5259 !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card.is-unassigned.revamp-unassigned-calm .driver-card-header .drv-initial {
+  background: #fff !important;
+  color: #4b5259 !important;
+}
+
+/* Shore / overflow: prod purple band, high-contrast Expand CTA */
+html body.revamp-preview #driver-cards-grid .driver-card.is-shore {
+  border: 1px solid #8e79bd !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card.is-shore::before { background: #4a2c85 !important; }
+html body.revamp-preview #driver-cards-grid .driver-card.is-shore .driver-card-header,
+html body.revamp-preview.has-plan #driver-cards-section #driver-cards-grid .driver-card.is-shore .driver-card-header {
+  background: #5b3a9b !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card.is-shore .drv-initial {
+  background: #fff !important;
+  color: #5b3a9b !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card.is-shore .revamp-shore-expand-cta {
+  background: #fff !important;
+  color: #4a2c85 !important;
+  border: 1px solid #fff !important;
+  font-weight: 800 !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card.is-shore .revamp-shore-expand-cta:hover { background: #efe9fa !important; }
+html body.revamp-preview #driver-cards-grid .driver-card.is-shore .revamp-shore-expand-cta[data-expanded="1"] {
+  background: transparent !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card.is-shore .card-dot-status {
+  background: #efe9fa !important;
+  color: #4a2c85 !important;
+  border-color: #b9a6de !important;
+  font-weight: 800 !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card.is-shore .revamp-shore-footer-cta {
+  background: #5b3a9b !important;
+  color: #fff !important;
+  border: 1px solid #4a2c85 !important;
+}
+html body.revamp-preview #driver-cards-grid .driver-card.is-shore .run-row.revamp-shore-summary:hover { background: #f4f0fb !important; }
+
+/* Filter tokens: selected = solid ink */
+html body.revamp-preview .revamp-filter-token {
+  border-color: #b9bec5 !important;
+  color: var(--bold-ink) !important;
+  font-weight: 700 !important;
+  background: #fff !important;
+}
+html body.revamp-preview .revamp-filter-token.is-selected {
+  background: var(--bold-ink) !important;
+  border-color: var(--bold-ink) !important;
+  color: #fff !important;
+}
+
+/* ── Generate + Commit: solid Coke red, bold ── */
+html body.revamp-preview .btn-generate,
+html body.revamp-preview .revamp-sticky-bar .btn-commit-primary,
+html body.revamp-preview #revamp-commit-btn {
+  background: var(--bold-red) !important;
+  border-color: var(--bold-red) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 6px rgba(230, 29, 43, 0.35) !important;
+}
+html body.revamp-preview .btn-generate:hover,
+html body.revamp-preview .revamp-sticky-bar .btn-commit-primary:hover,
+html body.revamp-preview #revamp-commit-btn:hover {
+  background: var(--bold-red-dark) !important;
+  border-color: var(--bold-red-dark) !important;
+}
+/* Sticky bar: separate from page */
+html body.revamp-preview .revamp-sticky-bar {
+  border-top: 2px solid var(--bold-ink) !important;
+  box-shadow: 0 -4px 14px rgba(16, 24, 40, 0.14) !important;
+}
+
+/* ── Phone (≤640): keep bands, tighten ── */
+@media (max-width: 640px) {
+  html body.revamp-preview #driver-cards-grid { gap: 10px !important; }
+  html body.revamp-preview #driver-cards-grid .driver-card .driver-card-header { padding: 8px 10px !important; }
+  html body.revamp-preview #driver-cards-grid .driver-card .driver-card-header .drv-name { font-size: 13.5px !important; }
+  html body.revamp-preview #driver-cards-section > .card-header,
+  html body.revamp-preview #assignments-section > .card-header,
+  html body.revamp-preview:not(.revamp-bold-off) #tab-dashboard .stack > .card:first-child:has(#phase-inputs) > .card-header {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+}
+@media print {
+  html body.revamp-preview { background: #fff !important; }
+  html body.revamp-preview #driver-cards-grid .driver-card { box-shadow: none !important; }
+  html body.revamp-preview #driver-cards-grid .driver-card .driver-card-header {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+}
+/* ═══ end 2026-09-27 bold contrast pass ═══ */
+
 </style>
 </head>
 <body>
@@ -13316,7 +13747,8 @@ if (false && 'serviceWorker' in navigator) {
           if (assigned > 0) n = assigned;
         }
       } catch (e) {}
-      titleSpan.textContent = 'Pass-out · ' + n + ' assigned';
+      var passTitle = 'Pass-out · ' + n + ' assigned';
+      if (titleSpan.textContent !== passTitle) titleSpan.textContent = passTitle;
     } else {
       titleSpan.textContent = titleSpan.getAttribute('data-revamp-passout-orig') || titleSpan.textContent;
     }
@@ -14290,7 +14722,12 @@ if (false && 'serviceWorker' in navigator) {
     if (more > 0) {
       html += '<span class="revamp-filter-more" title="Additional destinations not shown as tokens">+' + more + ' more</span>';
     }
-    tokensEl.innerHTML = html;
+    // 2026-09-27: only rewrite when changed — rewriting every pass replaced the
+    // token buttons between mousedown and mouseup, so real clicks never fired.
+    if (tokensEl.__revampHtml !== html) {
+      tokensEl.innerHTML = html;
+      tokensEl.__revampHtml = html;
+    }
     var legacy = document.getElementById('revamp-show-all');
     if (legacy) legacy.checked = !!showAllState.value;
   }
@@ -14412,7 +14849,18 @@ if (false && 'serviceWorker' in navigator) {
       });
       if (mode !== 'all') {
         // Assigned-first order for filtered views
-        specials.concat(assigned, empties).forEach(function (c) { grid.appendChild(c); });
+        // 2026-09-27: only move nodes when order actually differs. Unconditional
+        // appendChild re-inserted every card on every pass → MutationObserver
+        // re-fired → perpetual ~20Hz loop that detached nodes mid-click.
+        var wantOrder = specials.concat(assigned, empties);
+        var curCards = Array.prototype.filter.call(grid.children, function (c) {
+          return c.classList && c.classList.contains('driver-card');
+        });
+        var sameOrder = curCards.length === wantOrder.length;
+        for (var oi = 0; sameOrder && oi < wantOrder.length; oi++) {
+          if (curCards[oi] !== wantOrder[oi]) sameOrder = false;
+        }
+        if (!sameOrder) wantOrder.forEach(function (c) { grid.appendChild(c); });
       }
       if (toolbar) {
         var showBar = cards.length > 0 && planExists();
@@ -14451,6 +14899,8 @@ if (false && 'serviceWorker' in navigator) {
       densifyCardHeaders();
       syncUnassignedEmpty();
     } finally {
+      // Drop self-induced grid mutations so the observer can't re-trigger us.
+      try { if (grid.__revampMo) grid.__revampMo.takeRecords(); } catch (eTr) {}
       filterBusy = false;
     }
   }
@@ -15611,6 +16061,8 @@ if (false && 'serviceWorker' in navigator) {
         ensureCardsToolbar();
         applyEmptyCardFilter();
         densifyCardHeaders();
+        // Discard records produced by our own packaging passes (loop breaker).
+        try { if (grid.__revampMo) grid.__revampMo.takeRecords(); } catch (eTr2) {}
       }, 40);
     });
     grid.__revampMo.observe(grid, { childList: true, subtree: true });
@@ -15662,10 +16114,11 @@ if (false && 'serviceWorker' in navigator) {
         Array.prototype.forEach.call(grid.querySelectorAll('.driver-card.is-shore .drv-name'), function (el) {
           var t = el.textContent || '';
           if (/Shoreline|\bSHORE\b|\bShore\b/i.test(t)) {
-            el.textContent = t
+            var nt = t
               .replace(/Shoreline/gi, carrier)
               .replace(/\bSHORE\b/g, carrier)
               .replace(/\bShore\b/g, carrier);
+            if (nt !== t) el.textContent = nt;
           }
         });
       }
@@ -15777,18 +16230,24 @@ if (false && 'serviceWorker' in navigator) {
         });
         hdr.appendChild(cta);
       }
-      cta.setAttribute('data-expanded', expanded ? '1' : '0');
-      cta.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      cta.innerHTML = expanded
-        ? '<span class="revamp-shore-chev" aria-hidden="true">▲</span> Collapse'
-        : '<span class="revamp-shore-chev" aria-hidden="true">▼</span> Expand · set Out times';
+      var ctaWant = expanded ? '1' : '0';
+      if (cta.getAttribute('data-expanded') !== ctaWant || !cta.firstChild) {
+        cta.setAttribute('data-expanded', ctaWant);
+        cta.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        cta.innerHTML = expanded
+          ? '<span class="revamp-shore-chev" aria-hidden="true">▲</span> Collapse'
+          : '<span class="revamp-shore-chev" aria-hidden="true">▼</span> Expand · set Out times';
+      }
     }
 
     var footer = shore.querySelector('.driver-card-footer');
     if (footer) {
       var status = footer.querySelector('.card-dot-status');
       if (status) {
-        status.textContent = expanded ? 'Drag to reassign' : 'External · expand to stamp Out';
+        var stWant = expanded ? 'Drag to reassign' : 'External · expand to stamp Out';
+        // calm flag: polishCardEmojiChrome skips it (it used to rewrite → 'External' → ping-pong)
+        status.setAttribute('data-revamp-status-calm', '1');
+        if (status.textContent !== stWant) status.textContent = stWant;
       }
       var fcta = footer.querySelector('.revamp-shore-footer-cta');
       if (!expanded) {
@@ -15803,7 +16262,7 @@ if (false && 'serviceWorker' in navigator) {
           });
           footer.appendChild(fcta);
         }
-        fcta.textContent = 'Expand to stamp Out times';
+        if (fcta.textContent !== 'Expand to stamp Out times') fcta.textContent = 'Expand to stamp Out times';
       } else if (fcta) {
         fcta.remove();
       }
@@ -16031,10 +16490,10 @@ if (false && 'serviceWorker' in navigator) {
           var st = (status.textContent || '').trim();
           if (/^Clear$/i.test(st) || /Needs a driver/i.test(st) || /Sitting out/i.test(st) ||
               status.getAttribute('data-revamp-status-calm') === '1') {
-            status.textContent = 'None waiting';
+            if (status.textContent !== 'None waiting') status.textContent = 'None waiting';
             status.classList.remove('card-dot-ok', 'card-dot-warn', 'card-dot-over');
-            status.removeAttribute('style');
-            status.setAttribute('data-revamp-status-calm', '1');
+            if (status.hasAttribute('style')) status.removeAttribute('style');
+            if (status.getAttribute('data-revamp-status-calm') !== '1') status.setAttribute('data-revamp-status-calm', '1');
           }
         }
       }
