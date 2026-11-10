@@ -1,0 +1,270 @@
+="updateAdHocHrs()"></select>
+      </div>
+      <div class="field-group">
+        <label>Move Type</label>
+        <select id="adhoc-type" onchange="updateAdHocHrs()">
+          <option value="bobtail-rt">Bobtail — Round Trip</option>
+          <option value="bobtail-ow">Bobtail — One Way</option>
+          <option value="loaded-rt">Loaded — Round Trip</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Dispatch Time</label>
+        <input type="time" id="adhoc-dispatch" class="plain" value="08:00">
+      </div>
+      <div class="field-group">
+        <label>Notes (optional)</label>
+        <input type="text" id="adhoc-notes" placeholder="e.g. Pick up trailer from Columbus yard">
+      </div>
+      <div id="adhoc-hrs-preview" style="margin-top:8px;padding:8px 12px;background:var(--blue-bg);border-radius:var(--radius);font-size:12px;font-weight:600;color:var(--blue);">
+        — select destination —
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeAdHocModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAdHocMove()">Save Ad Hoc Move</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CLEAR DAY / START OVER CONFIRM ════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="clear-day-modal">
+  <div class="modal" style="width:380px;max-width:96vw;">
+    <div class="modal-header">
+      <span>↺ Start Over</span>
+      <button class="modal-close" onclick="closeClearDayModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--gray-600);line-height:1.55;">
+        Are you sure you want to <strong>delete the current plan and start over</strong>?
+        This clears all load counts, driver assignments, locks, and today's result.
+        Your drivers and settings are kept.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeClearDayModal()">No, keep it</button>
+      <button class="btn btn-danger" onclick="confirmClearDay()">Yes, start over</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ NEW CROSSDOCK WIZARD ═════════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="crossdock-modal">
+  <div class="modal" style="width:480px;max-width:96vw;">
+    <div class="modal-header">
+      <span>➕ Add a New Crossdock</span>
+      <button class="modal-close" onclick="closeCrossdockWizard()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--gray-400);margin-bottom:14px;">
+        Creates a new location alongside the others. It syncs to every device you sign in on.
+        After it's created you'll build out destinations, phases, and drivers in Settings.
+      </p>
+      <div class="field-group">
+        <label>Crossdock Name</label>
+        <input type="text" id="cd-name" class="plain" placeholder="e.g. Dothan Crossdock" oninput="cdDeriveSlug()">
+      </div>
+      <div class="field-group">
+        <label>ID / Slug <span style="color:var(--gray-400);font-weight:400;">(auto — lowercase, no spaces)</span></label>
+        <input type="text" id="cd-slug" class="plain" placeholder="dothan">
+      </div>
+      <div class="field-group">
+        <label>External Carrier Name</label>
+        <input type="text" id="cd-carrier" class="plain" placeholder="e.g. COWAN or SHORELINE">
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div class="field-group" style="flex:1;">
+          <label>Avg Speed (mph)</label>
+          <input type="number" id="cd-speed" class="plain" value="50" min="20" max="80">
+        </div>
+        <div class="field-group" style="flex:1;">
+          <label>DOT Max Hours</label>
+          <input type="number" id="cd-dotmax" class="plain" value="11" min="1" max="14" step="0.5">
+        </div>
+      </div>
+      <div id="cd-error" style="display:none;margin-top:6px;padding:8px 12px;background:#fdecea;border-radius:var(--radius);font-size:12px;font-weight:600;color:#c0392b;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCrossdockWizard()">Cancel</button>
+      <button class="btn btn-primary" id="cd-create-btn" onclick="createCrossdock()">Create Crossdock</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MANAGE DISPATCHERS ═══════════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="dispatchers-modal">
+  <div class="modal" style="width:460px;max-width:96vw;">
+    <div class="modal-header">
+      <span>👥 Dispatchers — <span id="disp-dc-name"></span></span>
+      <button class="modal-close" onclick="closeDispatchers()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="disp-list" style="margin-bottom:16px;">
+        <div style="color:var(--gray-400);font-size:12px;">Loading…</div>
+      </div>
+      <div id="disp-admin-area" style="display:none;border-top:1px solid var(--gray-100);padding-top:14px;">
+        <div class="settings-section-title" style="margin-bottom:8px;">Add a dispatcher</div>
+        <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">
+          Enter a temporary password to <strong>create their account now</strong> — they sign in
+          immediately with it. Leave the password blank to just pre-authorize the email (they
+          create their own account later).
+        </p>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="field-group" style="flex:1;min-width:150px;margin:0;">
+            <label>Email</label>
+            <input type="email" id="disp-email" class="plain" placeholder="dispatcher@example.com">
+          </div>
+          <div class="field-group" style="flex:1;min-width:120px;margin:0;">
+            <label>Temp password <span style="color:var(--gray-400);font-weight:400;">(optional)</span></label>
+            <input type="text" id="disp-password" class="plain" placeholder="min 6 chars">
+          </div>
+          <div class="field-group" style="margin:0;">
+            <label>Role</label>
+            <select id="disp-role" class="plain">
+              <option value="dispatcher">Dispatcher</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" id="disp-invite-btn" onclick="inviteDispatcher()">Add</button>
+        </div>
+        <div id="disp-msg" style="display:none;margin-top:10px;padding:8px 12px;border-radius:var(--radius);font-size:12px;font-weight:600;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EDIT DESTINATION MODAL ═══════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="edit-dest-modal">
+  <div class="modal" style="width:440px;max-width:96vw;">
+    <div class="modal-header">
+      <span>✏️ Edit Destination</span>
+      <button class="modal-close" onclick="closeEditDest()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ed-idx">
+      <div class="field-group">
+        <label>Code <span style="color:var(--gray-400);font-weight:400;">(fixed — delete &amp; re-add to change)</span></label>
+        <input type="text" id="ed-code" class="plain" disabled style="opacity:0.6;">
+      </div>
+      <div class="field-group">
+        <label>Full Name</label>
+        <input type="text" id="ed-name" class="plain" placeholder="e.g. Mobile, AL">
+      </div>
+      <div class="field-group">
+        <label>Address</label>
+        <input type="text" id="ed-address" class="plain" placeholder="e.g. 123 Main St, Mobile, AL 36602">
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div class="field-group" style="flex:1;">
+          <label>Miles (one-way)</label>
+          <input type="number" id="ed-miles" class="plain" min="0">
+        </div>
+        <div class="field-group" style="flex:1.4;">
+          <label>Carrier</label>
+          <select id="ed-carrier" class="plain"></select>
+        </div>
+      </div>
+      <div id="ed-error" style="display:none;margin-top:6px;padding:8px 12px;background:#fdecea;border-radius:var(--radius);font-size:12px;font-weight:600;color:#c0392b;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeEditDest()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditDest()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ OUT / DEPARTURE TIME MODAL ═══════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="out-modal">
+  <div class="modal" style="width:360px;max-width:96vw;">
+    <div class="modal-header">
+      <span>⏱ Departure (Out) Time</span>
+      <button class="modal-close" onclick="closeOutModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="out-modal-sub" style="font-size:12px;color:var(--gray-500);margin-bottom:12px;"></div>
+      <div class="field-group">
+        <label>Time out the gate</label>
+        <input type="time" id="out-time-input" class="plain">
+      </div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:6px;">
+        Sets the real departure. The receiver ETA recalculates from this time and
+        <strong>cascades to this driver's later loads</strong>. Leave loads unstamped to keep the planned ETA.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="out-clear-btn" style="color:#c0392b;" onclick="clearOutTime()">Clear</button>
+      <button class="btn btn-ghost" onclick="closeOutModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveOutTime()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD/EDIT DRIVER MODAL ════════════════════════════════════════ -->
+<div class="modal-overlay driver-overlay" id="driver-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="modal-title">Add New Driver</span>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-driver-id">
+      <div class="field-group"><label>Full Name *</label><input type="text" id="drv-name" placeholder="e.g. John Smith"></div>
+      <div class="field-group">
+        <label>Home Base *</label>
+        <select id="drv-home">
+          <!-- Populated dynamically from DC_CONFIG.destinations by populateRestrictionDropdowns() -->
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Route Restriction *</label>
+        <select id="drv-restriction">
+          <!-- Populated dynamically from DC_CONFIG.restrictions by populateRestrictionDropdowns() -->
+        </select>
+      </div>
+      <div class="field-group"><label>Arrival Time at Montgomery DC (leave blank if domicile driver)</label><input type="time" class="plain" id="drv-arrival"></div>
+      <div class="field-group"><label>Deadhead Miles (one-way home-to-DC; 0 for Montgomery-based drivers)</label><input type="number" class="plain" id="drv-deadhead" value="0" min="0" placeholder="0"></div>
+      <div class="field-group">
+        <label>Home Destination (domicile drivers only)</label>
+        <select id="drv-domiciledest" onchange="updateHomefirstVisibility()">
+          <!-- Populated dynamically from DC_CONFIG.destinations by populateRestrictionDropdowns() -->
+        </select>
+      </div>
+      <div class="field-group" id="drv-homefirst-group" style="display:none">
+        <label>Home Run Order</label>
+        <select id="drv-homefirst">
+          <option value="false">Last — home load assigned as final run (default)</option>
+          <option value="true">First — home load first, then other runs after</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label>Dispatch Priority <span style="color:var(--gray-400);font-weight:400;">(1 = fill first; higher = overflow/outside carrier)</span></label>
+        <input type="number" class="plain" id="drv-priority" value="1" min="1" step="1" placeholder="1">
+      </div>
+      <div class="field-group">
+        <label>On Vacation?</label>
+        <select id="drv-vacation">
+          <option value="false">No — Available</option>
+          <option value="true">Yes — On Vacation</option>
+        </select>
+      </div>
+      <div class="field-group"><label>Notes (optional)</label><input type="text" id="drv-notes" placeholder="Any special notes..."></div>
+      <div id="modal-error" style="color:var(--danger);font-size:12px;margin-top:6px;display:none;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDriver()">Save Driver</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden file input -->
+<input type="file" id="import-file-input" accept=".json" style="display:none" onchange="handleImportFile(event)">
+
+<!-- ═══ TAB: SETTINGS (hidden, kept for JS switchTab compatibility) ══ -->
+<div id="tab-settings" class="tab-content" style="display:none!important;"></div>
+
+<script>
+/* REVAMP_PREVIEW: packaging flag — real production app with revamp chrome */
+const REVAMP_PREVIEW = true;
+window.REVAMP_PREVIEW = true;
+// ═══════════════════════════════════════════════════════════════════════════

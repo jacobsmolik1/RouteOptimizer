@@ -1,0 +1,183 @@
+Parker',     homeBase:'Montgomery, AL',  restriction:'Any',              onVacation:false, arrivalTime:'17:00', deadheadMiles:0,   domicileDest:'',    notes:'Backup · last dispatch'},
+  ],
+
+  tifton: [
+    {id:'T001',name:'Allen Holloway',   homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T002',name:'Andrew Somers',    homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T003',name:'Dewey Phillips',   homeBase:'Tallahassee, FL', restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:95, domicileDest:'TAL', notes:'Domicile: Tallahassee · 95mi deadhead'},
+    {id:'T004',name:'Doug Wilkerson',   homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T005',name:'Glen Pitts',       homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T006',name:'Gus Williams',     homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T007',name:'James Jones',      homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T008',name:'James Pompey',     homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T009',name:'James Spillers',   homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T010',name:'James Walker',     homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T011',name:'Jerome Graydon',   homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T012',name:'Joe Carroll',      homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T013',name:'Joe Lundy',        homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T014',name:'Jonathan Fleming', homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T015',name:'Marc Kelley',      homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T016',name:'Marvis Murray',    homeBase:'Tallahassee, FL', restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:95, domicileDest:'TAL', notes:'Domicile: Tallahassee · 95mi deadhead'},
+    {id:'T017',name:'Pershaun Fann',    homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T018',name:'Richard Cook',     homeBase:'Tallahassee, FL', restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:95, domicileDest:'TAL', notes:'Domicile: Tallahassee · 95mi deadhead'},
+    {id:'T019',name:'Roberta Hepburn',  homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T020',name:'Susanne Tucker',   homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T021',name:'Tammy Mitchell',   homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T022',name:'Wendell Mullis',   homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+    {id:'T023',name:'Wiley Wilson',     homeBase:'Tifton, GA',      restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,  domicileDest:'',    notes:''},
+  ],
+
+  birmingham: [
+    {id:'B001',name:'Florence Dvr 1',  homeBase:'Florence, AL',    restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:125, domicileDest:'FLO', notes:'Domicile: Florence - 125mi deadhead'},
+    {id:'B002',name:'Florence Dvr 2',  homeBase:'Florence, AL',    restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:125, domicileDest:'FLO', notes:'Domicile: Florence - 125mi deadhead'},
+    {id:'B003',name:'Tuscaloosa Dvr 1',homeBase:'Tuscaloosa, AL',  restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:58,  domicileDest:'TUS', notes:'Domicile: Tuscaloosa - 58mi deadhead'},
+    {id:'B004',name:'Tuscaloosa Dvr 2',homeBase:'Tuscaloosa, AL',  restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:58,  domicileDest:'TUS', notes:'Domicile: Tuscaloosa - 58mi deadhead'},
+    {id:'B005',name:'C. Hill Dvr 1',   homeBase:'Carbon Hill, AL', restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:60,  domicileDest:'CAR', notes:'Domicile: Carbon Hill - 60mi deadhead'},
+    {id:'B006',name:'C. Hill Dvr 2',   homeBase:'Carbon Hill, AL', restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:60,  domicileDest:'CAR', notes:'Domicile: Carbon Hill - 60mi deadhead'},
+    {id:'B007',name:'Cullman Dvr 1',   homeBase:'Cullman, AL',     restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:48,  domicileDest:'CUL', notes:'Domicile: Cullman - 48mi deadhead'},
+    {id:'B008',name:'BHM Dvr 1',       homeBase:'Birmingham, AL',  restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'B009',name:'BHM Dvr 2',       homeBase:'Birmingham, AL',  restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'B010',name:'BHM Dvr 3',       homeBase:'Birmingham, AL',  restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'B011',name:'BHM Dvr 4',       homeBase:'Birmingham, AL',  restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'B012',name:'BHM Dvr 5',       homeBase:'Birmingham, AL',  restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'B013',name:'BHM Dvr 6',       homeBase:'Birmingham, AL',  restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'B014',name:'BHM Dvr 7',       homeBase:'Birmingham, AL',  restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,   domicileDest:'',    notes:''},
+    {id:'B015',name:'BHM Dvr 8',       homeBase:'Birmingham, AL',  restriction:'Any', onVacation:false, arrivalTime:'', deadheadMiles:0,   domicileDest:'',    notes:''},
+  ],
+
+};
+
+// ── DC selection helpers (defined before throw guard so they're always available) ─
+function selectDC(id) {
+  if (!ALL_DC_CONFIGS[id]) return;
+  localStorage.setItem('_active_dc', id);
+  location.reload();
+}
+function switchDC() {
+  localStorage.removeItem('_active_dc');
+  location.reload();
+}
+// Which DC slugs the signed-in user may access (from list_accessible_dcs, cached
+// after sign-in). null = not yet known (first load) → show all; enforced once known.
+function _accessibleDcSlugs() {
+  try { const raw = localStorage.getItem('_accessible_dc_slugs'); return raw ? JSON.parse(raw) : null; }
+  catch { return null; }
+}
+function _dcVisible(id) {
+  const acc = _accessibleDcSlugs();
+  return !acc || acc.includes(id);   // unknown → show all; otherwise restrict
+}
+// If the signed-in user is on a DC they can't access, bounce to the picker.
+// Returns true if it bounced (caller should stop).
+function enforceDcAccess() {
+  const acc = _accessibleDcSlugs();
+  if (!acc || !DC_CONFIG) return false;
+  if (!acc.includes(DC_CONFIG.id)) {
+    alert(`You don't have access to ${DC_CONFIG.name}. Pick a crossdock you're assigned to.`);
+    localStorage.removeItem('_active_dc');
+    location.reload();
+    return true;
+  }
+  return false;
+}
+
+function toggleDCSwitcher(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('dc-switcher-dropdown');
+  if (!dd) return;
+  if (dd.classList.contains('open')) { dd.classList.remove('open'); return; }
+  // Build items — only crossdocks this user can access.
+  dd.innerHTML = Object.values(ALL_DC_CONFIGS).filter(cfg => _dcVisible(cfg.id)).map(cfg => `
+    <button class="dc-switcher-item${cfg.id === DC_CONFIG?.id ? ' active' : ''}" onclick="selectDC('${cfg.id}')">
+      <span class="dc-dot"></span>${cfg.name}
+    </button>`).join('')
+    // + Add Crossdock is admin-only (create_dc is server-enforced admin-only too).
+    + (_isDcAdmin ? `<button class="dc-switcher-item" style="border-top:1px solid #eee;color:var(--red);font-weight:700;" onclick="openCrossdockWizard()">
+         <span class="dc-dot" style="background:var(--red);"></span>+ Add Crossdock
+       </button>` : '');
+  dd.classList.add('open');
+}
+document.addEventListener('click', () => {
+  const dd = document.getElementById('dc-switcher-dropdown');
+  if (dd) dd.classList.remove('open');
+});
+
+// Built-in DCs are defined in code (ALL_DC_CONFIGS above). Capture their ids BEFORE the
+// custom-DC merge so we can distinguish code-defined DCs (montgomery/tifton/birmingham)
+// from user-created crossdocks. Built-in DCs sync only their phases + destinations via
+// dcs.config (settings ride the dispatch_days path) and must never be cached as custom.
+const BUILTIN_DC_IDS = new Set(Object.keys(ALL_DC_CONFIGS));
+
+// ── Merge user-created crossdocks (synchronous, offline-safe) ────────────
+// Custom DC configs are cached in localStorage under '_custom_dcs' so they
+// are available BEFORE DC_CONFIG resolves below (auth/Supabase is async and
+// runs later). SupabaseSync.refreshDcConfigs() refreshes this cache post-auth.
+try {
+  const _customDcs = JSON.parse(localStorage.getItem('_custom_dcs') || '{}');
+  Object.values(_customDcs).forEach(cfg => {
+    if (cfg && cfg.id) { cfg._custom = true; ALL_DC_CONFIGS[cfg.id] = cfg; }
+  });
+} catch (e) { console.error('[CustomDC] cache merge failed:', e); }
+
+// ── Activate DC from localStorage ────────────────────────────────────────
+const _activeDcId = localStorage.getItem('_active_dc') || '';
+const DC_CONFIG = ALL_DC_CONFIGS[_activeDcId] || null;
+
+// Renders one button per accessible DC (built-in + custom). Called from cache
+// first, then again after a live server refresh (below) so every built location
+// shows. Defined before the throw so it exists in selector-only mode.
+function renderDcSelectorButtons() {
+  const wrap = document.getElementById('dc-selector-buttons');
+  if (!wrap) return;
+  const visible = Object.values(ALL_DC_CONFIGS).filter(cfg => _dcVisible(cfg.id));
+  if (!visible.length && _accessibleDcSlugs()) {
+    wrap.innerHTML = `<div style="color:white;font-size:14px;max-width:420px;text-align:center;">You don't have any crossdocks assigned yet. Ask an admin to add you to one, then reload.</div>`;
+  } else {
+    wrap.innerHTML = visible.map(cfg =>
+      `<button onclick="selectDC('${cfg.id}')" style="background:white;color:#E61D2B;border:none;border-radius:10px;padding:20px 32px;font-size:16px;font-weight:700;cursor:pointer;min-width:180px;">${cfg.name}</button>`
+    ).join('');
+  }
+}
+
+if (!DC_CONFIG) {
+  // No DC selected — show selector overlay, hide auth gate, halt app initialization
+  document.addEventListener('DOMContentLoaded', () => {
+    const s = document.getElementById('dc-selector-screen');
+    if (s) s.style.display = 'flex';
+    const g = document.getElementById('auth-gate');
+    if (g) g.style.display = 'none';
+    renderDcSelectorButtons();   // fast path: whatever's cached (built-in + prior custom)
+    // If a Supabase session persists, pull the FULL current list of accessible DCs
+    // so the selector always shows every location built — not just cached ones.
+    // (Uses the db client directly; SupabaseSync isn't defined in selector-only mode.)
+    (async () => {
+      try {
+        if (!db) return;
+        const { data: { session } } = await db.auth.getSession();
+        if (!session) return;
+        await db.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
+        const { data, error } = await db.rpc('list_accessible_dcs');
+        if (error || !Array.isArray(data)) return;
+        const cache = {};
+        data.forEach(r => {
+          if (!r.config || BUILTIN_DC_IDS.has(r.slug)) return;   // built-in DCs live in code, never custom
+          const cfg = r.config; cfg._custom = true; cfg.id = cfg.id || r.slug;
+          cache[r.slug] = cfg; ALL_DC_CONFIGS[cfg.id] = cfg;
+        });
+        localStorage.setItem('_custom_dcs', JSON.stringify(cache));
+        localStorage.setItem('_accessible_dc_slugs', JSON.stringify(data.map(r => r.slug)));
+        renderDcSelectorButtons();   // re-render with the complete, fresh list
+      } catch (e) { /* offline / no session — the cached selector stands */ }
+    })();
+  });
+  throw new Error('RouteOptimizer: awaiting DC selection');
+}
+
+// Convenience lookup — call instead of hardcoding restriction strings in logic.
+function getResDef(restrictionValue) {
+  const found = DC_CONFIG.restrictions.find(r => r.value === restrictionValue);
+  if (found) return found;
+  // Synthesize a def for "{CODE} ONLY" restrictions created for runtime-added destinations.
+  const m = /^(.+) ONLY$/.exec(restrictionValue || '');
+  if (m && typeof state !== 'undefined' && state.destinations?.some(d => d.code === m[1])) {
+    return { value: restrictionValue, type: 'only', destCode:

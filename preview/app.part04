@@ -1,0 +1,344 @@
+--purple); background:#ede0ff !important; }
+.driver-card.is-shore .driver-card-header { cursor:pointer; }
+.driver-card.is-shore .driver-card-header:hover { filter:brightness(1.12); }
+.driver-card.is-shore.drag-target { box-shadow: 0 0 0 2px var(--purple), var(--shadow-md); }
+.run-row.drop-hint  { justify-content:center;color:var(--gray-400);font-style:italic;font-size:11px;background:var(--gray-50);border:1.5px dashed var(--gray-200);border-radius:var(--radius);margin:4px 0;padding:8px; }
+.btn-remove-bkt { font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;border:1px solid var(--gray-200);background:white;color:var(--gray-400);cursor:pointer;margin-left:auto;flex-shrink:0;transition:all 0.15s; }
+.btn-remove-bkt:hover { border-color:var(--danger);color:var(--danger); }
+.btn-adhoc-add { font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;border:1.5px solid var(--blue);background:var(--blue-bg);color:var(--blue);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all 0.15s; }
+.btn-adhoc-add:hover { background:var(--blue);color:white; }
+
+/* ── AUTH GATE ──────────────────────────────────────────────── */
+#auth-gate {
+  position: fixed; inset: 0; z-index: 10000;
+  background: linear-gradient(155deg, var(--red-dark) 0%, var(--red) 58%, #F02535 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-loading {
+  color: white; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  font-size: 14px; font-weight: 500; opacity: 0.92;
+}
+.auth-spinner {
+  width: 32px; height: 32px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: white; border-radius: 50%;
+  animation: auth-spin 0.7s linear infinite;
+}
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+.auth-card {
+  background: white; border-radius: 14px;
+  padding: 36px 32px 28px; width: 100%; max-width: 380px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+}
+.auth-card-hdr { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.auth-card-badge {
+  background: var(--red); color: white; font-weight: 900;
+  font-size: 10px; letter-spacing: 2px; padding: 5px 9px;
+  border-radius: 5px; flex-shrink: 0; line-height: 1;
+}
+.auth-card-title { font-size: 15px; font-weight: 800; color: var(--black); }
+.auth-card-sub   { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+.auth-h2 { font-size: 20px; font-weight: 800; color: var(--black); margin-bottom: 20px; }
+.auth-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.auth-field label { font-size: 12px; font-weight: 600; color: var(--gray-600); }
+.auth-field input {
+  border: 1.5px solid var(--gray-200); border-radius: 7px;
+  padding: 10px 12px; font-size: 14px; font-family: inherit;
+  outline: none; transition: border-color 0.15s;
+}
+.auth-field input:focus { border-color: var(--red); }
+.auth-submit {
+  width: 100%; background: var(--red); color: white; border: none;
+  border-radius: 7px; padding: 11px; font-size: 14px; font-weight: 700;
+  cursor: pointer; margin-top: 4px; font-family: inherit; transition: background 0.15s;
+}
+.auth-submit:hover:not(:disabled) { background: var(--red-dark); }
+.auth-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.auth-error { color: var(--danger); font-size: 12px; margin-top: 10px; min-height: 18px; }
+
+/* ── HEADER USER DISPLAY ────────────────────────────────────── */
+.hdr-user { display: flex; align-items: center; gap: 8px; }
+.hdr-user-email { font-size: 11px; opacity: 0.75; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hdr-logout-btn {
+  background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.2);
+  color: white; padding: 4px 10px; border-radius: 5px;
+  cursor: pointer; font-size: 11px; font-weight: 600; font-family: inherit;
+}
+.hdr-logout-btn:hover { background: rgba(0,0,0,0.32); }
+
+/* ── SYNC STATUS ────────────────────────────────────────────── */
+#sync-indicator {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.3px;
+  padding: 3px 8px; border-radius: 4px; opacity: 0.85; white-space: nowrap;
+}
+#sync-indicator.syncing  { background: rgba(255,255,255,0.15); color: white; }
+#sync-indicator.synced   { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+#sync-indicator.offline  { background: rgba(0,0,0,0.25); color: rgba(255,255,255,0.6); }
+#commit-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+  padding: 3px 8px; border-radius: 4px; white-space: nowrap;
+  background: rgba(34,197,94,0.25); color: #86efac;
+}
+</style>
+<style id="revamp-preview-css">
+/* ═══ REVAMP PREVIEW chrome (packaging only) ═══ */
+:root {
+  --revamp-red: #E61D2B;
+  --revamp-warn-bg: #FFF8E6;
+  --revamp-warn-border: #F0D48A;
+  --revamp-warn-text: #7A5A00;
+}
+body.revamp-preview { padding-bottom: 92px; }
+body.revamp-preview .test-banner { display: none !important; }
+
+.revamp-preview-banner {
+  background: #111;
+  color: #fff;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 7px 12px;
+  position: relative;
+  z-index: 10001;
+}
+.revamp-preview-banner span { color: #f5c542; }
+
+/* Compact Needs Attention strip (restyles #plan-quality-panel) */
+body.revamp-preview #plan-quality-panel.revamp-needs {
+  display: none;
+  margin-bottom: 14px;
+  background: var(--revamp-warn-bg);
+  border: 1.5px solid var(--revamp-warn-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(26,32,64,0.06);
+}
+body.revamp-preview #plan-quality-panel.revamp-needs.is-visible { display: block !important; }
+body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs > .revamp-needs-hd .needs-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--revamp-warn-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-pill {
+  background: #F5D06A;
+  color: var(--revamp-warn-text);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-sub {
+  font-size: 12px;
+  color: #9A7A30;
+  font-weight: 500;
+  margin-left: 4px;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .needs-chevron {
+  margin-left: auto;
+  color: #9A7A30;
+  transition: transform .2s;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs.is-open .needs-chevron { transform: rotate(90deg); }
+body.revamp-preview #plan-quality-panel.revamp-needs #plan-quality-content {
+  display: none;
+  padding: 0 14px 12px;
+  flex-direction: column;
+  gap: 6px;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs.is-open #plan-quality-content { display: flex; }
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-row {
+  background: rgba(255,255,255,.75);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-unused-collapsed {
+  color: #9A7A30;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  background: transparent;
+  border: 0;
+  padding: 4px 0;
+  text-align: left;
+}
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-unused-extra { display: none; }
+body.revamp-preview #plan-quality-panel.revamp-needs .pq-unused-extra.show { display: block; }
+
+/* Assigned-first toolbar */
+.revamp-cards-toolbar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
+}
+.revamp-cards-toolbar.visible { display: flex; }
+.revamp-cards-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600, #4A5275);
+  cursor: pointer;
+  user-select: none;
+}
+.revamp-cards-toolbar .hint {
+  font-size: 12px;
+  color: var(--gray-400, #9199B4);
+  font-weight: 500;
+}
+body.revamp-preview .driver-card.revamp-empty-hidden { display: none !important; }
+
+/* Sticky Commit / Re-run bar */
+.revamp-sticky-bar {
+  display: none;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 9990;
+  background: #fff;
+  border-top: 1px solid #E2E5EF;
+  box-shadow: 0 -8px 28px rgba(26,32,64,0.10);
+  padding: 12px 20px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+body.revamp-preview.has-plan .revamp-sticky-bar { display: flex; }
+.revamp-sticky-bar .left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+}
+.revamp-sticky-bar .left strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+.revamp-sticky-bar .left span {
+  font-size: 11px;
+  color: #6B7394;
+  font-weight: 500;
+}
+.revamp-sticky-bar .actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.revamp-sticky-bar .btn-rerun {
+  background: #fff;
+  color: #1a1a1a;
+  border: 1.5px solid #C8CDD9;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.revamp-sticky-bar .btn-rerun:hover { background: #F8F9FC; }
+.revamp-sticky-bar .btn-commit-primary {
+  background: var(--revamp-red);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 14px rgba(230,29,43,0.35);
+}
+.revamp-sticky-bar .btn-commit-primary:hover { filter: brightness(1.05); }
+.revamp-sticky-bar .btn-ghost {
+  background: transparent;
+  border: 0;
+  color: #6B7394;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 10px;
+}
+.revamp-sticky-bar .btn-ghost:hover { color: #1a1a1a; }
+
+/* Demote inline Generate once a plan exists; hide duplicate Commit in card header (moved to sticky) */
+body.revamp-preview.has-plan .btn-generate {
+  display: none !important;
+}
+body.revamp-preview.has-plan #commit-day-btn {
+  display: none !important;
+}
+body.revamp-preview.has-plan .card-header .btn-group #commit-day-btn { display: none !important; }
+
+@media print {
+  .revamp-preview-banner,
+  .revamp-sticky-bar,
+  .revamp-cards-toolbar { display: none !important; }
+  body.revamp-preview { padding-bottom: 0 !important; }
+}
+
+</style>
+</head>
+<body>
+<!-- DC Selector Screen — visible only when no DC is active -->
+<div id="dc-selector-screen" style="display:none;position:fixed;inset:0;background:#E61D2B;z-index:20000;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:Inter,sans-serif;">
+  <div style="color:white;font-size:32px;font-weight:900;letter-spacing:-1px;">Route Optimizer</div>
+  <div style="color:rgba(255,255,255,0.85);font-size:15px;margin-bottom:8px;">Select your distribution center</div>
+  <div id="dc-selector-buttons" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:720px;">
+    <!-- Populated dynamically from ALL_DC_CONFIGS (built-ins + custom crossdocks) -->
+  </div>
+  <div style="color:rgba(255,255,255,0.6);font-size:12px;margin-top:8px;">Your choice is remembered on this device · To add a new crossdock, open any DC and use the ⇄ menu</div>
+</div>
+<div class="test-banner no-print">🔗 UNIFIED — Select your DC below or use the ⇄ button to switch</div>
+
+<!-- ═══ PRINT HEADER ═══════════════════════════════════════════════════ -->
+<div class="print-header">
+  <div class="print-header-brand">
+    <div class="print-header-badge">CCBCU</div>
+    <div>
+      <div class="print-header-title">Route Optimizer — Daily Load Assignments</div>
+      <div class="print-header-sub">Coca-Cola Bottling Co. United • Montgomery DC • 4919 Westport Blvd</div>
+    </div>
+  </div>
+  <div class="print-header-right">
+    <strong id="print-date-hdr"></strong>
+    <span id="print-dc-info">Montgomery DC • DOT Compliant</span>
+  </div>
+</div>
+<div class="print-summary-bar" id="print-summary-bar">
+  <div class="psb-item"><div class="psb-num" id="psb-total">—</div><div class="psb-lbl">Total Loads</div></div>
+  <div class="psb-item"><div class="psb-num" id="psb-internal">—</div><div class="psb-lbl">Internal</div></div>
+  <div class="psb-item"><div class="psb-num" id="psb-shoreline">—</div><div class="psb-lbl">External</div></div>
+  <div class="psb-item"><div class="psb-num" id="psb-drivers">—</div><div class="psb-lbl">Drivers Used</div></div>
+</div>
+
+<!-- ═══ HEADER ═════════════════════════════════════════════════════════ -->
+<header>
+  <div class="hdr-left">
+    <div class="hdr-logo">
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAAAAAXNSR0IArs4c6QAAAHhlWElmTU0AKgAAAAgABAEaAAUAAAABAAAAPgEbAAUAAAABAAAARgEoAAMAAAABAAIAAIdpAAQAAAABAAAATgAAAAAAAAEsAAAAAQAAASwAAAABAAOgAQADAAAAAQABAACgAgAEAAAAAQAAAHigAwAEAAAAAQAAAHgAAAAAXY4R8gAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAWRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDYuMC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIj4KICAgICAgICAgPHhtcDpDcmVhdG9yVG9vbD5BZG9iZSBJbWFnZVJlYWR5PC94bXA6Q3JlYXRvclRvb2w+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgoEPvQbAABAAEl
