@@ -1190,10 +1190,10 @@ th.sortable:hover { background: var(--gray-100); }
     <div class="settings-body">
 
       <div class="settings-section-title">Destinations</div>
-      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Edit one-way miles, or add/remove receiving locations. Round-trip and hours auto-calculate.</p>
+      <p style="font-size:11px;color:var(--gray-400);margin-bottom:10px;">Edit one-way miles, or add/remove receiving locations. Set MPH to give a lane its own average speed (blank = DC average). Round-trip and hours auto-calculate.</p>
       <div class="tbl-wrap" style="margin-bottom:12px;">
         <table class="dest-settings-table">
-          <thead><tr><th>Code</th><th>Location</th><th title="Miles, one-way">Mi&nbsp;1w</th><th title="Miles, round trip">RT</th><th title="Estimated hours">Hrs</th><th>Carrier</th><th>On</th><th></th></tr></thead>
+          <thead><tr><th>Code</th><th>Location</th><th title="Miles, one-way">Mi&nbsp;1w</th><th title="Average speed for this lane. Leave blank to use the DC average speed.">MPH</th><th title="Miles, round trip">RT</th><th title="Estimated hours">Hrs</th><th>Carrier</th><th>On</th><th></th></tr></thead>
           <tbody id="dest-tbody"></tbody>
         </table>
       </div>
@@ -3057,10 +3057,20 @@ const { toMinutes, fmt12h, minutesToHHMM, fmtReturnTime, fmtHrs } = TimeUtils;
 //  State-reading functions that bridge DC config and runtime state.
 // ════════════════════════════════════════════════════════════════════════════
 const DcConfig = (() => {
+// Average speed for a destination's lane: its own MPH when set (e.g. from Geotab actuals),
+// otherwise the DC-wide average speed. Every trip-time and deadhead calc goes through this.
+function destSpeed(code) {
+  const d = code && state.destinations.find(x => x.code === code);
+  const own = d && parseFloat(d.avgSpeed);
+  return (own > 0 ? own : 0) || state.settings.avgSpeed || 45;
+}
+// One-way home-to-DC deadhead hours for a domicile driver, at their home lane's speed.
+function driverDHHrs(d) {
+  return d && d.deadheadMiles ? d.deadheadMiles / destSpeed(d.domicileDest) : 0;
+}
 function getHrsForDest(code) {
   const d = state.destinations.find(x => x.code === code);
-  const spd = state.settings.avgSpeed || 45;
-  return d ? (d.miles1Way * 2) / spd : 0;
+  return d ? (d.miles1Way * 2) / destSpeed(code) : 0;
 }
 function getAvailableDrivers() {
   const wi = state.whatIf || {};
@@ -3081,10 +3091,10 @@ function driverCanTakeDest(driver, destCode) {
   if (def.type === 'onlyGroup') return (def.destCodes || []).includes(destCode);
   return true; // any, assist, first — no hard destination block
 }
-  return { getHrsForDest, getAvailableDrivers, nextId, driverCanTakeDest };
+  return { getHrsForDest, destSpeed, driverDHHrs, getAvailableDrivers, nextId, driverCanTakeDest };
 })();
 // Re-export to global scope — call sites remain unchanged during incremental migration.
-const { getHrsForDest, getAvailableDrivers, nextId, driverCanTakeDest } = DcConfig;
+const { getHrsForDest, destSpeed, driverDHHrs, getAvailableDrivers, nextId, driverCanTakeDest } = DcConfig;
 
 // Dispatch-priority tier for a driver (1 = highest / used first). Defaults to 1
 // so a roster with no tiers set behaves exactly as before (all-equal = inert).
@@ -3206,7 +3216,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
   available.forEach(d => {
     // Only charge morning deadhead upfront. Evening deadhead is reserved in the capacity
     // check and settled in post-processing (saved if last load is home destination).
-    const mDH = d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0;
+    const mDH = driverDHHrs(d);
     const homeHrs = d.domicileDest ? getHrsForDest(d.domicileDest) / 2 : 0;
     const pre = preLoads[d.id] || {};
     const availableMins = d.arrivalTime ? toMinutes(d.arrivalTime) : 0;
@@ -4638,7 +4648,7 @@ function reassignShorelineToReturned() {
   const candidates = state.drivers.filter(d => {
     if (d.onVacation || !state.returned[d.id]) return false;
     const w = state.lastResult.workload.find(x => x.id === d.id);
-    const usedHrs = w ? w.hours : (d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0);
+    const usedHrs = w ? w.hours : driverDHHrs(d);
     return usedHrs < dotMaxHrs;
   }).sort((a,b) => (loadCounts[a.id]||0) - (loadCounts[b.id]||0));
 
@@ -4646,7 +4656,7 @@ function reassignShorelineToReturned() {
     if (a.override || a.autoDriver !== DC_CONFIG.externalCarrier) return;
     const drv = candidates.find(d => {
       const dw = state.lastResult.workload.find(x => x.id === d.id);
-      const dHrs = dw ? dw.hours : (d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0);
+      const dHrs = dw ? dw.hours : driverDHHrs(d);
       const effectiveHrs = (d.domicileDest && a.dest === d.domicileDest) ? a.hrs / 2 : a.hrs;
       if ((dHrs + effectiveHrs) > dotMaxHrs) return false;
       if (checkMidnightViolation(d.name, a.dispatchTime, a.hrs).violates) return false;
@@ -5280,7 +5290,7 @@ function renderDriverCards(result) {
     });
     const adhRuns  = byAdhoc[d.name] || [];
 
-    const morningDH = d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0;
+    const morningDH = driverDHHrs(d);
     const fullDH    = morningDH * 2;
 
     // Domicile drivers' last run to their home destination is one-way (home return).
@@ -5954,9 +5964,8 @@ function calculateDriverWorkload(driverName) {
   const driver = state.drivers.find(d => d.name === driverName);
   if (!driver) return null;
   const loads     = getDriverPlannedLoads(driverName);
-  const avgSpeed  = state.settings.avgSpeed || 45;
   const dotMax    = state.settings.dotMaxHours;
-  const morningDH = driver.deadheadMiles ? driver.deadheadMiles / avgSpeed : 0;
+  const morningDH = driverDHHrs(driver);
 
   // Reset all homeReturn flags then recompute from the last load.
   loads.forEach(l => { if (!l.isBucket) l.homeReturn = false; });
@@ -6448,7 +6457,7 @@ function openReassignModal(idx) {
   const drivers = getAvailableDrivers();
   const rows = drivers.map(d => {
     const w = state.lastResult.workload.find(x => x.id === d.id);
-    const usedHrs  = w ? w.hours : (d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0);
+    const usedHrs  = w ? w.hours : driverDHHrs(d);
     const loadsDone = w ? w.loads : 0;
     const remaining = dotMax - usedHrs;
     const fits       = remaining >= a.hrs;
@@ -6575,7 +6584,7 @@ function openNewLoadPickModal(encodedPayload) {
   const drivers = getAvailableDrivers();
   const rows = drivers.map(d => {
     const w         = state.lastResult ? state.lastResult.workload.find(x => x.id === d.id) : null;
-    const usedHrs   = w ? w.hours : (d.deadheadMiles ? d.deadheadMiles / state.settings.avgSpeed : 0);
+    const usedHrs   = w ? w.hours : driverDHHrs(d);
     const loadsDone = w ? w.loads : 0;
     const remaining = dotMax - usedHrs;
     const fits      = remaining >= load.hrs;
@@ -6689,10 +6698,10 @@ function closeSettings(e) {
 //  DESTINATIONS & SETTINGS
 // ════════════════════════════════════════════════════════════════════════════
 function renderDestinations() {
-  const spd = state.settings.avgSpeed;
+  const dcSpd = state.settings.avgSpeed || 45;
   document.getElementById('dest-tbody').innerHTML = state.destinations.map((d,idx) => {
     const rt = d.miles1Way*2;
-    const hrs= (rt/spd).toFixed(2);
+    const hrs= (rt/destSpeed(d.code)).toFixed(2);
     const off = !!d.disabled;
     const toggleBtn = off
       ? `<button onclick="toggleDestEnabled(${idx})" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;border:1px solid var(--gray-300);background:var(--gray-100);color:var(--gray-400);cursor:pointer;" title="Disabled — click to enable">✗ Off</button>`
@@ -6701,6 +6710,7 @@ function renderDestinations() {
       <td><span class="tag ${DEST_TAGS[d.code]||''}">${d.code}</span></td>
       <td>${d.name}</td>
       <td><input type="number" class="plain" id="dest-miles-${idx}" value="${d.miles1Way}" min="0" style="width:70px;" onchange="updateDestMiles(${idx},this.value)"></td>
+      <td><input type="number" class="plain" id="dest-speed-${idx}" value="${parseFloat(d.avgSpeed) > 0 ? d.avgSpeed : ''}" placeholder="${dcSpd}" min="1" max="80" step="0.5" style="width:56px;" title="Blank = DC average (${dcSpd} mph)" onchange="updateDestSpeed(${idx},this.value)"></td>
       <td class="text-center">${rt}</td>
       <td class="text-center"><strong>${hrs}</strong></td>
       <td style="font-size:11px;color:var(--gray-400);">${d.carrier}</td>
@@ -6755,6 +6765,13 @@ function updateDisabledBanner() {
 
 function updateDestMiles(idx,val) {
   state.destinations[idx].miles1Way = parseFloat(val)||0;
+  renderDestinations(); renderPhaseInputs();
+}
+// Per-lane average speed. Blank/0 clears it so the lane falls back to the DC average speed.
+function updateDestSpeed(idx,val) {
+  const v = parseFloat(val);
+  if (v > 0) state.destinations[idx].avgSpeed = v;
+  else delete state.destinations[idx].avgSpeed;
   renderDestinations(); renderPhaseInputs();
 }
 function saveDestinations() {
@@ -7972,7 +7989,7 @@ function dropBucketToDriver(load, driverName) {
 
   // Project total hours AFTER this drop, built from components to avoid double-counting.
   // we.hours from the optimizer already embeds preLoads (bucket hrs), so we never use it here.
-  const morningDH = driver.deadheadMiles ? driver.deadheadMiles / state.settings.avgSpeed : 0;
+  const morningDH = driverDHHrs(driver);
   const allBktAfter = [...bktForDriver, load];
   const hasHomeReturnAfter = !!(driver.domicileDest && allBktAfter.some(b => b.dest === driver.domicileDest));
   const homeOwSavings = hasHomeReturnAfter ? getHrsForDest(driver.domicileDest) / 2 : 0;
@@ -8090,8 +8107,8 @@ function updateAdHocHrs() {
   if (!destCode || !preview) return;
   const dest = state.destinations.find(d => d.code === destCode);
   if (!dest) return;
-  const rtHrs = (dest.miles1Way * 2) / state.settings.avgSpeed;
-  const owHrs = dest.miles1Way / state.settings.avgSpeed;
+  const rtHrs = (dest.miles1Way * 2) / destSpeed(dest.code);
+  const owHrs = dest.miles1Way / destSpeed(dest.code);
   const hrs   = moveType === 'bobtail-ow' ? owHrs : rtHrs;
   const typeLabel = {'bobtail-rt':'Bobtail Round Trip','bobtail-ow':'Bobtail One Way','loaded-rt':'Loaded Round Trip'}[moveType] || moveType;
   preview.textContent = `${typeLabel} · Est. ${hrs.toFixed(2)}h · ${dest.miles1Way}mi one-way`;
@@ -8106,8 +8123,8 @@ function saveAdHocMove() {
   if (!driverName || !destCode) return;
   const dest = state.destinations.find(d => d.code === destCode);
   if (!dest) return;
-  const rtHrs = (dest.miles1Way * 2) / state.settings.avgSpeed;
-  const owHrs = dest.miles1Way / state.settings.avgSpeed;
+  const rtHrs = (dest.miles1Way * 2) / destSpeed(dest.code);
+  const owHrs = dest.miles1Way / destSpeed(dest.code);
   const hrs   = moveType === 'bobtail-ow' ? owHrs : rtHrs;
   // Warn before committing a move that would exceed DOT
   const adhDriver = state.drivers.find(d => d.name === driverName);
@@ -8117,7 +8134,7 @@ function saveAdHocMove() {
     // When no result, manually sum deadhead + bucket hrs so the projection is accurate.
     const optiHrs = we
       ? we.hours
-      : (adhDriver.deadheadMiles ? adhDriver.deadheadMiles / state.settings.avgSpeed : 0)
+      : driverDHHrs(adhDriver)
         + (state.bucketAsgn||[]).filter(b => b.driverName === driverName).reduce((s,b) => s + b.hrs, 0);
     const existingAdhocHrs = (state.adhocMoves || []).filter(m => m.driverName === driverName).reduce((s,m) => s+m.hrs, 0);
     const projected = optiHrs + existingAdhocHrs + hrs;
