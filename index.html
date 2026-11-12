@@ -3234,6 +3234,18 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
     };
   });
 
+  // DOT capacity check for giving driver d one more load to destCode.
+  // Loads are tallied as full round trips and every non-home load reserves the one-way trip
+  // home on top. A load TO the driver's own domicile can be their final run, though: they
+  // drop it and they're home, so it only costs the one-way leg and needs no reservation.
+  // (Charging it a full round trip + the home reservation double-counted the drive home and
+  // pushed loads a domicile driver had time for — e.g. a 3rd home-lane load — to the carrier.)
+  function fitsDot(d, hrs, destCode) {
+    const s = ds[d.id];
+    if (d.domicileDest && destCode === d.domicileDest) return (s.hours + hrs / 2) <= dotMax;
+    return (s.hours + hrs + s.homeHrs) <= dotMax;
+  }
+
   // Current phase's scheduled dispatch time in minutes — updated before each finder call.
   let phaseDispatchMins = 0;
 
@@ -3372,7 +3384,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         if (def.type === 'onlyGroup' && !(def.destCodes || []).includes(destCode)) return false;
         if (blockAubFirst && def.type === 'first' && ds[d.id].loadCount === 0 && destCode !== def.destCode) return false;
         if (!allowExtraHome && reservedForHome.has(d.id) && d.domicileDest === destCode) return false;
-        if ((ds[d.id].hours + hrs + ds[d.id].homeHrs) > dotMax) return false;
+        if (!fitsDot(d, hrs, destCode)) return false;
         if (!homeReturnStaysFeasible(d, hrs, destCode)) return false;
         return candidateTimingAllowed(d, hrs);
       })
@@ -3438,7 +3450,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
           if (fdef.type === 'first' && ds[d.id].loadCount === 0 && destCode !== fdef.destCode) return false;
         }
         if (!allowExtraHome && reservedForHome.has(d.id) && d.domicileDest === destCode) return false;
-        if ((ds[d.id].hours + hrs + ds[d.id].homeHrs) > dotMax) return false;
+        if (!fitsDot(d, hrs, destCode)) return false;
         if (!homeReturnStaysFeasible(d, hrs, destCode)) return false;
         return candidateTimingAllowed(d, hrs);
       })
@@ -3489,7 +3501,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
       .filter(d => {
         if (d.restriction !== assistDef.value) return false;
         if (ds[d.id].colCount >= cap) return false;
-        if ((ds[d.id].hours + hrs + ds[d.id].homeHrs) > dotMax) return false;
+        if (!fitsDot(d, hrs, assistDef.destCode)) return false;
         if (!homeReturnStaysFeasible(d, hrs, assistDef.destCode)) return false;
         return candidateTimingAllowed(d, hrs);
       })
@@ -3508,7 +3520,7 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
   // Returns why a load went to the external carrier (for Plan Quality panel).
   function getExternalReason(destCode, hrs, ds, drivers) {
     if (!drivers.some(d => driverCanTakeDest(d, destCode))) return 'restriction';
-    if (!drivers.some(d => driverCanTakeDest(d, destCode) && ds[d.id].hours + hrs + ds[d.id].homeHrs <= dotMax)) return 'dot_limit';
+    if (!drivers.some(d => driverCanTakeDest(d, destCode) && fitsDot(d, hrs, destCode))) return 'dot_limit';
     return 'schedule';
   }
   const assignments = [];
