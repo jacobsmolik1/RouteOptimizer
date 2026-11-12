@@ -2100,18 +2100,23 @@ function deepCopy(x) { return JSON.parse(JSON.stringify(x)); }
 function load() {
   const P = DC_CONFIG.storagePrefix;
   try {
+    // The user's saved phase list is the source of truth. Code-defined phases (DEFAULT_PHASES)
+    // are only a first-run seed for a device/DC with nothing saved yet — they must NEVER
+    // replace a saved list, or locations the user deleted (or never added) reappear on reload.
     const savedPhases  = JSON.parse(localStorage.getItem(P + 'phases'));
-    const phaseCountOk = savedPhases && savedPhases.length === DEFAULT_PHASES.length;
-    const phases       = phaseCountOk ? savedPhases : deepCopy(DEFAULT_PHASES);
+    const hasSaved     = Array.isArray(savedPhases) && savedPhases.length > 0;
+    const phases       = hasSaved ? savedPhases : deepCopy(DEFAULT_PHASES);
 
+    // Loads are index-aligned to the phases actually in use (not the code defaults).
     const savedLoads = JSON.parse(localStorage.getItem(P + 'loads'));
-    const loads = (savedLoads && savedLoads.length === DEFAULT_PHASES.length)
-      ? savedLoads : Array(DEFAULT_PHASES.length).fill(0);
+    const loads = (Array.isArray(savedLoads) && savedLoads.length === phases.length)
+      ? savedLoads : Array(phases.length).fill(0);
 
-    // Templates are phase-index-coupled — discard if phase count changed
-    const savedTemplates = JSON.parse(localStorage.getItem(P + 'templates')) || {};
-    const templates = phaseCountOk ? savedTemplates : {};
-    if (!phaseCountOk) localStorage.removeItem(P + 'templates');
+    // New-format templates match phases by dest/label, so they survive phase edits. Old-format
+    // templates are plain index-aligned arrays — drop only those that no longer line up.
+    const rawTemplates = JSON.parse(localStorage.getItem(P + 'templates')) || {};
+    const templates = Object.fromEntries(Object.entries(rawTemplates).filter(([, t]) =>
+      !Array.isArray(t) || !t.length || typeof t[0] === 'object' || t.length === phases.length));
 
     return {
       drivers:     JSON.parse(localStorage.getItem(P + 'drivers'))    || deepCopy(DEFAULT_DRIVERS),
@@ -7424,7 +7429,9 @@ function showResetConfirm()  { document.getElementById('reset-confirm-box').clas
 function hideResetConfirm()  { document.getElementById('reset-confirm-box').classList.remove('show'); document.getElementById('reset-btn').style.display=''; }
 function hardReset() {
   const P = DC_CONFIG.storagePrefix;
-  ['drivers','dests','settings','phases','loads','lastresult','returned','templates','history','basgn','adhoc','whatif'].forEach(k=>localStorage.removeItem(P+k));
+  // Also clear the config-sync stamp so the reload re-pulls this DC's saved phases and
+  // destinations from the server, instead of falling back to the code-defined defaults.
+  ['drivers','dests','settings','phases','loads','lastresult','returned','templates','history','basgn','adhoc','whatif','_cfgsync'].forEach(k=>localStorage.removeItem(P+k));
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => {
       Promise.all(regs.map(r => r.unregister())).then(() => location.reload(true));
