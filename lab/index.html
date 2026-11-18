@@ -840,6 +840,7 @@ th.sortable:hover { background: var(--gray-100); }
 .inbound-run-row{background:#fffbeb;border-left:3px solid #d97706;cursor:grab;}
 .inbound-run-row.inbound-empty{background:#fafaf9;}
 .inbound-run-row.inbound-empty .inbound-label{background:#78716c !important;}
+.inbound-late{font-size:9px;font-weight:700;color:#991b1b;background:#fee2e2;border-radius:3px;padding:1px 4px;margin-left:4px;}
 .inbound-pin{font-size:9px;font-weight:700;color:#7c3aed;background:#ede9fe;border-radius:3px;padding:1px 4px;margin-left:4px;}
 .inbound-run-row .inbound-label{background:#d97706;min-width:38px;width:auto;padding:0 5px;font-size:8px;white-space:nowrap;}
 .inbound-run-row.inbound-shuttle{background:#eff6ff;border-left-color:#2563eb;}
@@ -5442,7 +5443,7 @@ function renderDriverCards(result) {
       const backStyle = 'color:var(--gray-400);font-weight:400;';
       const etaLead = isStamped ? `⏱ Out ${fmtActualTime(r.actualOutTime)} · ETA` : 'ETA';
       const backPart = r.homeReturn ? `<span style="${backStyle}">(home)</span>`
-                     : ibHere.length ? `<span style="${backStyle}">· back via ${ibHere.map(l => (l.label || '').toLowerCase().replace(/les$/, 'le')).join(', ')} pickup ↓</span>`
+                     : ibHere.length ? `<span style="${backStyle}">· back via ${ibHere.map(l => (l.label || '').toLowerCase().replace(/s$/, '')).join(', ')} pickup ↓</span>`
                                     : `<span style="${backStyle}">· Back ~${backStr}</span>`;
       const timeInfo = `<span style="display:block;font-size:9px;"><span style="${delStyle}">${etaLead} ${isStamped?'':'~'}${etaStr}</span> ${backPart}</span>`;
       const outBtn = `<button class="out-btn ${isStamped?'stamped':''}" onclick="event.stopPropagation();openOutModal(${loadIdx})" title="Set / edit the actual departure (Out) time — updates this ETA and the driver's later loads">${isStamped ? '✓ Out' : '⏱ Out'}</button>`;
@@ -5786,7 +5787,7 @@ function inboundSlots(result) {
       if (a.homeReturn) return;                       // ends the day at home — not hub-bound
       const dest = state.destinations.find(x => x.code === a.dest);
       if (!dest) return;
-      const later = ordered.slice(i + 1).map(x => ({ dest: x.dest, eta: (timings.get(x) || {}).eta }));
+      const later = ordered.slice(i + 1).map((x, j) => ({ dest: x.dest, eta: (timings.get(x) || {}).eta, runNo: i + 2 + j }));
       slots.push({ driver: d, kind: 'return', origin: a.dest, baseHrs: getHrsForDest(a.dest) / 2,
                    baseMi: dest.miles1Way || 0, afterKey: inboundAssignKey(a), afterPhase: a.phase,
                    endMins, later, seq: i + 1 });
@@ -5826,19 +5827,26 @@ function planInbound(result, manual) {
     return cands;
   };
   const spareOf = name => dotMax - (baseHrs(name) + (extraBy[name] || 0));
-  const windowsOkFor = (c) => {
+  const lateDetail = (c) => {
+    if (c.kind === 'am') return null;
     const sh = (shiftBy[c.driver.name] || 0) + Math.round(c.extra * 60);
-    return (c.later || []).every(r => {
+    for (const r of (c.later || [])) {
       const w = state.settings.receiverWindows && state.settings.receiverWindows[r.dest];
-      if (!w || !w.close || r.eta == null) return true;
+      if (!w || !w.close || r.eta == null) continue;
       const close = toMinutes(w.close);
-      return r.eta > close || r.eta + sh <= close;
-    });
+      if (r.eta <= close && r.eta + sh > close) return { dest: r.dest, runNo: r.runNo, newEta: r.eta + sh, close };
+    }
+    return null;
   };
-  const fitsSlot = c => !used.has(c.si) && !blocked.has(c.key)
-    && spareOf(c.driver.name) - c.extra >= -1e-9
-    && (c.kind === 'am' || ((c.endMins + (shiftBy[c.driver.name] || 0) + Math.round(c.extra * 60)) <= 1440 && windowsOkFor(c)));
-  const take = (type, c, pinned) => {
+  const windowsOkFor = c => !lateDetail(c);
+  const hoursOk = c => spareOf(c.driver.name) - c.extra >= -1e-9;
+  const midnightOk = c => c.kind === 'am' || (c.endMins + (shiftBy[c.driver.name] || 0) + Math.round(c.extra * 60)) <= 1440;
+  // allowLate: the planner may let a receiver window slip (only for a pickup you moved and OK'd).
+  const fitsSlot = (c, allowLate) => !used.has(c.si) && !blocked.has(c.key)
+    && hoursOk(c) && midnightOk(c) && (allowLate || windowsOkFor(c));
+  const pinFailures = [];
+  const take = (type, c, pinned, allowLate) => {
+    const late = allowLate ? lateDetail(c) : null;
     used.add(c.si);
     const n = c.driver.name;
     extraBy[n] = (extraBy[n] || 0) + c.extra;
@@ -5846,7 +5854,9 @@ function planInbound(result, manual) {
     legs.push({ type: type.key, label: type.short || type.label, driverId: c.driver.id, driverName: n,
                 kind: c.kind, slotKey: c.key, afterKey: c.afterKey, afterPhase: c.afterPhase || null,
                 origin: c.origin, nodes: c.path.nodes, miles: c.path.miles, mins: c.path.mins,
-                extraHrs: c.extra, extraMi: c.extraMi, triangle: c.tier > 0, pinned: !!pinned });
+                extraHrs: c.extra, extraMi: c.extraMi, triangle: c.tier > 0, pinned: !!pinned,
+                ...(late ? { late } : {}) });
+    if (late) alerts.push({ level: 'info', type: type.key, text: `${n}: Run ${late.runNo} now delivers ~${fmt12h(minutesToHHMM(late.newEta % 1440))}, after ${inboundNodeName(cfg, late.dest)}'s ${fmt12h(minutesToHHMM(late.close))} close (you allowed this)` });
     coveredBy[type.key] = (coveredBy[type.key] || 0) + 1;
   };
   // 1) Manual moves first: put each pinned pickup on its chosen driver's best open leg.
@@ -5854,14 +5864,27 @@ function planInbound(result, manual) {
   (manual.pins || []).slice().sort((a, b) => (a.slotKey ? 0 : 1) - (b.slotKey ? 0 : 1)).forEach(pin => {
     const type = (cfg.types || []).find(t => t.key === pin.type);
     if (!type || (coveredBy[type.key] || 0) >= needOf(type)) return;
-    const mine = candsFor(type).filter(c => c.driver.name === pin.driverName).filter(fitsSlot);
+    const all = candsFor(type).filter(c => c.driver.name === pin.driverName);
+    const mine = all.filter(c => fitsSlot(c, !!pin.allowLate));
     const pick = mine.find(c => pin.slotKey && c.key === pin.slotKey)
       || mine.sort((a, b) => (a.extra - b.extra) || ((a.kind === 'am' ? 0 : 1) - (b.kind === 'am' ? 0 : 1)) || (a.seq - b.seq))[0];
     if (!pick) {
+      const open = all.filter(c => !used.has(c.si) && !blocked.has(c.key));
+      const byCost = open.slice().sort((a, b) => a.extra - b.extra);
+      const winOnly = byCost.find(c => hoursOk(c) && midnightOk(c) && lateDetail(c));
+      const f = { type: pin.type, driverName: pin.driverName, label: type.short || type.label };
+      if (!all.length) f.reason = 'noslot';
+      else if (!open.length) f.reason = 'taken';
+      else if (winOnly) Object.assign(f, { reason: 'window', ...lateDetail(winOnly) });
+      else if (byCost.some(c => !hoursOk(c))) {
+        const c = byCost[0];
+        Object.assign(f, { reason: 'hours', newHrs: baseHrs(c.driver.name) + (extraBy[c.driver.name] || 0) + c.extra });
+      } else f.reason = 'midnight';
+      pinFailures.push(f);
       alerts.push({ level: 'info', type: pin.type, text: `${pin.driverName} no longer has an open leg for a ${(type.short || type.label).toLowerCase()} pickup — it went back to the automatic plan` });
       return;
     }
-    take(type, pick, !pin.slotKey || !!pin.moved);
+    take(type, pick, !pin.slotKey || !!pin.moved, !!pin.allowLate);
     keptPins.push(pin.slotKey ? pin : { ...pin, slotKey: pick.key, moved: true });
   });
   // 2) Automatic fill for whatever each type still needs.
@@ -5903,7 +5926,7 @@ function planInbound(result, manual) {
         : { level: 'info',   type: type.key, text: `${need - covered} ${type.label.toLowerCase()} left for shuttle drivers` });
     }
   });
-  return { legs, summary, alerts, extraBy, manual: { pins: keptPins, blocks: manual.blocks || [] } };
+  return { legs, summary, alerts, extraBy, pinFailures, manual: { pins: keptPins, blocks: manual.blocks || [] } };
 }
 // Re-plans inbound legs from the current assignments and folds their extra time into
 // each driver's workload hours. Idempotent: previous inbound hours are removed first.
@@ -5923,7 +5946,7 @@ function applyInboundPlan(result) {
     w.baseHours = w.hours; w.hours += h; w.inboundHrs = h;
     w.status = w.hours > dotMax ? 'over' : w.hours > dotMax * 0.9 ? 'warn' : 'ok';
   });
-  result.inbound = { legs: plan.legs, summary: plan.summary, alerts: plan.alerts, manual: plan.manual };
+  result.inbound = { legs: plan.legs, summary: plan.summary, alerts: plan.alerts, manual: plan.manual, pinFailures: plan.pinFailures };
 }
 // Drag a can/shuttle pickup onto another driver: the app puts it on that driver's best open
 // leg (cheapest extra time that keeps the hours cap and receiver windows), and the leg it
@@ -5939,20 +5962,45 @@ function moveInboundLeg(legIdx, targetName) {
   // Lock in the plan exactly as shown (every pickup stays on its driver), then move only the
   // dragged one — so dropping onto a driver who already has a pickup ADDS one rather than
   // bumping theirs to someone else.
-  const m = { pins: ib.legs.filter((l, i) => i !== legIdx).map(l => ({ type: l.type, driverName: l.driverName, slotKey: l.slotKey, ...(l.pinned ? { moved: true } : {}) })),
+  const m = { pins: ib.legs.filter((l, i) => i !== legIdx).map(l => ({ type: l.type, driverName: l.driverName, slotKey: l.slotKey, ...(l.pinned ? { moved: true } : {}), ...(l.late ? { allowLate: true } : {}) })),
               // Dropping onto a driver is an explicit "use this driver" — clear any earlier block on them.
               blocks: (prev.blocks || []).filter(b => b.driverName !== targetName) };
   if (!m.blocks.some(b => b.slotKey === leg.slotKey)) m.blocks.push({ slotKey: leg.slotKey, driverName: leg.driverName });
   m.pins.push({ type: leg.type, driverName: targetName });
   ib.manual = m;
   applyInboundPlan(r);
-  const landed = r.inbound.legs.some(l => l.type === leg.type && l.driverName === targetName && l.pinned);
+  let landed = r.inbound.legs.some(l => l.type === leg.type && l.driverName === targetName && l.pinned);
+  if (!landed) {
+    const f = (r.inbound.pinFailures || []).find(x => x.type === leg.type && x.driverName === targetName) || {};
+    const cfg = inboundCfg(), t12 = m => fmt12h(minutesToHHMM(((m % 1440) + 1440) % 1440));
+    const what = `this ${(leg.label || '').toLowerCase().replace(/s$/, '')} pickup`;
+    if (f.reason === 'window') {
+      const ok = confirm(`⚠️ Moving ${what} to ${targetName} delays their Run ${f.runNo}: it would deliver at ~${t12(f.newEta)}, after ${inboundNodeName(cfg, f.dest)}'s ${t12(f.close)} receiving close.\n\nMove it anyway?`);
+      if (ok) {
+        const myPin = m.pins[m.pins.length - 1];
+        myPin.allowLate = true;
+        r.inbound.manual = m; applyInboundPlan(r);
+        landed = r.inbound.legs.some(l => l.type === leg.type && l.driverName === targetName && l.pinned);
+      }
+      if (!landed) { r.inbound.manual = prev; applyInboundPlan(r); }
+      saveResult(); renderWorkload(r); renderDriverCards(r);
+      if (typeof renderDomicileWarnings === 'function') renderDomicileWarnings(r);
+      return;
+    }
+    const why = f.reason === 'noslot' ? `${targetName} has no trip heading back to ${inboundNodeName(cfg, 'HUB')} to carry it (their only run ends at home).`
+              : f.reason === 'taken' ? `every trip ${targetName} makes back to ${inboundNodeName(cfg, 'HUB')} already carries a pickup.`
+              : f.reason === 'hours' ? `it would put ${targetName} at ${f.newHrs.toFixed(2)}h, over the ${state.settings.dotMaxHours}h cap.`
+              : f.reason === 'midnight' ? `it would push ${targetName}'s last delivery past midnight.`
+              : `${targetName} has no open leg that fits it.`;
+    r.inbound.manual = prev; applyInboundPlan(r);
+    alert(`⚠️ Can't move ${what}: ${why}\n\nIt stayed with ${leg.driverName}.`);
+    saveResult(); renderWorkload(r); renderDriverCards(r);
+    if (typeof renderDomicileWarnings === 'function') renderDomicileWarnings(r);
+    return;
+  }
   // From here on the moved pickup keeps its exact leg too.
   // (pins created by a drag keep moved:true so the card can show '✋ moved')
-  if (!landed) {
-    r.inbound.manual = prev; applyInboundPlan(r);
-    alert(`⚠️ ${targetName} has no open leg that fits this ${leg.label.toLowerCase()} pickup within the ${state.settings.dotMaxHours}h cap and receiver windows. It stayed with ${leg.driverName}.`);
-  }
+
   saveResult();
   renderWorkload(r); renderDriverCards(r);
   if (typeof renderDomicileWarnings === 'function') renderDomicileWarnings(r);
@@ -6039,7 +6087,7 @@ function inboundLegRowsHTML(leg, legIdx, startMins) {
     const loaded = i >= pickupIdx;
     const isHop = loaded && nodes[i + 1] === 'HUB' && i > pickupIdx;
     const badge = !loaded ? 'EMPTY' : isHop ? 'HOP' : (leg.label || '').toUpperCase().replace(/LES$/, 'LE');
-    const one = (leg.label || '').replace(/les$/, 'le');
+    const one = (leg.label || '').replace(/s$/, '');
     const what = !loaded ? `Empty to ${inboundNodeName(cfg, nodes[i + 1])} for pickup`
                : isHop ? `${one} dropped · on to the DC`
                : `${one} on board`;
@@ -6049,7 +6097,7 @@ function inboundLegRowsHTML(leg, legIdx, startMins) {
         title="${leg.label} pickup${leg.pinned ? ' (moved here by you)' : ''}: ${nodes.map(c => inboundNodeName(cfg, c)).join(' → ')}. +${leg.extraHrs.toFixed(2)}h / +${leg.extraMi} mi vs. driving that leg empty. Drag onto another driver to move it.">
         <span class="run-reorder" style="visibility:hidden;"><button class="run-move">▲</button><button class="run-move">▼</button></span>
         <span class="run-label inbound-label">${badge}</span>
-        <span class="run-phase">${inboundNodeName(cfg, nodes[i])} → ${inboundNodeName(cfg, nodes[i + 1])}${leg.pinned && i === 0 ? ' <span class="inbound-pin">✋ moved</span>' : ''}<span style="display:block;font-size:9px;color:var(--gray-400);"><span style="color:var(--gray-600);font-weight:700;">${dep != null ? 'Depart ~' + tm(dep) + ' · ' : ''}Arrive ~${tm(arr)}</span> · ${what} · ${seg.miles} mi</span></span>
+        <span class="run-phase">${inboundNodeName(cfg, nodes[i])} → ${inboundNodeName(cfg, nodes[i + 1])}${leg.pinned && i === 0 ? ' <span class="inbound-pin">✋ moved</span>' : ''}${leg.late && i === 0 ? ` <span class="inbound-late">⚠ Run ${leg.late.runNo} late: ~${tm(leg.late.newEta)} (closes ${tm(leg.late.close)})</span>` : ''}<span style="display:block;font-size:9px;color:var(--gray-400);"><span style="color:var(--gray-600);font-weight:700;">${dep != null ? 'Depart ~' + tm(dep) + ' · ' : ''}Arrive ~${tm(arr)}</span> · ${what} · ${seg.miles} mi</span></span>
         <span class="run-hrs">${(seg.mins / 60).toFixed(2)}h</span>
       </div>`);
   }
