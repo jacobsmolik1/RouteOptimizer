@@ -2281,7 +2281,7 @@ const SupabaseSync = (() => {
   // ── Day sync (debounced 3 s) ─────────────────────────────────────────────
   function queueSync() {
     clearTimeout(_dayTimer);
-    _dayTimer = setTimeout(_syncDay, 3000);
+    _dayTimer = setTimeout(() => { _dayTimer = null; _syncDay(); }, 3000);
     _setSyncIndicator('syncing');
   }
 
@@ -2337,7 +2337,7 @@ const SupabaseSync = (() => {
   function queueConfigSync() {
     if (!DC_CONFIG) return;   // every DC (built-in + custom) syncs its structural config
     clearTimeout(_configTimer);
-    _configTimer = setTimeout(_syncConfig, 2000);
+    _configTimer = setTimeout(() => { _configTimer = null; _syncConfig(); }, 2000);
   }
 
   async function _syncConfig() {
@@ -2531,7 +2531,7 @@ const SupabaseSync = (() => {
   // ── Driver roster sync ───────────────────────────────────────────────────
   function queueDriverSync() {
     clearTimeout(_driverTimer);
-    _driverTimer = setTimeout(_syncDrivers, 3000);
+    _driverTimer = setTimeout(() => { _driverTimer = null; _syncDrivers(); }, 3000);
   }
 
   async function _syncDrivers() {
@@ -2658,6 +2658,18 @@ const SupabaseSync = (() => {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
+  // Push any change still waiting in a debounce timer right now (used before a refresh so the
+  // last few seconds of edits aren't lost). Only pending saves are sent: re-pushing an unchanged
+  // tab could overwrite a coworker's newer plan.
+  async function flushPending() {
+    const jobs = [];
+    if (_dayTimer)    { clearTimeout(_dayTimer);    _dayTimer = null;    jobs.push(_syncDay()); }
+    if (_driverTimer) { clearTimeout(_driverTimer); _driverTimer = null; jobs.push(_syncDrivers()); }
+    if (_configTimer) { clearTimeout(_configTimer); _configTimer = null; jobs.push(_syncConfig()); }
+    await Promise.all(jobs.map(j => Promise.resolve(j).catch(() => {})));
+    return jobs.length;
+  }
+
   function _setSyncIndicator(status) {
     const el = document.getElementById('sync-indicator');
     if (!el) return;
@@ -2685,7 +2697,7 @@ const SupabaseSync = (() => {
     } catch(e) { console.error('[SupabaseSync] amIAdmin failed:', e); return false; }
   }
 
-  return { init, signIn, signUp, signOut, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, createAccountDirect, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted, amIAdmin };
+  return { init, signIn, signUp, signOut, flushPending, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, createAccountDirect, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted, amIAdmin };
 })();
 
 // ── Auth UI helpers ─────────────────────────────────────────────────────────
@@ -8503,6 +8515,56 @@ init();
 //   2) at most once per tab session (loop protection if a proxy ever serves a varying sw.js),
 //   3) only shortly after load (fresh-at-open) — the ~24h background SW check that fires while
 //      a tab sits open all day is ignored; that tab keeps working and updates on its next open.
+// ── New-version banner ───────────────────────────────────────────────────────
+// Each release stamps APP_VERSION here and writes the same value to version.json next to the page
+// (tools/stamp_version.py). While a tab is open it checks version.json every 5 minutes and whenever
+// the tab comes back into view; if a NEWER version is live it shows a banner. It never reloads on
+// its own; the dispatcher clicks Refresh when it suits them (pending saves are pushed first).
+const APP_VERSION = '2026-11-19T14:09:36Z';
+(function appUpdateCheck() {
+  if (location.protocol === 'file:' || /^__/.test(APP_VERSION)) return;
+  let lastCheck = 0, snoozeUntil = 0, latest = null;
+  function showBanner() {
+    if (!latest || Date.now() < snoozeUntil) return;
+    let el = document.getElementById('app-update-banner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'app-update-banner'; el.className = 'no-print'; el.setAttribute('role', 'status');
+      el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 32px);background:#111;color:#fff;padding:10px 14px 10px 18px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:13px;font-weight:600;';
+      el.innerHTML = `<span>🔄 A new version of Route Optimizer is ready.<span id="app-update-notes" style="font-weight:400;opacity:.8;"></span></span>
+        <span style="display:flex;gap:8px;">
+          <button id="app-update-refresh" style="background:#E61D2B;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-weight:700;cursor:pointer;">Refresh</button>
+          <button id="app-update-later" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:6px 12px;cursor:pointer;">Later</button>
+        </span>`;
+      document.body.appendChild(el);
+      el.querySelector('#app-update-later').onclick = () => { snoozeUntil = Date.now() + 30 * 60 * 1000; el.remove(); };
+      el.querySelector('#app-update-refresh').onclick = async (e) => {
+        e.target.disabled = true; e.target.textContent = 'Saving…';
+        try { await Promise.race([SupabaseSync.flushPending(), new Promise(r => setTimeout(r, 6000))]); } catch (err) {}
+        location.reload();
+      };
+    }
+    const notes = el.querySelector('#app-update-notes');
+    if (notes) notes.textContent = latest.notes ? ' ' + latest.notes : '';
+  }
+  async function check(force) {
+    const now = Date.now();
+    if (!force && now - lastCheck < 60000) return;
+    lastCheck = now;
+    try {
+      const r = await fetch('version.json?t=' + now, { cache: 'no-store', credentials: 'same-origin' });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j && typeof j.version === 'string' && j.version > APP_VERSION) { latest = j; showBanner(); }
+    } catch (e) { /* offline, access gate page, or no version file: ignore */ }
+  }
+  setInterval(() => { if (document.visibilityState === 'visible') check(true); }, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+  window.addEventListener('focus', () => check());
+  setTimeout(() => check(true), 20000);
+  window.checkForAppUpdate = check;
+})();
+
 if ('serviceWorker' in navigator) {
   const _swLoadTime = Date.now();
   const _swHadController = !!navigator.serviceWorker.controller;
