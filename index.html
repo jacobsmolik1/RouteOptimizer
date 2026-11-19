@@ -3014,19 +3014,10 @@ function renderAll() {
   }
 }
 
-// One-time migration: exclusive domicile drivers were missing deadhead/home-dest
-(function migrateExclusiveDomicile() {
-  const patches = {
-    D001: { deadheadMiles: 188, domicileDest: 'PAN' },
-    D002: { deadheadMiles: 105, domicileDest: 'COL' },
-    D018: { deadheadMiles: 105, domicileDest: 'COL' },
-  };
-  let changed = false;
-  state.drivers.forEach(d => {
-    if (patches[d.id] && !d.domicileDest) { Object.assign(d, patches[d.id]); changed = true; }
-  });
-  if (changed) saveDrivers();
-})();
+// (Removed 2026-11-19) A one-time Montgomery migration used to run here on every load at EVERY
+// crossdock: any driver with id D001/D002/D018 and no home destination was forced to PAN 188 mi /
+// COL 105 mi and queued to the database. Montgomery's real values have long been stored in the
+// database, and the migration was corrupting other crossdocks' drivers (Tifton's Vincent Phillips).
 
 // ════════════════════════════════════════════════════════════════════════════
 //  MODULE: TimeUtils
