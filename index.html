@@ -287,6 +287,7 @@ header {
 .day-chip:hover { border-color: var(--red); color: var(--red); }
 .day-chip.saved { border-color: var(--black); color: var(--black); background: var(--gray-100); }
 .day-chip.today { border-color: var(--red); color: var(--red); background: #FFF0F0; }
+.day-chip.locked, .day-chip.locked:hover { border-color: var(--gray-200); color: var(--gray-300, #c4c4c4); background: var(--gray-100); cursor: not-allowed; }
 
 /* ── HISTORY TAB ─────────────────────────────────────────────────────── */
 .hist-entry { border: 1px solid var(--gray-200); border-radius: var(--radius); background: white;
@@ -3982,15 +3983,26 @@ const { toggleFairness, toggleRescueStranded, toggleProtectHome, toggleWindowPro
 // ════════════════════════════════════════════════════════════════════════════
 const DAY_KEYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
+// True once today has real work in it: a generated plan, manual (bucket) assignments, ad-hoc
+// moves or stamped out times. Loading a template replaces the counts and throws all of that away,
+// so templates only load on an empty day.
+function dayHasPlan() {
+  const asg = state.lastResult?.assignments || [];
+  return asg.length > 0 || (state.bucketAsgn || []).length > 0 || (state.adhocMoves || []).length > 0;
+}
+
 function renderTemplateDays() {
   const el = document.getElementById('template-days');
   if (!el) return;
   const todayKey = DAY_KEYS[new Date().getDay()];
+  const locked = dayHasPlan();
   el.innerHTML = DAY_KEYS.map(d => {
     const hasSaved = !!state.templates[d];
     const isToday  = d === todayKey;
-    return `<button class="day-chip ${hasSaved?'saved':''} ${isToday?'today':''}"
-      onclick="loadTemplate('${d}')" title="${hasSaved?'Click to load':'No template saved'}">${d}</button>`;
+    const title = locked ? "Locked: today's plan is built. Templates only load on an empty day."
+                         : (hasSaved ? 'Click to load' : 'No template saved');
+    return `<button class="day-chip ${hasSaved?'saved':''} ${isToday?'today':''} ${locked?'locked':''}"
+      ${locked ? 'disabled aria-disabled="true"' : ''} onclick="loadTemplate('${d}')" title="${title}">${d}</button>`;
   }).join('');
 }
 
@@ -4004,7 +4016,11 @@ function saveTemplate() {
 }
 
 function loadTemplate(day) {
+  // Never wipe a built day (plan, locks, out times). Guarded here too, not just by the greyed button,
+  // in case the bar was drawn before a plan synced in from another device.
+  if (dayHasPlan()) { renderTemplateDays(); alert(`Templates are locked because today's plan is already built.\n\nTemplates only load on an empty day, so nothing was changed.`); return; }
   if (!state.templates[day]) { alert(`No template saved for ${day} yet.`); return; }
+  if (!confirm(`Load ${day}'s saved counts?\n\nThis replaces the load counts currently entered for today.`)) return;
   const tpl = state.templates[day];
   // Support both old format (plain array of numbers) and new format (array of {dest,label,count})
   if (Array.isArray(tpl) && tpl.length && typeof tpl[0] === 'object') {
@@ -4604,6 +4620,7 @@ function togglePhaseBuildDay(idx) {
 //  RENDER: METRICS
 // ════════════════════════════════════════════════════════════════════════════
 function renderMetrics(result) {
+  renderTemplateDays();   // reset/clear paths call this; unlocks the template bar once the day is empty again
   const avail = getAvailableDrivers().length;
   document.getElementById('m-avail').textContent    = avail;
   document.getElementById('m-dot-limit').textContent = state.settings.dotMaxHours;
@@ -5290,6 +5307,7 @@ function toggleShoreCard() {
 //  RENDER: DRIVER ASSIGNMENT CARDS
 // ════════════════════════════════════════════════════════════════════════════
 function renderDriverCards(result) {
+  renderTemplateDays();   // keep the template lock in step with the plan (generate, clear, sync from other devices)
   const grid    = document.getElementById('driver-cards-grid');
   const section = document.getElementById('driver-cards-section');
   // Shared timeline (anchors on stamped out-times + cascades) — same map the
