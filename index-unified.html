@@ -1097,7 +1097,7 @@ th.sortable:hover { background: var(--gray-100); }
       <div class="card">
         <div class="card-header">
           Full Load Assignments — Detailed View
-          <button class="btn btn-ghost btn-sm no-print" id="detail-toggle-btn" onclick="toggleDetailCols()">📋 Show Trailer / Carrier</button>
+          <button class="btn btn-ghost btn-sm no-print" id="detail-toggle-btn" onclick="toggleDetailCols()">📋 Show Carrier</button>
         </div>
         <div class="tbl-wrap">
           <table id="assignments-table" class="hide-details">
@@ -1112,7 +1112,8 @@ th.sortable:hover { background: var(--gray-100); }
                 <th class="sortable" onclick="sortAssignments('hrs')" title="Sort each location by hours">Hrs <span class="asrt-caret" data-acol="hrs"></span></th>
                 <th class="sortable" onclick="sortAssignments('driver')" title="Sort each location by driver">Driver <span class="asrt-caret" data-acol="driver"></span></th>
                 <th class="sortable" onclick="sortAssignments('run')" title="Sort each location by driver run #">Run <span class="asrt-caret" data-acol="run"></span></th>
-                <th class="col-detail">Trailer #</th>
+                <th>Trailer #</th>
+                <th>Route</th>
                 <th class="col-detail">Carrier</th>
                 <th class="no-print">Override</th>
                 <th class="no-print">Status</th>
@@ -5989,7 +5990,7 @@ function renderAssignmentsTable(result) {
       const priorBadge = a.buildDay === 'prior'
         ? `<span style="font-size:10px;font-weight:700;background:#EDE7F6;color:#5C35A8;border-radius:3px;padding:1px 6px;margin-left:8px;vertical-align:middle;">◑ Prior Night</span>`
         : '';
-      separator = `<tr class="phase-group-hdr"><td colspan="13"><span class="tag ${DEST_TAGS[a.dest]}" style="margin-right:6px;">${a.dest}</span>${a.phase}${priorBadge}</td></tr>`
+      separator = `<tr class="phase-group-hdr"><td colspan="14"><span class="tag ${DEST_TAGS[a.dest]}" style="margin-right:6px;">${a.dest}</span>${a.phase}${priorBadge}</td></tr>`
         + `<tr class="col-key">
             <td class="tbl-num">#</td>
             <td>Build Phase</td>
@@ -6000,7 +6001,8 @@ function renderAssignmentsTable(result) {
             <td>Hrs</td>
             <td>Driver</td>
             <td>Run</td>
-            <td class="col-detail">Trailer #</td>
+            <td>Trailer #</td>
+            <td>Route</td>
             <td class="col-detail">Carrier</td>
             <td class="no-print">Override</td>
             <td class="no-print">Status</td>
@@ -6041,7 +6043,8 @@ function renderAssignmentsTable(result) {
       <td class="text-center">${(a.homeReturn ? a.hrs/2 : a.hrs).toFixed(2)}</td>
       <td>${driverCell}</td>
       <td class="text-center">${a.driverLoadNum!==null?`<span style="font-size:11px;font-weight:700;color:var(--gray-400);">#${a.driverLoadNum}</span>`:'—'}</td>
-      <td class="col-detail"><input type="text" value="${a.trailerNum||''}" onchange="setTrailerNum(${idx},this.value)" style="width:60px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—"></td>
+      <td><input type="text" value="${escAttr(a.trailerNum)}" onchange="setTrailerNum(${idx},this.value)" style="width:60px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—" aria-label="Trailer number"></td>
+      <td><input type="text" value="${escAttr(a.routeNum)}" onchange="setRouteNum(${idx},this.value)" style="width:70px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—" aria-label="Route"></td>
       <td class="col-detail">${(a.override||a.autoDriver)===DC_CONFIG.externalCarrier?`<input type="text" value="${a.carrierDriver||''}" onchange="setCarrierDriver(${idx},this.value)" style="width:90px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="Driver name">`:`<span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span>`}</td>
       <td class="no-print">${overrideSel}</td>
       <td class="no-print">${statusSel}</td>
@@ -6070,7 +6073,8 @@ function renderAssignmentsTable(result) {
       <td class="text-center">${b.hrs.toFixed(2)}</td>
       <td><strong>${b.driverName}</strong> <span style="font-size:9px;color:var(--red);font-weight:700;">MANUAL</span></td>
       <td class="text-center">—</td>
-      <td class="col-detail">—</td>
+      <td><input type="text" value="${escAttr(b.trailerNum)}" onchange="setBucketField('${b.id}','trailerNum',this.value)" style="width:60px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—" aria-label="Trailer number"></td>
+      <td><input type="text" value="${escAttr(b.routeNum)}" onchange="setBucketField('${b.id}','routeNum',this.value)" style="width:70px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—" aria-label="Route"></td>
       <td class="col-detail"><span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span></td>
       <td class="no-print">${bktOutBtn}</td>
       <td class="no-print">—</td>
@@ -6098,7 +6102,8 @@ function renderAssignmentsTable(result) {
       <td class="text-center">${m.hrs.toFixed(2)}</td>
       <td><strong>${m.driverName}</strong> <span style="font-size:9px;color:var(--blue);font-weight:700;">AD HOC</span></td>
       <td class="text-center">—</td>
-      <td class="col-detail">—</td>
+      <td><input type="text" value="${escAttr(m.trailerNum)}" onchange="setAdhocField('${m.id}','trailerNum',this.value)" style="width:60px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—" aria-label="Trailer number"></td>
+      <td><input type="text" value="${escAttr(m.routeNum)}" onchange="setAdhocField('${m.id}','routeNum',this.value)" style="width:70px;font-size:11px;border:1px solid var(--gray-200);border-radius:3px;padding:2px 4px;" placeholder="—" aria-label="Route"></td>
       <td class="col-detail"><span style="font-size:11px;color:var(--gray-600);">Coca-Cola United</span></td>
       <td class="no-print">${adhOutBtn}</td>
       <td class="no-print">—</td>
@@ -6121,7 +6126,8 @@ function renderAssignmentsTable(result) {
       <td colspan="6">TOTALS — ${total} load${total!==1?'s':''} this day</td>
       <td><span style="color:#86EFAC;">✓ ${internal} internal</span> · <span style="color:#FF8A80;">${shoreline} ${DC_CONFIG.externalCarrier}</span>${unassigned?` · <span style="color:#FF8A80;">⚠ ${unassigned} unassigned</span>`:''}</td>
       <td></td>
-      <td class="col-detail"></td>
+      <td></td>
+      <td></td>
       <td class="col-detail"></td>
       <td class="no-print"></td>
       <td class="no-print"></td>
@@ -6274,6 +6280,18 @@ function setTrailerNum(idx,val) {
   if (state.lastResult) { state.lastResult.assignments[idx].trailerNum=val; saveResult(); }
 }
 
+function escAttr(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+function setRouteNum(idx, val) {
+  if (state.lastResult) { state.lastResult.assignments[idx].routeNum = String(val || '').trim(); saveResult(); }
+}
+function setBucketField(id, field, val) {
+  const b = (state.bucketAsgn || []).find(x => String(x.id) === String(id));
+  if (b && (field === 'trailerNum' || field === 'routeNum')) { b[field] = String(val || '').trim(); saveBucketAsgn(); }
+}
+function setAdhocField(id, field, val) {
+  const m = (state.adhocMoves || []).find(x => String(x.id) === String(id));
+  if (m && (field === 'trailerNum' || field === 'routeNum')) { m[field] = String(val || '').trim(); saveAdhocMoves(); }
+}
 function setCarrierDriver(idx,val) {
   if (state.lastResult) { state.lastResult.assignments[idx].carrierDriver=val; saveResult(); }
 }
@@ -7454,7 +7472,7 @@ function _buildExportModel() {
         hrs: (a.homeReturn ? a.hrs / 2 : a.hrs).toFixed(2),
         driver: a.override || a.autoDriver,
         run: a.driverLoadNum != null ? `#${a.driverLoadNum}` : '—',
-        trailer: a.trailerNum || '',
+        trailer: a.trailerNum || '', route: a.routeNum || '',
         carrier: a.autoDriver === carrier ? (a.carrierDriver || '') : 'Coca-Cola United',
         outTime: a.actualOutTime ? fmtActualTime(a.actualOutTime) : '',
         status: a.status || '', home: !!a.homeReturn,
@@ -7471,7 +7489,7 @@ function _buildExportModel() {
         depart: b.actualOutTime ? fmtActualTime(b.actualOutTime) : (b.dispatchTime ? fmt12h(b.dispatchTime) : ''),
         eta: out != null ? hhmm(out + Math.round((b.hrs / 2) * 60)) : '',
         miles: dest ? dest.miles1Way * 2 : '', hrs: b.hrs.toFixed(2), driver: b.driverName, run: 'MANUAL',
-        trailer: '', carrier: 'Coca-Cola United', outTime: b.actualOutTime ? fmtActualTime(b.actualOutTime) : '',
+        trailer: b.trailerNum || '', route: b.routeNum || '', carrier: 'Coca-Cola United', outTime: b.actualOutTime ? fmtActualTime(b.actualOutTime) : '',
         status: 'Manual Pre-Assignment', home: false };
     });
     sections.push({ title: 'Manual Pre-Assignments', sub: `${rows.length} load${rows.length !== 1 ? 's' : ''}`, colorIdx: -1, kind: 'manual', rows });
@@ -7485,7 +7503,7 @@ function _buildExportModel() {
         depart: m.actualOutTime ? fmtActualTime(m.actualOutTime) : (m.dispatchTime ? fmt12h(m.dispatchTime) : ''),
         eta: out != null ? hhmm(out + Math.round((m.hrs / 2) * 60)) : '',
         miles: m.miles || '', hrs: m.hrs.toFixed(2), driver: m.driverName, run: 'AD HOC',
-        trailer: '', carrier: 'Coca-Cola United', outTime: m.actualOutTime ? fmtActualTime(m.actualOutTime) : '',
+        trailer: m.trailerNum || '', route: m.routeNum || '', carrier: 'Coca-Cola United', outTime: m.actualOutTime ? fmtActualTime(m.actualOutTime) : '',
         status: m.notes || 'Ad Hoc', home: false };
     });
     sections.push({ title: 'Ad Hoc Moves', sub: `${rows.length} move${rows.length !== 1 ? 's' : ''}`, colorIdx: -1, kind: 'adhoc', rows });
@@ -7506,7 +7524,7 @@ function _buildExportModel() {
     dateStr: now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }),
     carrier, sections,
     summary: { total, internal, external, driversUsed },
-    cols: ['#','Destination','Depart','ETA','Miles','Hrs','Driver','Run','Trailer #','Carrier','Out Time','Status'],
+    cols: ['#','Destination','Depart','ETA','Miles','Hrs','Driver','Run','Trailer #','Route','Carrier','Out Time','Status'],
   };
 }
 
@@ -7535,7 +7553,7 @@ function exportCSV() {
   m.sections.forEach(sec => {
     out.push(line([`>> ${sec.title.toUpperCase()}  ·  ${sec.sub}`]));
     out.push(line(m.cols));
-    sec.rows.forEach(r => out.push(line([r.num, r.dest + (r.home ? '  ← Home' : ''), r.depart, r.eta, r.miles, r.hrs, r.driver, r.run, r.trailer, r.carrier, r.outTime, r.status])));
+    sec.rows.forEach(r => out.push(line([r.num, r.dest + (r.home ? '  ← Home' : ''), r.depart, r.eta, r.miles, r.hrs, r.driver, r.run, r.trailer, r.route, r.carrier, r.outTime, r.status])));
     out.push(line(['', `Subtotal: ${sec.rows.length}`]));
     out.push(blank);
   });
@@ -7559,9 +7577,9 @@ function exportSheet() {
     body += `<tr>${m.cols.map(c => `<th style="background:#37474F;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding:5px 8px;text-align:left;white-space:nowrap;">${esc(c)}</th>`).join('')}</tr>`;
     sec.rows.forEach((r, i) => {
       const zebra = i % 2 ? '#ffffff' : '#fafafa';
-      const cells = [r.num, esc(r.dest) + (r.home ? ' <span style="color:#16a34a;font-weight:700;">← Home</span>' : ''), r.depart, r.eta, r.miles, r.hrs, r.driver, r.run, r.trailer, r.carrier,
+      const cells = [r.num, esc(r.dest) + (r.home ? ' <span style="color:#16a34a;font-weight:700;">← Home</span>' : ''), r.depart, r.eta, r.miles, r.hrs, r.driver, r.run, r.trailer, r.route, r.carrier,
         r.outTime ? `<span style="color:#16a34a;font-weight:700;">${esc(r.outTime)}</span>` : '', r.status];
-      body += `<tr style="background:${zebra};">${cells.map((c,ci) => `<td style="padding:4px 8px;font-size:12px;border-bottom:1px solid #eee;${ci===0?'font-weight:700;color:#888;':''}white-space:nowrap;">${ci===1||ci===10?c:esc(c)}</td>`).join('')}</tr>`;
+      body += `<tr style="background:${zebra};">${cells.map((c,ci) => `<td style="padding:4px 8px;font-size:12px;border-bottom:1px solid #eee;${ci===0?'font-weight:700;color:#888;':''}white-space:nowrap;">${ci===1||ci===11?c:esc(c)}</td>`).join('')}</tr>`;
     });
     body += `<tr><td colspan="${nCols}" style="padding:3px 8px;font-size:11px;color:#666;text-align:right;font-style:italic;">Subtotal: ${sec.rows.length}</td></tr>`;
     body += `<tr><td colspan="${nCols}" style="height:8px;"></td></tr>`;
@@ -7717,7 +7735,7 @@ function toggleDetailCols() {
   const btn = document.getElementById('detail-toggle-btn');
   const willHide = !tbl.classList.contains('hide-details');
   tbl.classList.toggle('hide-details');
-  if (btn) btn.textContent = willHide ? '📋 Show Trailer / Carrier' : '📋 Hide Trailer / Carrier';
+  if (btn) btn.textContent = willHide ? '📋 Show Carrier' : '📋 Hide Carrier';
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -8616,7 +8634,7 @@ const autoRefresh = (() => {
   return { arm, blockers, tick };
 })();
 
-const APP_VERSION = '2026-11-19T14:30:33Z';
+const APP_VERSION = '2026-11-19T15:23:58Z';
 (function appUpdateCheck() {
   if (location.protocol === 'file:' || /^__/.test(APP_VERSION)) return;
   let lastCheck = 0, snoozeUntil = 0, latest = null;
