@@ -2669,6 +2669,7 @@ const SupabaseSync = (() => {
     await Promise.all(jobs.map(j => Promise.resolve(j).catch(() => {})));
     return jobs.length;
   }
+  function hasPending() { return !!(_dayTimer || _driverTimer || _configTimer); }
 
   function _setSyncIndicator(status) {
     const el = document.getElementById('sync-indicator');
@@ -2697,7 +2698,7 @@ const SupabaseSync = (() => {
     } catch(e) { console.error('[SupabaseSync] amIAdmin failed:', e); return false; }
   }
 
-  return { init, signIn, signUp, signOut, flushPending, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, createAccountDirect, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted, amIAdmin };
+  return { init, signIn, signUp, signOut, flushPending, hasPending, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, createAccountDirect, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted, amIAdmin };
 })();
 
 // ── Auth UI helpers ─────────────────────────────────────────────────────────
@@ -8520,7 +8521,102 @@ init();
 // (tools/stamp_version.py). While a tab is open it checks version.json every 5 minutes and whenever
 // the tab comes back into view; if a NEWER version is live it shows a banner. It never reloads on
 // its own; the dispatcher clicks Refresh when it suits them (pending saves are pushed first).
-const APP_VERSION = '2026-11-19T14:09:36Z';
+// ── Automatic refresh to a new version (only when nothing can be lost) ────────
+// Refreshes by itself once the tab has been in the background for 30s, or after 5 minutes with no
+// mouse / keyboard / touch / scroll, AND: no pop-up open, no drag in progress, no field holding an
+// un-applied edit, no save waiting to sync, online, and the new page really is the app (not the
+// access-code gate) at the new version. Otherwise it keeps waiting; the banner stays up meanwhile.
+// Before reloading it applies any field edit (blur → its normal change handler), pushes pending
+// saves, and remembers the tab + scroll position so the planner lands where they were.
+const autoRefresh = (() => {
+  const IDLE_MS = 5 * 60 * 1000, HIDDEN_MS = 30 * 1000, TICK_MS = 15 * 1000;
+  let lastActivity = Date.now(), hiddenSince = document.visibilityState === 'hidden' ? Date.now() : 0;
+  let dragging = false, target = null, timer = null, busy = false;
+  ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel', 'scroll', 'input'].forEach(ev =>
+    window.addEventListener(ev, () => { lastActivity = Date.now(); }, { passive: true, capture: true }));
+  document.addEventListener('dragstart', () => { dragging = true; }, true);
+  document.addEventListener('dragend',   () => { dragging = false; lastActivity = Date.now(); }, true);
+  document.addEventListener('drop',      () => { dragging = false; lastActivity = Date.now(); }, true);
+  document.addEventListener('visibilitychange', () => { hiddenSince = document.visibilityState === 'hidden' ? Date.now() : 0; });
+
+  function blockers() {
+    const why = [];
+    if (document.querySelector('.modal-overlay.open')) why.push('pop-up open');
+    if (dragging) why.push('drag in progress');
+    const gate = document.getElementById('auth-gate');
+    if (gate && getComputedStyle(gate).display !== 'none') why.push('sign-in screen');
+    const ae = document.activeElement;
+    if (ae && ae.closest && ae.closest('.modal-overlay')) why.push('editing in a pop-up');
+    if (!navigator.onLine) why.push('offline');
+    try { if (SupabaseSync.hasPending()) why.push('saves pending'); } catch (e) {}
+    const hidden = document.visibilityState === 'hidden' && hiddenSince && (Date.now() - hiddenSince) >= HIDDEN_MS;
+    const idle = (Date.now() - lastActivity) >= IDLE_MS;
+    if (!hidden && !idle) why.push('in use');
+    return why;
+  }
+  async function newPageReady(ver) {
+    try {
+      const r = await fetch('index.html?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' });
+      if (!r.ok) return false;
+      const t = await r.text();
+      return t.includes(`const APP_VERSION = '${ver}'`);     // the app, at the new version (not the gate)
+    } catch (e) { return false; }
+  }
+  async function tick() {
+    if (!target || busy) return;
+    if (sessionStorage.getItem('_autoUpdatedTo') === target.version) return;   // one try per version per tab
+    if (blockers().length) return;
+    busy = true;
+    try {
+      if (!(await newPageReady(target.version))) return;
+      // Apply a half-typed field the normal way, then make sure nothing is left unsaved.
+      const ae = document.activeElement;
+      if (ae && ae !== document.body && typeof ae.blur === 'function') ae.blur();
+      await new Promise(r => setTimeout(r, 150));
+      try { await Promise.race([SupabaseSync.flushPending(), new Promise(r => setTimeout(r, 6000))]); } catch (e) {}
+      if (blockers().filter(w => w !== 'saves pending').length) return;   // something started meanwhile
+      try { if (SupabaseSync.hasPending()) return; } catch (e) {}
+      const tabBtn = document.querySelector('.tab-btn.active');
+      const tab = tabBtn && (tabBtn.getAttribute('onclick') || '').match(/switchTab\('([^']+)'/);
+      sessionStorage.setItem('_autoUpdatedTo', target.version);
+      sessionStorage.setItem('_autoUpdateRestore', JSON.stringify({ tab: tab ? tab[1] : null, y: window.scrollY, at: Date.now() }));
+      location.reload();
+    } finally { busy = false; }
+  }
+  function arm(j) {
+    target = j;
+    if (!timer) timer = setInterval(tick, TICK_MS);
+  }
+  // After an automatic refresh: back to the same tab and scroll position, and say what happened.
+  function restoreAfterReload() {
+    let saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem('_autoUpdateRestore') || 'null'); } catch (e) {}
+    if (!saved || Date.now() - saved.at > 5 * 60 * 1000) return;
+    sessionStorage.removeItem('_autoUpdateRestore');
+    let tries = 0;
+    const apply = () => {
+      const gate = document.getElementById('auth-gate');
+      if (gate && getComputedStyle(gate).display !== 'none' && tries++ < 40) return setTimeout(apply, 250);
+      try {
+        if (saved.tab && saved.tab !== 'dashboard') {
+          const btn = [...document.querySelectorAll('.tab-btn')].find(b => (b.getAttribute('onclick') || '').includes(`'${saved.tab}'`));
+          if (btn) switchTab(saved.tab, { currentTarget: btn });
+        }
+        window.scrollTo(0, saved.y || 0);
+      } catch (e) {}
+      const t = document.createElement('div');
+      t.className = 'no-print'; t.setAttribute('role', 'status');
+      t.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;background:#111;color:#fff;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25);';
+      t.textContent = '✓ Updated to the latest version. Your work was saved.';
+      document.body.appendChild(t); setTimeout(() => t.remove(), 7000);
+    };
+    setTimeout(apply, 600);
+  }
+  restoreAfterReload();
+  return { arm, blockers, tick };
+})();
+
+const APP_VERSION = '2026-11-19T14:30:33Z';
 (function appUpdateCheck() {
   if (location.protocol === 'file:' || /^__/.test(APP_VERSION)) return;
   let lastCheck = 0, snoozeUntil = 0, latest = null;
@@ -8555,10 +8651,10 @@ const APP_VERSION = '2026-11-19T14:09:36Z';
       const r = await fetch('version.json?t=' + now, { cache: 'no-store', credentials: 'same-origin' });
       if (!r.ok) return;
       const j = await r.json();
-      if (j && typeof j.version === 'string' && j.version > APP_VERSION) { latest = j; showBanner(); }
+      if (j && typeof j.version === 'string' && j.version > APP_VERSION) { latest = j; showBanner(); autoRefresh.arm(j); }
     } catch (e) { /* offline, access gate page, or no version file: ignore */ }
   }
-  setInterval(() => { if (document.visibilityState === 'visible') check(true); }, 5 * 60 * 1000);
+  setInterval(() => check(true), 5 * 60 * 1000);   // also in the background, so idle tabs update unseen
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
   window.addEventListener('focus', () => check());
   setTimeout(() => check(true), 20000);
