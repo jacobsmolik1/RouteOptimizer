@@ -979,6 +979,7 @@ th.sortable:hover { background: var(--gray-100); }
 
       <!-- Generate Button -->
       <button class="btn-generate no-print" onclick="generateAssignments()">⚡ Generate Load Assignments</button>
+      <button id="restore-plan-btn" class="btn btn-outline btn-sm no-print" style="display:none;margin-top:8px;width:auto;align-self:flex-start;" onclick="openRestoreModal()" title="Bring back a dispatched plan that was replaced or cleared today">↩ Restore earlier plan</button>
 
       <!-- Load Bucket (pre-generate manual staging) -->
       <div id="load-bucket-panel" class="no-print" style="display:none;">
@@ -2154,7 +2155,7 @@ function saveDests()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'dest
 function saveSettings_()  { localStorage.setItem(DC_CONFIG.storagePrefix + 'settings',   JSON.stringify(state.settings));    SupabaseSync.queueSync(); SupabaseSync.queueConfigSync(); }
 function savePhases()     { localStorage.setItem(DC_CONFIG.storagePrefix + 'phases',     JSON.stringify(state.phases));      SupabaseSync.queueConfigSync(); }
 function saveLoads()      { localStorage.setItem(DC_CONFIG.storagePrefix + 'loads',      JSON.stringify(state.loads));       stampPlanToday(); SupabaseSync.queueSync(); }
-function saveResult()     { if (state.lastResult) state.lastResult.snapshot = buildPlanSnapshot(); localStorage.setItem(DC_CONFIG.storagePrefix + 'lastresult', JSON.stringify(state.lastResult));  stampPlanToday(); SupabaseSync.queueSync(); }
+function saveResult()     { backupIfLosingDispatch(state.lastResult); if (state.lastResult) state.lastResult.snapshot = buildPlanSnapshot(); localStorage.setItem(DC_CONFIG.storagePrefix + 'lastresult', JSON.stringify(state.lastResult));  stampPlanToday(); SupabaseSync.queueSync(); }
 function saveReturned()   { localStorage.setItem(DC_CONFIG.storagePrefix + 'returned',   JSON.stringify(state.returned));    SupabaseSync.queueSync(); }
 function saveTemplates()  { localStorage.setItem(DC_CONFIG.storagePrefix + 'templates',  JSON.stringify(state.templates));   SupabaseSync.queueSync(); }
 function saveHistory()    { localStorage.setItem(DC_CONFIG.storagePrefix + 'history',    JSON.stringify(state.history)); }
@@ -2470,6 +2471,7 @@ const SupabaseSync = (() => {
       if (!data) return false;
       // A row exists for today → the local sheet belongs to today. Stamp it so the
       // day-rollover check treats it as current (and a coworker's built plan isn't cleared).
+      const _prevPlanDate = localStorage.getItem(P + 'planDate');   // whose day the local plan belongs to (plan protection)
       localStorage.setItem(P + 'planDate', todayLocal());
       const dbTs    = new Date(data.updated_at).getTime();
       const localTs = parseInt(localStorage.getItem(P + '_dbsync') || '0');
@@ -2482,6 +2484,11 @@ const SupabaseSync = (() => {
         localStorage.setItem(P + lsKey, JSON.stringify(val));
         changed = true;
       };
+      // Plan protection: if the incoming day has fewer locks / out times than ours, keep ours first.
+      try {
+        const mine = dispatchedCounts(state.lastResult), theirs = dispatchedCounts(data.result);
+        if (_prevPlanDate === todayLocal() && (mine.locks + mine.outs) > 0 && (theirs.locks < mine.locks || theirs.outs < mine.outs)) backupPlan('Replaced by a change from another device');
+      } catch (e) { console.error('[PlanBackup] sync compare failed:', e); }
       set('loads',       data.loads,              'loads');
       // A reset/rolled-over day (nightly server rollover, or a coworker's "Start Over")
       // carries a null result AND zeroed loads — honor that by clearing the stale local plan
@@ -2987,6 +2994,7 @@ async function startupAuth() {
 
 // Re-renders all UI sections from current state (used after DB pull or sign-in).
 function renderAll() {
+  try { renderRestoreButton(); } catch (e) {}
   populateRestrictionDropdowns();
   renderPhaseInputs();
   renderTemplateDays();
@@ -3991,6 +3999,128 @@ function dayHasPlan() {
   return asg.length > 0 || (state.bucketAsgn || []).length > 0 || (state.adhocMoves || []).length > 0;
 }
 
+// ── Plan protection ─────────────────────────────────────────────────────────
+// "Dispatched" = the plan has at least one locked load or a stamped out time. Anything that
+// would erase a dispatched plan is either turned off, or needs the planner to type CLEAR after
+// being told exactly what goes. Every time a dispatched plan is replaced (by any path, including
+// a sync from another device) a copy is kept on this device for today, restorable in one click.
+function dispatchedCounts(result) {
+  const asg = (result && result.assignments) || [];
+  return { loads: asg.length, locks: asg.filter(a => a.locked).length, outs: asg.filter(a => a.actualOutTime).length };
+}
+function dayDispatched() { const c = dispatchedCounts(state.lastResult); return (c.locks + c.outs) > 0; }
+function describeDayCounts(c) {
+  const pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  return `${pl(c.loads, 'load')}, ${pl(c.locks, 'lock')}, ${pl(c.outs, 'out time')}`;
+}
+// Hard stop for actions that would quietly erase a dispatched day. Returns true when blocked.
+function blockIfDispatched(what) {
+  if (!dayDispatched()) return false;
+  alert(`Locked: drivers are dispatched today.\n\n${what} would erase today's plan (${describeDayCounts(dispatchedCounts(state.lastResult))}), so it's turned off until the day is cleared with Start Over.`);
+  return true;
+}
+// Explicit, informed confirmation for deliberate actions that erase a dispatched day.
+function confirmEraseDispatched(what) {
+  if (!dayDispatched()) return true;
+  const c = dispatchedCounts(state.lastResult);
+  const typed = prompt(`⚠ ${what} ERASES today's dispatched plan:\n${describeDayCounts(c)}.\n\nEveryone viewing this crossdock will see it disappear. A backup is kept on this device (↩ Restore).\n\nType CLEAR to continue.`);
+  if (String(typed || '').trim().toUpperCase() !== 'CLEAR') { alert('Nothing was changed.'); return false; }
+  return true;
+}
+
+const PLAN_BACKUP_MAX = 6;
+const PLAN_BACKUP_MAX_CHARS = 1500000;   // keep backups well inside the browser's storage limit
+function _planBackupKey() { return DC_CONFIG.storagePrefix + 'planBackups'; }
+function _readAllPlanBackups() { try { return JSON.parse(localStorage.getItem(_planBackupKey()) || '[]') || []; } catch (e) { return []; } }
+function readPlanBackups() { const t = todayLocal(); return _readAllPlanBackups().filter(b => b.planDate === t); }
+function currentDaySnap(overrides) {
+  return Object.assign({
+    phaseKeys: state.phases.map(ph => ph.dest + '|' + ph.label),
+    loads: state.loads, lastResult: state.lastResult, bucketAsgn: state.bucketAsgn,
+    adhocMoves: state.adhocMoves, returned: state.returned,
+  }, overrides || {});
+}
+function backupPlan(reason, snap) {
+  if (window._suppressPlanBackup) return;     // overnight rollover: yesterday's plan isn't restorable today
+  try {
+    snap = snap || currentDaySnap();
+    const c = dispatchedCounts(snap.lastResult);
+    if ((c.locks + c.outs) === 0) return;                      // nothing dispatched → nothing worth keeping
+    const lr = snap.lastResult ? Object.assign({}, snap.lastResult) : null;
+    if (lr) delete lr.snapshot;                                // rebuilt on restore; keeps backups small
+    const json = JSON.stringify(Object.assign({}, snap, { lastResult: lr }));
+    const rkey = JSON.stringify(lr);
+    const today = todayLocal();
+    let list = _readAllPlanBackups().filter(b => b.planDate === today);
+    // Same plan already kept (e.g. Start Over backs up first, then its own save would again with
+    // counts already zeroed) → keep the first, most complete copy.
+    if (list.some(b => b.rkey === rkey)) return;
+    list.push({ at: Date.now(), planDate: today, reason, counts: c, json, rkey });
+    list = list.slice(-PLAN_BACKUP_MAX);
+    while (list.length > 1 && JSON.stringify(list).length > PLAN_BACKUP_MAX_CHARS) list.shift();
+    try { localStorage.setItem(_planBackupKey(), JSON.stringify(list)); }
+    catch (e) { localStorage.setItem(_planBackupKey(), JSON.stringify(list.slice(-1))); }
+  } catch (e) { console.error('[PlanBackup] failed:', e); }
+  try { renderRestoreButton(); } catch (e) {}
+}
+// Called from saveResult: if the plan about to be saved has fewer locks / out times than the one
+// stored, keep the stored one. Catches every path that replaces a plan, present and future.
+function backupIfLosingDispatch(nextResult, reason) {
+  try {
+    const prev = JSON.parse(localStorage.getItem(DC_CONFIG.storagePrefix + 'lastresult') || 'null');
+    const a = dispatchedCounts(prev), b = dispatchedCounts(nextResult);
+    if ((a.locks + a.outs) > 0 && (b.locks < a.locks || b.outs < a.outs)) backupPlan(reason || 'Plan changed', currentDaySnap({ lastResult: prev }));
+  } catch (e) { console.error('[PlanBackup] compare failed:', e); }
+}
+function renderRestoreButton() {
+  const btn = document.getElementById('restore-plan-btn');
+  if (!btn) return;
+  const n = readPlanBackups().length;
+  btn.style.display = n ? '' : 'none';
+  btn.textContent = `↩ Restore earlier plan (${n})`;
+}
+function openRestoreModal() {
+  const list = readPlanBackups();
+  closeRestoreModal();
+  const fmt = ms => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const rows = list.map((b, i) => ({ b, i })).reverse().map(({ b, i }) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-200);">
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:13px;">${fmt(b.at)} · ${String(b.reason).replace(/</g, '&lt;')}</div>
+        <div style="font-size:12px;color:var(--gray-500);">${describeDayCounts(b.counts)}</div>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="restorePlanBackup(${i})">Restore</button>
+    </div>`).join('') || '<p style="font-size:13px;color:var(--gray-500);">No earlier plans kept today.</p>';
+  const el = document.createElement('div');
+  el.id = 'restore-plan-modal'; el.className = 'modal-overlay driver-overlay open';
+  el.innerHTML = `<div class="modal" style="width:440px;max-width:96vw;">
+    <div class="modal-header"><span>↩ Restore an earlier plan</span><button class="modal-close" onclick="closeRestoreModal()">&times;</button></div>
+    <div class="modal-body"><p style="font-size:12px;color:var(--gray-600);line-height:1.5;margin:0 0 6px;">Copies of today's dispatched plan, kept on this device each time it was replaced or cleared. Restoring saves it for everyone; the plan on screen now is kept as a copy first.</p>${rows}</div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeRestoreModal()">Close</button></div></div>`;
+  document.body.appendChild(el);
+}
+function closeRestoreModal() { document.getElementById('restore-plan-modal')?.remove(); }
+function restorePlanBackup(i) {
+  const b = readPlanBackups()[i];
+  if (!b) return;
+  const when = new Date(b.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (!confirm(`Restore the plan from ${when} (${describeDayCounts(b.counts)})?\n\nThis replaces what's on screen for everyone. The current plan is kept as a copy first, so you can switch back.`)) return;
+  backupPlan('Before a restore');
+  const snap = JSON.parse(b.json);
+  // Line counts up by phase (dest + label) in case phases were added, removed or reordered since.
+  const keys = snap.phaseKeys || state.phases.map(ph => ph.dest + '|' + ph.label);
+  const newIdx = keys.map(k => state.phases.findIndex(ph => ph.dest + '|' + ph.label === k));
+  state.loads = state.phases.map(ph => { const j = keys.indexOf(ph.dest + '|' + ph.label); return j >= 0 ? ((snap.loads || [])[j] || 0) : 0; });
+  state.bucketAsgn = (snap.bucketAsgn || []).filter(x => newIdx[x.phaseIdx] >= 0).map(x => Object.assign({}, x, { phaseIdx: newIdx[x.phaseIdx] }));
+  state.adhocMoves = snap.adhocMoves || [];
+  state.returned = snap.returned || {};
+  state.lastResult = snap.lastResult || null;
+  saveLoads(); saveBucketAsgn(); saveAdhocMoves(); saveReturned(); saveResult();
+  closeRestoreModal();
+  renderAll();
+  renderRestoreButton();
+}
+
 function renderTemplateDays() {
   const el = document.getElementById('template-days');
   if (!el) return;
@@ -4126,7 +4256,7 @@ function autoRolloverDay() {
   if (state.lastResult) {
     try { commitToHistory(planDate); } catch (e) { console.error('[autoRollover] commit failed:', e); }
   }
-  if (hasPlan) resetLoads();   // clears loads, result (and its locks), bucket, ad-hoc, returned
+  if (hasPlan) { window._suppressPlanBackup = true; try { resetLoads(); } finally { window._suppressPlanBackup = false; } }   // clears loads, result (and its locks), bucket, ad-hoc, returned
   localStorage.setItem(P + 'planDate', today);
   return hasPlan;
 }
@@ -4501,8 +4631,8 @@ function renderPhaseInputs() {
     row.className = 'phase-row';
     row.innerHTML = `
       <div class="phase-reorder">
-        <button onclick="movePhase(${idx},-1)" ${idx===0?'disabled':''} title="Move up">▲</button>
-        <button onclick="movePhase(${idx},1)"  ${idx===n-1?'disabled':''} title="Move down">▼</button>
+        <button onclick="movePhase(${idx},-1)" ${idx===0||dayDispatched()?'disabled':''} title="${dayDispatched()?'Locked: drivers are dispatched today':'Move up'}">▲</button>
+        <button onclick="movePhase(${idx},1)"  ${idx===n-1||dayDispatched()?'disabled':''} title="${dayDispatched()?'Locked: drivers are dispatched today':'Move down'}">▼</button>
       </div>
       <div class="phase-num">${shown}</div>
       <label class="phase-label">${phase.label}</label>
@@ -4537,7 +4667,7 @@ function updateTotalsDisplay() {
 // Confirmation popup for wiping the day and starting fresh (destructive).
 function openClearDayModal()  { const m = document.getElementById('clear-day-modal'); if (m) m.classList.add('open'); }
 function closeClearDayModal() { const m = document.getElementById('clear-day-modal'); if (m) m.classList.remove('open'); }
-function confirmClearDay()    { closeClearDayModal(); resetLoads(); }
+function confirmClearDay()    { closeClearDayModal(); if (!confirmEraseDispatched('Start Over')) return; backupPlan('Before Start Over'); resetLoads(); }
 
 function resetLoads() {
   state.loads = Array(state.phases.length).fill(0);
@@ -4566,6 +4696,7 @@ function resetLoads() {
 }
 
 function movePhase(idx, dir) {
+  if (blockIfDispatched('Reordering phases')) return;
   const n = state.phases.length;
   const to = idx + dir;
   if (to < 0 || to >= n) return;
@@ -6246,6 +6377,7 @@ function generateAssignments() {
 // generateAssignments so the full-generate path is never affected.
 function rerunRemaining() {
   if (!state.lastResult) return generateAssignments();
+  backupPlan('Before re-run');
   const prev = state.lastResult;
   // Only PRESERVABLE locks are kept (active driver in roster); locks on a vacationed/removed
   // driver are stale and fall through to the optimizer to re-plan.
@@ -6820,6 +6952,7 @@ function renderDestinations() {
 // stashes the entered load counts of its phases to 0 (restored on re-enable) so
 // the location reads as 0 loads everywhere — phase inputs, bucket, and optimizer.
 function toggleDestEnabled(idx) {
+  if (blockIfDispatched('Turning a destination on or off')) return;
   const dest = state.destinations[idx];
   if (!dest) return;
   dest.disabled = !dest.disabled;
@@ -6987,6 +7120,8 @@ function deleteDestination(idx) {
   if (relDrivers) warn += `\n• ${relDrivers} driver${relDrivers!==1?'s':''} restricted to / domiciled at this destination will be reset to "Any".`;
   warn += `\n• Any current generated plan will be cleared.`;
   if (!confirm(warn)) return;
+  if (!confirmEraseDispatched(`Deleting destination ${dest.code}`)) return;
+  backupPlan(`Before deleting destination ${dest.code}`);
 
   // Map old phase indexes → new (or -1 if removed), realign loads + bucket assignments.
   const oldToNew = [];
@@ -7067,6 +7202,8 @@ function deletePhase(idx) {
   const p = state.phases[idx];
   if (!p) return;
   if (!confirm(`Delete phase "${p.label}"?\n\nIts load count will be cleared and any current plan reset.`)) return;
+  if (!confirmEraseDispatched(`Deleting phase "${p.label}"`)) return;
+  backupPlan(`Before deleting phase "${p.label}"`);
   state.phases.splice(idx, 1);
   state.loads.splice(idx, 1);
   // Realign bucket assignments: drop this phase's chips, shift higher indexes down.
@@ -8140,6 +8277,12 @@ function dropBucketToDriver(load, driverName) {
 function removeBucketAssignment(id) {
   state.bucketAsgn = (state.bucketAsgn || []).filter(b => b.id !== id);
   saveBucketAsgn();
+  // Dispatched day: take out just that load and keep the plan; the load goes back to the pool.
+  if (dayDispatched()) {
+    markResultStale('A manual load went back to the pool', 'Re-run (keep committed) to place it. Locked loads and out times stay as they are.');
+    renderLoadBucket(); renderAllDriverCards();
+    return;
+  }
   // If a result exists it's stale — that slot is now unassigned and needs regenerating
   if (state.lastResult) {
     state.lastResult = null;
@@ -8160,6 +8303,12 @@ function clearAllBucketAssignments() {
   if (!confirm(`Remove all ${count} manual assignment${count!==1?'s':''}?\n\nThe optimizer will reassign them on next Generate.`)) return;
   state.bucketAsgn = [];
   saveBucketAsgn();
+  // Dispatched day: keep the plan; the removed loads go back to the pool for a keep-committed re-run.
+  if (dayDispatched()) {
+    markResultStale(`${count} manual load${count!==1?'s':''} went back to the pool`, 'Re-run (keep committed) to place them. Locked loads and out times stay as they are.');
+    renderLoadBucket(); renderAllDriverCards();
+    return;
+  }
   if (state.lastResult) {
     state.lastResult = null;
     saveResult();
