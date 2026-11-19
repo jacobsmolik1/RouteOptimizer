@@ -1254,6 +1254,8 @@ th.sortable:hover { background: var(--gray-100); }
       <div class="settings-section-title">Operational Settings</div>
       <div class="field-group"><label>Average Speed (mph)</label><input type="number" class="plain" id="set-avg-speed" min="20" max="75" step="1"></div>
       <div class="field-group"><label>DOT Max Driving Hours</label><input type="number" class="plain" id="set-dot-max" min="8" max="11" step="0.5"></div>
+      <div class="field-group" id="set-target-day-group"><label>Target Day Length (hours) <span style="font-weight:400;color:var(--gray-400);">· optional</span></label><input type="number" class="plain" id="set-target-day" min="4" max="14" step="0.25" placeholder="Off">
+        <div style="font-size:11px;color:var(--gray-500);margin-top:4px;line-height:1.4;">Soft target, not a limit. The optimizer fills every driver up to this length before giving anyone a longer day, and only goes past it when loads can't be covered otherwise. DOT max stays the hard cap. Same hours as DOT max (drive time incl. deadhead, not the 30-min break). Leave blank to turn off.</div></div>
       <div class="field-group"><label>Default Delivery Window Target (hours)</label><input type="number" class="plain" id="set-delivery-window" min="1" max="12" step="0.5"></div>
       <div class="field-group"><label>Driver Card Order</label>
         <select class="plain" id="set-card-sort">
@@ -1790,6 +1792,9 @@ const ALL_DC_CONFIGS = {
       avoidConsecutiveDestinationCodes:     ['FLO'],
       preferEarliestAvailableDriver:        true,
       preferMultiLoadInternalDrivers:       false,
+      // Soft target day length: fill every driver to ~7.5h before anyone runs longer (matches how
+      // the Birmingham planner builds days). Per-device override in Settings; 0 there = off.
+      targetDayHours:                       7.5,
       deliveryWindowHours:                  5,
       fairness: {
         enabled:              true,
@@ -3072,6 +3077,17 @@ function getHrsForDest(code) {
   const d = state.destinations.find(x => x.code === code);
   return d ? (d.miles1Way * 2) / destSpeed(code) : 0;
 }
+// Target day length in effect: the Settings value when set (0 = explicitly off), otherwise the
+// crossdock's default (optimizer.targetDayHours). null = no target. Only crossdocks that have the
+// feature switched on in their optimizer config (Birmingham for now) use it at all; everywhere
+// else it returns null and the Settings field is hidden, so nothing changes there.
+function targetDayHoursEnabled() { return DC_CONFIG.optimizer?.targetDayHours !== undefined; }
+function targetDayHours() {
+  if (!targetDayHoursEnabled()) return null;
+  const own = state.settings.targetDayHours;
+  const v = (own !== undefined && own !== null && own !== '') ? Number(own) : Number(DC_CONFIG.optimizer?.targetDayHours || 0);
+  return v > 0 ? v : null;
+}
 function getAvailableDrivers() {
   const wi = state.whatIf || {};
   return state.drivers
@@ -3091,10 +3107,10 @@ function driverCanTakeDest(driver, destCode) {
   if (def.type === 'onlyGroup') return (def.destCodes || []).includes(destCode);
   return true; // any, assist, first — no hard destination block
 }
-  return { getHrsForDest, destSpeed, driverDHHrs, getAvailableDrivers, nextId, driverCanTakeDest };
+  return { getHrsForDest, targetDayHours, targetDayHoursEnabled, destSpeed, driverDHHrs, getAvailableDrivers, nextId, driverCanTakeDest };
 })();
 // Re-export to global scope — call sites remain unchanged during incremental migration.
-const { getHrsForDest, destSpeed, driverDHHrs, getAvailableDrivers, nextId, driverCanTakeDest } = DcConfig;
+const { getHrsForDest, targetDayHours, targetDayHoursEnabled, destSpeed, driverDHHrs, getAvailableDrivers, nextId, driverCanTakeDest } = DcConfig;
 
 // Dispatch-priority tier for a driver (1 = highest / used first). Defaults to 1
 // so a roster with no tiers set behaves exactly as before (all-equal = inert).
@@ -3246,6 +3262,26 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
     return (s.hours + hrs + s.homeHrs) <= dotMax;
   }
 
+  // Soft target day length (Settings → Target Day Length, or the crossdock default). A driver is
+  // "under target" when this load keeps their projected day at or below it: for a load to their own
+  // domicile that's the one-way leg home; otherwise the round trip plus the reserved trip home.
+  // Under-target drivers are preferred; nobody is refused a load for being over it (DOT still is).
+  const targetDay = targetDayHours();
+  function underTarget(d, hrs, destCode) {
+    if (!targetDay) return true;
+    const s = ds[d.id];
+    // Non-home load: round trip plus the way home — the reserved home leg, or the evening deadhead
+    // if that's longer (it's what gets added when no home load is left for them at the end).
+    const homeCost = Math.max(s.homeHrs, (d.deadheadMiles && d.domicileDest) ? s.eveningDH : 0);
+    const proj = (d.domicileDest && destCode === d.domicileDest) ? s.hours + hrs / 2 : s.hours + hrs + homeCost;
+    return proj <= targetDay + 1e-9;
+  }
+  const targetCmp = (a, b, hrs, destCode) => {
+    if (!targetDay) return 0;
+    const aU = underTarget(a, hrs, destCode), bU = underTarget(b, hrs, destCode);
+    return aU === bU ? 0 : (aU ? -1 : 1);
+  };
+
   // Current phase's scheduled dispatch time in minutes — updated before each finder call.
   let phaseDispatchMins = 0;
 
@@ -3334,6 +3370,8 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         return candidateTimingAllowed(d, hrs);
       })
       .sort((a, b) => {
+        const tc = targetCmp(a, b, hrs, destCode);
+        if (tc !== 0) return tc;
         const availabilityCmp = compareAvailability(a, b, hrs);
         if (availabilityCmp !== 0) return availabilityCmp;
         const aHrs = a.domicileDest === destCode ? hrs / 2 : hrs;
@@ -3401,6 +3439,8 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         // higher (e.g. overflow carriers). Inert when all drivers share a tier.
         const priCmp = driverPriority(a) - driverPriority(b);
         if (priCmp !== 0) return priCmp;
+        const tc = targetCmp(a, b, hrs, destCode);
+        if (tc !== 0) return tc;
         // Pack mode (opt-in, per-DC): once we're placing overflow-tier trucks, fill an
         // already-used truck before opening a new one — reveals the minimum trucks needed.
         if (state.settings.packOverflow && driverPriority(a) > 1 && driverPriority(b) > 1) {
@@ -3435,12 +3475,14 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
   }
 
   // Last-resort fallback for non-external-carrier routes.
-  function findAnyAvailable(hrs, destCode) {
+  // onlyRestriction (optional): consider only drivers with exactly this restriction text.
+  function findAnyAvailable(hrs, destCode, onlyRestriction) {
     const blockAubFirst = aubLoadsRemain();
     const allowExtraHome = DC_CONFIG.optimizer?.allowExtraHomeDestinationBeforeReturn !== false;
     const packShortRoutes = shouldPackShortRoutes(destCode);
     return available
       .filter(d => {
+        if (onlyRestriction && d.restriction !== onlyRestriction) return false;
         const def = getResDef(d.restriction);
         // Exclusive drivers can only appear via findExclusive — block all that don't match this dest.
         if (def.type === 'only' && def.destCode !== destCode) return false;
@@ -3463,6 +3505,8 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
         }
         const priCmp = driverPriority(a) - driverPriority(b);
         if (priCmp !== 0) return priCmp;
+        const tc = targetCmp(a, b, hrs, destCode);
+        if (tc !== 0) return tc;
         if (state.settings.packOverflow && driverPriority(a) > 1 && driverPriority(b) > 1) {
           const aStarted = ds[a.id].loadCount > 0, bStarted = ds[b.id].loadCount > 0;
           if (aStarted !== bStarted) return aStarted ? -1 : 1;
@@ -3615,7 +3659,14 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
       counts[pi]--;   // keep counts current so aubLoadsRemain()/fullDayLoadsRemain() see live state
       globalNum++;
       let drv = null;
-      const onlyDef   = DC_CONFIG.restrictions.find(r => r.type === 'only'   && r.destCode === phase.dest);
+      // Single-destination drivers: a restriction defined in the crossdock's settings, or one the app
+      // recognises from a driver's "{CODE} ONLY" restriction (getResDef). Before, only the first kind
+      // reached the exclusive step, so e.g. "CUL ONLY" drivers were kept out of the general pool AND
+      // never offered their own destination's loads.
+      const cfgOnlyDef = DC_CONFIG.restrictions.find(r => r.type === 'only'   && r.destCode === phase.dest) || null;
+      const onlyDef   = cfgOnlyDef
+                     || available.map(d => getResDef(d.restriction)).find(def => def.type === 'only' && def.destCode === phase.dest)
+                     || null;
       const assistDef = DC_CONFIG.restrictions.find(r => r.type === 'assist' && r.destCode === phase.dest);
       const canExt    = destCanExternal(phase.dest);
       const extOnly   = destIsExternalOnly(phase.dest);   // outside carrier runs all of these
@@ -3646,7 +3697,17 @@ function runOptimizer(loadCounts, minimizeShoreline, preLoads={}) {
               return ds[a.id].hours - ds[b.id].hours;
             })[0] || null;
         } else {
-          drv = findExclusive(onlyDef.value, hrs, phase.dest);
+          // Restrictions defined in settings keep their exclusive picker. "{CODE} ONLY" drivers recognised
+          // from the roster use the regular fallback picker limited to those drivers — same DOT, home-return
+          // and timing checks and the same tie-breaks they already got when that fallback reached them.
+          drv = cfgOnlyDef ? findExclusive(onlyDef.value, hrs, phase.dest)
+                           : findAnyAvailable(hrs, phase.dest, onlyDef.value);
+          // A single-destination driver who'd go past the target yields to an under-target pool driver.
+          if (drv && targetDay && !underTarget(drv, hrs, phase.dest) && !extOnly
+              && (!canExt || DC_CONFIG.optimizer?.assignExternalEligibleToInternal)) {
+            const alt = findGeneral(hrs, phase.dest);
+            if (alt && underTarget(alt, hrs, phase.dest)) drv = alt;
+          }
         }
       }
       if (!drv && assistDef && !extOnly) drv = findAssist(assistDef, hrs);
@@ -5341,6 +5402,8 @@ function renderDriverCards(result) {
       ? `<span class="card-dot-status card-dot-over">⚠️ OVER DOT LIMIT</span>`
       : status==='warn'
       ? `<span class="card-dot-status card-dot-warn">⚡ Near Limit</span>`
+      : (targetDayHours() && loadCount > 0 && dutyHrs > targetDayHours() + 1e-9)
+      ? `<span class="card-dot-status card-dot-warn" title="Past the ${targetDayHours()}h target day length (still within DOT)">✓ DOT OK · over ${targetDayHours()}h target</span>`
       : `<span class="card-dot-status card-dot-ok">✓ DOT OK</span>`;
 
     // Build every card row (manual/bucket, ad-hoc, and optimizer loads) into one list,
@@ -7051,6 +7114,8 @@ function saveReceiverWindows() {
 function renderSettings() {
   document.getElementById('set-avg-speed').value       = state.settings.avgSpeed;
   document.getElementById('set-dot-max').value         = state.settings.dotMaxHours;
+  document.getElementById('set-target-day').value      = targetDayHours() || '';
+  document.getElementById('set-target-day-group').style.display = targetDayHoursEnabled() ? '' : 'none';
   document.getElementById('set-delivery-window').value = state.settings.deliveryWindowHours ?? DC_CONFIG.optimizer?.deliveryWindowHours ?? 5;
   document.getElementById('set-card-sort').value       = state.settings.cardSort || 'arrival';
   // Optimizer Tuning toggles. Fairness fallback expression MUST match rebalanceFairness exactly.
@@ -7128,6 +7193,13 @@ function saveBlends() {
 function saveSettings() {
   state.settings.avgSpeed             = parseFloat(document.getElementById('set-avg-speed').value)||45;
   state.settings.dotMaxHours          = parseFloat(document.getElementById('set-dot-max').value)||10;
+  {
+    // Blank saves an explicit 0 (off) so it also overrides a crossdock default.
+    if (targetDayHoursEnabled()) {
+    const t = parseFloat(document.getElementById('set-target-day').value);
+    state.settings.targetDayHours = t > 0 ? Math.min(t, state.settings.dotMaxHours) : 0;
+    }
+  }
   state.settings.deliveryWindowHours  = parseFloat(document.getElementById('set-delivery-window').value)||5;
   state.settings.cardSort             = document.getElementById('set-card-sort').value || 'arrival';
   // Recalculate bucket hrs — avgSpeed change affects getHrsForDest
