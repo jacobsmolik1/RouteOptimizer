@@ -1,1 +1,1 @@
-{"version": "2026-11-19T15:23:58Z", "notes": "Trailer # is always shown, and there's a new Route column (both export)."}
+{"version": "2026-11-20T01:04:56Z", "notes": "Changing a lane speed now updates today's plan, including loads already out."}

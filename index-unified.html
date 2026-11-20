@@ -6236,6 +6236,31 @@ function recalcDriverWorkload(driverName) {
   else          state.lastResult.workload.push(wl);
 }
 
+// Re-time today's plan after a speed / miles change. Every load whose trip isn't finished gets the
+// lane's current drive time — including loads already dispatched, so return times, follow-on ETAs
+// and driver hours reflect the new speed. Finished = status Complete, or the driver is marked Back.
+// Assignments, out times and locks are not touched. Returns how many loads changed.
+function refreshPlanDriveTimes() {
+  const res = state.lastResult;
+  if (!res || !Array.isArray(res.assignments)) return 0;
+  const touched = new Set();
+  let n = 0;
+  res.assignments.forEach(a => {
+    if (!a || !a.dest || a.status === 'Complete') return;
+    const name = a.override || a.autoDriver;
+    const drv  = state.drivers.find(d => d.name === name);
+    if (drv && (state.returned || {})[drv.id]) return;
+    const h = getHrsForDest(a.dest);
+    if (!(h > 0) || Math.abs(h - (a.hrs || 0)) < 1e-6) return;
+    a.hrs = h; n++; touched.add(name);
+  });
+  if (n) { recalcAffectedDrivers(...touched); saveResult(); }
+  return n;
+}
+function _driveTimeNote(n) {
+  return n ? `\n\nUpdated the drive time on ${n} load${n === 1 ? '' : 's'} in today's plan that ${n === 1 ? "isn't" : "aren't"} finished yet (including dispatched loads). Return times and later ETAs now use the new speed.` : '';
+}
+
 function recalcAffectedDrivers(...names) {
   const skip = new Set([DC_CONFIG.externalCarrier, 'UNASSIGNED', '']);
   const unique = [...new Set(names.filter(n => n && !skip.has(n)))];
@@ -7027,10 +7052,12 @@ function saveDestinations() {
   state.bucketAsgn = (state.bucketAsgn || []).map(b => ({...b, hrs: getHrsForDest(b.dest)}));
   saveBucketAsgn();
   saveDests();
+  const retimed = refreshPlanDriveTimes();
+  if (retimed) renderAll();
   renderPhaseInputs();
   renderLoadBucket();
   renderAllDriverCards();
-  alert('✅ Destinations saved!');
+  alert('✅ Destinations saved!' + _driveTimeNote(retimed));
 }
 
 // Carrier <option> list, tailored to this DC's external carrier. `current` is
@@ -7082,6 +7109,7 @@ function saveEditDest() {
   state.bucketAsgn = (state.bucketAsgn || []).map(b => ({ ...b, hrs: getHrsForDest(b.dest) }));
   saveDests(); saveBucketAsgn();
   rebuildDestMaps();
+  if (refreshPlanDriveTimes()) renderAll();
   renderDestinations();
   renderPhaseMgmtList();
   renderPhaseInputs();
@@ -7382,7 +7410,10 @@ function saveSettings() {
   // Recalculate bucket hrs — avgSpeed change affects getHrsForDest
   state.bucketAsgn = (state.bucketAsgn || []).map(b => ({...b, hrs: getHrsForDest(b.dest)}));
   saveBucketAsgn();
-  saveSettings_(); renderDestinations(); renderPhaseInputs(); renderLoadBucket(); renderAllDriverCards(); alert('✅ Settings saved!');
+  saveSettings_();
+  const retimed = refreshPlanDriveTimes();
+  if (retimed) renderAll();
+  renderDestinations(); renderPhaseInputs(); renderLoadBucket(); renderAllDriverCards(); alert('✅ Settings saved!' + _driveTimeNote(retimed));
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -8634,7 +8665,7 @@ const autoRefresh = (() => {
   return { arm, blockers, tick };
 })();
 
-const APP_VERSION = '2026-11-19T15:23:58Z';
+const APP_VERSION = '2026-11-20T01:04:56Z';
 (function appUpdateCheck() {
   if (location.protocol === 'file:' || /^__/.test(APP_VERSION)) return;
   let lastCheck = 0, snoozeUntil = 0, latest = null;
