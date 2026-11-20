@@ -882,6 +882,7 @@ th.sortable:hover { background: var(--gray-100); }
       <span id="commit-badge" class="no-print" style="display:none">🔒 Committed</span>
       <span id="sync-indicator" class="synced" style="display:none"></span>
       <button class="hdr-logout-btn" id="hdr-dispatchers-btn" onclick="openDispatchers()" style="display:none">👥 Dispatchers</button>
+      <button class="hdr-logout-btn" id="hdr-access-btn" onclick="openUserAccess()" style="display:none" title="Manage who can access each crossdock">🔑 User Access</button>
       <button class="hdr-logout-btn" id="hdr-logout-btn" onclick="handleSignOut()" style="display:none">Sign Out</button>
     </div>
     <div class="hdr-date">
@@ -1502,6 +1503,77 @@ th.sortable:hover { background: var(--gray-100); }
         <div id="disp-msg" style="display:none;margin-top:10px;padding:8px 12px;border-radius:var(--radius);font-size:12px;font-weight:600;"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ═══ USER ACCESS (owner only) ═════════════════════════════════════ -->
+<style>
+#user-access-page { position: fixed; inset: 0; z-index: 3000; background: var(--gray-50, #f7f7f8); display: none; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 0; }
+#user-access-page.open { display: flex; }
+.ua-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 20px; background: #fff; border-bottom: 1px solid var(--gray-200); }
+.ua-top h2 { font-size: 17px; margin: 0 8px 0 0; }
+.ua-top input[type=search] { flex: 1; min-width: 160px; max-width: 320px; padding: 7px 10px; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 13px; }
+.ua-body { flex: 1; overflow: auto; padding: 16px 20px 40px; }
+.ua-msg { display: none; margin-bottom: 12px; padding: 9px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+.ua-add { display: none; background: #fff; border: 1px solid var(--gray-200); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.ua-add.open { display: block; }
+.ua-add .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.ua-add label { font-size: 11px; font-weight: 700; color: var(--gray-600); display: block; margin-bottom: 4px; }
+.ua-add input[type=text], .ua-add input[type=email], .ua-add select { padding: 7px 9px; border: 1px solid var(--gray-200); border-radius: 6px; font-size: 13px; }
+.ua-dc-picks { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 4px; font-size: 12px; }
+.ua-dc-picks label { font-weight: 500; color: var(--gray-800, #222); display: inline-flex; gap: 5px; align-items: center; margin: 0; }
+.ua-table-wrap { background: #fff; border: 1px solid var(--gray-200); border-radius: 10px; overflow: auto; }
+table.ua-grid { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12px; }
+.ua-grid th, .ua-grid td { padding: 7px 8px; border-bottom: 1px solid var(--gray-100); white-space: nowrap; text-align: center; }
+.ua-grid th { position: sticky; top: 0; background: #fff; z-index: 2; font-size: 11px; color: var(--gray-600); font-weight: 700; vertical-align: bottom; }
+.ua-grid th.ua-dc { min-width: 64px; max-width: 96px; white-space: normal; line-height: 1.2; text-transform: none; letter-spacing: 0; overflow-wrap: normal; word-break: normal; }
+.ua-grid th.ua-test, .ua-grid td.ua-test { background: #fafafa; }
+.ua-grid th.ua-test { color: var(--gray-400); }
+.ua-grid td.ua-person { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; min-width: 220px; }
+.ua-name { font-weight: 700; font-size: 13px; cursor: pointer; border-bottom: 1px dashed transparent; }
+.ua-name:hover { border-bottom-color: var(--gray-400); }
+.ua-name.empty { color: var(--gray-400); font-weight: 500; font-style: italic; }
+.ua-email { color: var(--gray-500); font-size: 11px; }
+.ua-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 4px; vertical-align: 1px; }
+.ua-badge.owner { background: #111; color: #fff; }
+.ua-badge.invited { background: #fff8e1; color: #8a6d00; }
+.ua-cell { width: 34px; height: 26px; border-radius: 6px; border: 1px solid var(--gray-200); background: #fff; font-weight: 800; font-size: 11px; cursor: pointer; color: var(--gray-300, #ccc); }
+.ua-cell:hover { border-color: var(--gray-400); }
+.ua-cell.dispatcher { background: #e8f1ff; border-color: #9cc0f5; color: #1d5fbf; }
+.ua-cell.admin { background: #fff0f1; border-color: #f2a3aa; color: var(--red, #E61D2B); }
+.ua-cell.busy { opacity: .45; cursor: progress; }
+.ua-cell:disabled { cursor: not-allowed; }
+.ua-actions select, .ua-actions button { font-size: 11px; padding: 3px 6px; border: 1px solid var(--gray-200); border-radius: 5px; background: #fff; cursor: pointer; }
+.ua-actions button.danger { color: #c0392b; }
+.ua-legend { font-size: 11px; color: var(--gray-500); margin: 10px 2px 0; line-height: 1.6; }
+</style>
+<div class="modal-overlay" id="user-access-page" role="dialog" aria-label="User Access">
+  <div class="ua-top">
+    <h2>🔑 User Access</h2>
+    <input type="search" id="ua-search" placeholder="Search name or email…" oninput="renderUserAccess()">
+    <label style="font-size:12px;display:flex;gap:5px;align-items:center;"><input type="checkbox" id="ua-show-test" onchange="renderUserAccess()"> Show test crossdocks</label>
+    <button class="btn btn-primary btn-sm" onclick="toggleUaAdd()">＋ Add person</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeUserAccess()" style="margin-left:auto;">Close ✕</button>
+  </div>
+  <div class="ua-body">
+    <div class="ua-msg" id="ua-msg"></div>
+    <div class="ua-add" id="ua-add">
+      <div class="row">
+        <div><label>Email</label><input type="email" id="ua-new-email" placeholder="planner@ccbcu.com" style="width:230px;"></div>
+        <div><label>Role</label><select id="ua-new-role"><option value="dispatcher">Dispatcher</option><option value="admin">Admin</option></select></div>
+        <div><label>Same crossdocks as… <span style="font-weight:400;">(optional)</span></label><select id="ua-new-copy" onchange="uaPickCopySource()"><option value="">—</option></select></div>
+        <div><label>Temp password <span style="font-weight:400;">(optional)</span></label><input type="text" id="ua-new-pw" placeholder="creates the account now" style="width:170px;"></div>
+      </div>
+      <div class="ua-dc-picks" id="ua-new-dcs"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+        <button class="btn btn-primary btn-sm" id="ua-add-btn" onclick="uaAddPerson()">Give access</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleUaAdd(false)">Cancel</button>
+        <span style="font-size:11px;color:var(--gray-500);">No account yet? They're invited and get this access when they sign up with this email. Add a temp password to create the account now instead.</span>
+      </div>
+    </div>
+    <div class="ua-table-wrap"><table class="ua-grid" id="ua-grid"><tbody><tr><td style="padding:24px;color:var(--gray-400);">Loading…</td></tr></tbody></table></div>
+    <div class="ua-legend">Click a box to change access: <b>blank</b> → <b style="color:#1d5fbf;">D</b> Dispatcher (plans the day) → <b style="color:var(--red);">A</b> Admin (also edits that crossdock's settings, drivers and destinations) → blank. Changes save immediately and reach that person's app the next time it loads or they switch crossdocks.
+      Click a name to edit it. Only you (owner accounts) can see this page or change access.</div>
   </div>
 </div>
 
@@ -2699,7 +2771,26 @@ const SupabaseSync = (() => {
     } catch(e) { console.error('[SupabaseSync] amIAdmin failed:', e); return false; }
   }
 
-  return { init, signIn, signUp, signOut, flushPending, hasPending, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, createAccountDirect, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted, amIAdmin };
+  // ── Owner-only access management (User Access page). Enforced server-side. ──
+  async function amIOwner() {
+    if (!db || !_user) return false;
+    try { const { data, error } = await db.rpc('am_i_owner'); if (error) throw error; return !!data; }
+    catch (e) { console.error('[SupabaseSync] amIOwner failed:', e); return false; }
+  }
+  async function _ownerRpc(fn, args) {
+    if (!db || !_user) throw new Error('Sign in first.');
+    const { data, error } = await db.rpc(fn, args || {});
+    if (error) throw new Error(error.message || String(error));
+    return data;
+  }
+  const ownerList      = ()                   => _ownerRpc('owner_list_access');
+  const ownerSetAccess = (email, slug, role)  => _ownerRpc('owner_set_access', { p_email: email, p_dc_slug: slug, p_role: role || null });
+  const ownerSetName   = (email, name)        => _ownerRpc('owner_set_name',   { p_email: email, p_name: name });
+  const ownerCopy      = (fromEmail, toEmail) => _ownerRpc('owner_copy_access', { p_from_email: fromEmail, p_to_email: toEmail });
+  const ownerRemoveAll = (email)              => _ownerRpc('owner_remove_all', { p_email: email });
+
+  return { init, signIn, signUp, signOut, flushPending, hasPending, queueSync, queueDriverSync, queueConfigSync, refreshDcConfigs, createDc, listMembers, grantAccess, revokeAccess, createAccountDirect, loadDayFromDB, syncDriversFromDB, commitDay, loadHistory, getUser, isCommitted, amIAdmin,
+           amIOwner, ownerList, ownerSetAccess, ownerSetName, ownerCopy, ownerRemoveAll };
 })();
 
 // ── Auth UI helpers ─────────────────────────────────────────────────────────
@@ -2799,10 +2890,14 @@ async function loadDispatchers() {
   const listEl = document.getElementById('disp-list');
   try {
     const members = await SupabaseSync.listMembers(DC_CONFIG.id);
-    const iAmAdmin = members.some(m => m.is_self && m.role === 'admin');
+    // Granting / removing access is owner-only (User Access page); others see the list read-only.
+    const iAmAdmin = _isOwner;
     document.getElementById('disp-admin-area').style.display = iAmAdmin ? '' : 'none';
-    if (!members.length) { listEl.innerHTML = '<div style="color:var(--gray-400);font-size:12px;">No dispatchers yet.</div>'; return; }
-    listEl.innerHTML = members.map(m => {
+    const note = _isOwner
+      ? `<div style="font-size:11px;color:var(--gray-500);margin-bottom:8px;">Tip: manage every crossdock at once in <a href="#" onclick="closeDispatchers();openUserAccess();return false;">🔑 User Access</a>.</div>`
+      : `<div style="font-size:11px;color:var(--gray-500);margin-bottom:8px;">Access is managed by the app owner.</div>`;
+    if (!members.length) { listEl.innerHTML = note + '<div style="color:var(--gray-400);font-size:12px;">No dispatchers yet.</div>'; return; }
+    listEl.innerHTML = note + members.map(m => {
       const roleBadge = m.role === 'admin'
         ? '<span style="font-size:10px;font-weight:700;color:var(--red);background:#fff0f1;padding:2px 6px;border-radius:4px;">ADMIN</span>'
         : '<span style="font-size:10px;font-weight:600;color:var(--gray-400);background:var(--gray-100);padding:2px 6px;border-radius:4px;">Dispatcher</span>';
@@ -2865,6 +2960,179 @@ async function revokeDispatcher(email) {
   }
 }
 
+// ── User Access page (owner only) ──────────────────────────────────────────
+// One grid of every person × every crossdock. Each click calls an owner-only database
+// function; the page is just a view, so a non-owner who opened it would be refused anyway.
+let _ua = { data: null, busy: new Set() };
+const uaEsc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const uaIsTest = slug => /-test$/.test(slug);
+const uaShort = name => String(name || '').replace(/\s*cross\s*dock$/i, '').replace(/\s*crossdock$/i, '').trim();
+function uaMsg(text, isError) {
+  const m = document.getElementById('ua-msg'); if (!m) return;
+  if (!text) { m.style.display = 'none'; return; }
+  m.textContent = text; m.style.display = '';
+  m.style.background = isError ? '#fdecea' : '#eafaf1'; m.style.color = isError ? '#c0392b' : '#1e8449';
+  clearTimeout(uaMsg._t); if (!isError) uaMsg._t = setTimeout(() => { m.style.display = 'none'; }, 5000);
+}
+async function openUserAccess() {
+  if (!_isOwner) return;
+  document.getElementById('user-access-page').classList.add('open');
+  uaMsg('');
+  await uaReload();
+}
+function closeUserAccess() { document.getElementById('user-access-page').classList.remove('open'); toggleUaAdd(false); }
+async function uaReload() {
+  try { _ua.data = await SupabaseSync.ownerList(); renderUserAccess(); }
+  catch (e) { document.getElementById('ua-grid').innerHTML = `<tbody><tr><td style="padding:24px;color:#c0392b;">${uaEsc(e.message || 'Could not load access.')}</td></tr></tbody>`; }
+}
+// People = accounts + invited emails without an account yet.
+function uaPeople() {
+  const d = _ua.data || { users: [], invites: [] };
+  const people = d.users.map(u => ({ ...u, invited: false }));
+  const byEmail = new Map(people.map(p => [p.email.toLowerCase(), p]));
+  d.invites.forEach(iv => {
+    let p = byEmail.get(iv.email.toLowerCase());
+    if (!p) { p = { email: iv.email, name: '', last_sign_in: null, is_owner: false, is_self: false, access: {}, invited: true }; byEmail.set(iv.email.toLowerCase(), p); people.push(p); }
+    if (p.invited) p.access[iv.slug] = iv.role;
+  });
+  const q = (document.getElementById('ua-search')?.value || '').trim().toLowerCase();
+  return people
+    .filter(p => !q || p.email.toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q))
+    .sort((a, b) => (a.is_owner - b.is_owner) || (a.name || a.email).toLowerCase().localeCompare((b.name || b.email).toLowerCase()));
+}
+function uaDcs() {
+  const showTest = document.getElementById('ua-show-test')?.checked;
+  const all = (_ua.data?.dcs || []);
+  return [...all.filter(d => !uaIsTest(d.slug)), ...(showTest ? all.filter(d => uaIsTest(d.slug)) : [])];
+}
+function uaFmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso); if (isNaN(d)) return '—';
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+}
+function renderUserAccess() {
+  const grid = document.getElementById('ua-grid'); if (!grid || !_ua.data) return;
+  const dcs = uaDcs(), people = uaPeople();
+  const head = `<thead><tr><th style="text-align:left;" class="ua-person-h">Person</th>
+    ${dcs.map(d => `<th class="ua-dc ${uaIsTest(d.slug) ? 'ua-test' : ''}" title="${uaEsc(d.name)}">${uaEsc(uaShort(d.name))}</th>`).join('')}
+    <th>Last sign-in</th><th></th></tr></thead>`;
+  const others = p => people.filter(o => o.email !== p.email && !o.invited);
+  const rows = people.map(p => {
+    const e = uaEsc(p.email);
+    const nameHtml = p.invited
+      ? `<span class="ua-name empty" title="Names can be added once they sign up">${e}</span>`
+      : `<span class="ua-name ${p.name ? '' : 'empty'}" data-email="${e}" onclick="uaEditName(this.dataset.email)" title="Click to edit name">${p.name ? uaEsc(p.name) : 'Add name'}</span>`;
+    const badges = (p.is_owner ? '<span class="ua-badge owner">OWNER</span>' : '') + (p.invited ? '<span class="ua-badge invited">Invited · not signed up</span>' : '');
+    const cells = dcs.map(d => {
+      const role = p.access[d.slug] || '';
+      const key = p.email + '|' + d.slug;
+      const locked = p.is_owner && role === 'admin';
+      const label = role === 'admin' ? 'A' : role === 'dispatcher' ? 'D' : '·';
+      const title = locked ? 'Owner account: always keeps admin' : `${uaShort(d.name)}: ${role || 'no access'} (click to change)`;
+      return `<td class="${uaIsTest(d.slug) ? 'ua-test' : ''}"><button class="ua-cell ${role} ${_ua.busy.has(key) ? 'busy' : ''}" ${locked ? 'disabled' : ''}
+        data-email="${e}" data-slug="${uaEsc(d.slug)}" onclick="uaCycle(this)" title="${uaEsc(title)}" aria-label="${uaEsc(title)}">${label}</button></td>`;
+    }).join('');
+    const actions = p.is_owner ? '' : `<span class="ua-actions" style="display:inline-flex;gap:6px;">
+        <select data-email="${e}" onchange="uaCopyFrom(this.dataset.email, this)" title="Give ${e} the same crossdocks as someone else"><option value="">Same as…</option>
+          ${others(p).map(o => `<option value="${uaEsc(o.email)}">${uaEsc(o.name || o.email)}</option>`).join('')}</select>
+        <button class="danger" data-email="${e}" onclick="uaRemoveAll(this.dataset.email)" title="Remove every crossdock for this person">Remove all</button></span>`;
+    return `<tr><td class="ua-person">${nameHtml}${badges}<div class="ua-email">${p.invited ? '' : e}</div></td>${cells}
+      <td style="color:var(--gray-500);">${p.invited ? 'never' : uaFmtDate(p.last_sign_in)}</td><td>${actions}</td></tr>`;
+  }).join('') || `<tr><td colspan="${dcs.length + 3}" style="padding:20px;color:var(--gray-400);">No one matches.</td></tr>`;
+  grid.innerHTML = head + '<tbody>' + rows + '</tbody>';
+  uaFillAddForm();
+}
+async function uaCycle(btn) {
+  const email = btn.dataset.email, slug = btn.dataset.slug, key = email + '|' + slug;
+  if (_ua.busy.has(key)) return;
+  const person = uaPeople().find(p => p.email === email) || (_ua.data.users.find(u => u.email === email));
+  const cur = (person && person.access[slug]) || '';
+  const next = person && person.is_owner ? 'admin' : (cur === '' ? 'dispatcher' : cur === 'dispatcher' ? 'admin' : '');
+  if (next === cur) return;
+  const dcName = uaShort((_ua.data.dcs.find(d => d.slug === slug) || {}).name || slug);
+  _ua.busy.add(key); btn.classList.add('busy');
+  try {
+    await SupabaseSync.ownerSetAccess(email, slug, next);
+    await uaReload();
+    uaMsg(`${person?.name || email}: ${dcName} → ${next ? next[0].toUpperCase() + next.slice(1) : 'no access'}`);
+  } catch (e) { uaMsg(e.message || 'Could not change access.', true); }
+  finally { _ua.busy.delete(key); renderUserAccess(); }
+}
+async function uaEditName(email) {
+  const u = (_ua.data.users || []).find(x => x.email === email); if (!u) return;
+  const name = prompt(`Name for ${email}:`, u.name || '');
+  if (name === null) return;
+  try { await SupabaseSync.ownerSetName(email, name); await uaReload(); uaMsg(name.trim() ? `Saved name: ${name.trim()}` : 'Name cleared'); }
+  catch (e) { uaMsg(e.message || 'Could not save the name.', true); }
+}
+async function uaCopyFrom(toEmail, sel) {
+  const fromEmail = sel.value; sel.value = '';
+  if (!fromEmail) return;
+  const from = (_ua.data.users || []).find(u => u.email === fromEmail);
+  const list = Object.entries(from?.access || {}).map(([slug, role]) => `${uaShort((_ua.data.dcs.find(d => d.slug === slug) || {}).name || slug)} (${role})`).join(', ') || 'no crossdocks';
+  if (!confirm(`Give ${toEmail} exactly the same access as ${from?.name || fromEmail}?\n\n${list}\n\nThis replaces ${toEmail}'s current access.`)) return;
+  try { await SupabaseSync.ownerCopy(fromEmail, toEmail); await uaReload(); uaMsg(`${toEmail} now has the same access as ${from?.name || fromEmail}.`); }
+  catch (e) { uaMsg(e.message || 'Could not copy access.', true); }
+}
+async function uaRemoveAll(email) {
+  const p = uaPeople().find(x => x.email === email);
+  const n = Object.keys(p?.access || {}).length;
+  if (!confirm(`Remove ALL access for ${p?.name || email}?\n\nThey lose ${n} crossdock${n === 1 ? '' : 's'} and won't see any crossdock until you add one back. ${p?.invited ? 'Their invite is cancelled.' : 'Their account stays.'}`)) return;
+  try { await SupabaseSync.ownerRemoveAll(email); await uaReload(); uaMsg(`Removed all access for ${p?.name || email}.`); }
+  catch (e) { uaMsg(e.message || 'Could not remove access.', true); }
+}
+function toggleUaAdd(force) {
+  const el = document.getElementById('ua-add'); if (!el) return;
+  const open = force === undefined ? !el.classList.contains('open') : force;
+  el.classList.toggle('open', open);
+  if (open) { uaFillAddForm(true); document.getElementById('ua-new-email').focus(); }
+}
+function uaFillAddForm(reset) {
+  if (!_ua.data) return;
+  const box = document.getElementById('ua-new-dcs'), copySel = document.getElementById('ua-new-copy');
+  if (!box || !copySel) return;
+  const checked = new Set(reset ? [] : [...box.querySelectorAll('input:checked')].map(i => i.value));
+  const all = _ua.data.dcs;
+  const pick = d => `<label><input type="checkbox" value="${uaEsc(d.slug)}" ${checked.has(d.slug) ? 'checked' : ''}> ${uaEsc(uaShort(d.name))}</label>`;
+  box.innerHTML = all.filter(d => !uaIsTest(d.slug)).map(pick).join('')
+    + `<span style="flex-basis:100%;height:0;"></span><span style="color:var(--gray-400);">Test:</span>` + all.filter(d => uaIsTest(d.slug)).map(pick).join('');
+  const keep = reset ? '' : copySel.value;
+  copySel.innerHTML = '<option value="">—</option>' + (_ua.data.users || []).filter(u => !u.is_owner)
+    .map(u => `<option value="${uaEsc(u.email)}">${uaEsc(u.name || u.email)}</option>`).join('');
+  copySel.value = keep;
+  if (reset) { ['ua-new-email', 'ua-new-pw'].forEach(id => { const i = document.getElementById(id); if (i) i.value = ''; }); }
+}
+function uaPickCopySource() {
+  const from = (_ua.data.users || []).find(u => u.email === document.getElementById('ua-new-copy').value);
+  document.querySelectorAll('#ua-new-dcs input').forEach(i => { i.checked = !!(from && from.access[i.value]); });
+}
+async function uaAddPerson() {
+  const email = document.getElementById('ua-new-email').value.trim().toLowerCase();
+  const role  = document.getElementById('ua-new-role').value;
+  const copy  = document.getElementById('ua-new-copy').value;
+  const pw    = document.getElementById('ua-new-pw').value;
+  const slugs = [...document.querySelectorAll('#ua-new-dcs input:checked')].map(i => i.value);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return uaMsg('Enter a valid email address.', true);
+  if (!slugs.length) return uaMsg('Tick at least one crossdock (or pick "Same crossdocks as…" to tick them for you).', true);
+  if (pw && pw.length < 6) return uaMsg('Temp password must be at least 6 characters.', true);
+  const btn = document.getElementById('ua-add-btn'); btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const from = (_ua.data.users || []).find(u => u.email === copy);
+    if (pw) await SupabaseSync.createAccountDirect(slugs[0], email, pw, (from && from.access[slugs[0]]) || role);
+    for (const slug of slugs) {
+      // "Same as" keeps that person's role per crossdock; otherwise the chosen role.
+      const r = (from && from.access[slug]) || role;
+      await SupabaseSync.ownerSetAccess(email, slug, r);
+    }
+    await uaReload();
+    const exists = (_ua.data.users || []).some(u => u.email.toLowerCase() === email);
+    uaMsg(exists ? `✅ ${email} now has ${slugs.length} crossdock${slugs.length === 1 ? '' : 's'}.${pw ? ` They can sign in now with the temp password (${pw}).` : ''}`
+                 : `⏳ ${email} is invited to ${slugs.length} crossdock${slugs.length === 1 ? '' : 's'}. They get access when they create an account with this email at ${location.host}.`);
+    toggleUaAdd(false);
+  } catch (e) { uaMsg(e.message || 'Could not add this person.', true); }
+  finally { btn.disabled = false; btn.textContent = 'Give access'; }
+}
+
 // ── Role gating ──────────────────────────────────────────────────────────────
 // Admin-only controls (Settings, Add Crossdock, Dispatchers) are hidden for
 // dispatchers. This is cosmetic — the enforcement is server-side in the RPCs
@@ -2872,16 +3140,19 @@ async function revokeDispatcher(email) {
 // (false) and reveal admin controls once the role check resolves, so an admin
 // sees controls appear rather than a dispatcher seeing them flash then vanish.
 let _isDcAdmin = false;
+let _isOwner = false;
 function applyRoleGating() {
   const user = SupabaseSync.getUser();
   const settingsBtn = document.getElementById('btn-settings-gear');
   if (settingsBtn) settingsBtn.style.display = (user && _isDcAdmin) ? '' : 'none';
   const dispBtn = document.getElementById('hdr-dispatchers-btn');
   if (dispBtn) dispBtn.style.display = (user && _isDcAdmin) ? '' : 'none';
+  const accBtn = document.getElementById('hdr-access-btn');
+  if (accBtn) accBtn.style.display = (user && _isOwner) ? '' : 'none';
   // "+ Add Crossdock" lives in the switcher dropdown — gated when it's built (toggleDCSwitcher).
 }
 async function refreshRoleGating() {
-  _isDcAdmin = await SupabaseSync.amIAdmin();
+  [_isDcAdmin, _isOwner] = await Promise.all([SupabaseSync.amIAdmin(), SupabaseSync.amIOwner()]);
   applyRoleGating();
 }
 
@@ -8665,7 +8936,7 @@ const autoRefresh = (() => {
   return { arm, blockers, tick };
 })();
 
-const APP_VERSION = '2026-11-20T01:04:56Z';
+const APP_VERSION = '2026-11-20T09:14:18Z';
 (function appUpdateCheck() {
   if (location.protocol === 'file:' || /^__/.test(APP_VERSION)) return;
   let lastCheck = 0, snoozeUntil = 0, latest = null;
